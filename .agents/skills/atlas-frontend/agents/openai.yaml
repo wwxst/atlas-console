@@ -1,0 +1,7 @@
+interface:
+  display_name: "Atlas Frontend"
+  short_description: "Build and maintain the Atlas Console frontend"
+  default_prompt: "Use $atlas-frontend to implement this Atlas Console frontend task according to the repository architecture and UI conventions."
+
+policy:
+  allow_implicit_invocation: true

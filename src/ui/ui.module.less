@@ -1,0 +1,29 @@
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: var(--atlas-control-height-md); padding: 0 15px; border: 1px solid transparent; border-radius: var(--atlas-radius-sm); cursor: pointer; font-size: 13px; font-weight: 550; transition: background .16s ease, border-color .16s ease, color .16s ease; }
+.button:focus-visible, .iconButton:focus-visible { outline: 2px solid var(--atlas-color-brand); outline-offset: 2px; }
+.button_primary { color: #fff; background: var(--atlas-color-brand); }
+.button_primary:hover { background: var(--atlas-color-brand-hover); }
+.button_secondary { color: var(--atlas-color-text-primary); border-color: var(--atlas-color-border); background: var(--atlas-color-bg-surface); }
+.button_secondary:hover { border-color: var(--atlas-color-brand); color: var(--atlas-color-brand); }
+.button_ghost { color: var(--atlas-color-text-secondary); background: transparent; }
+.button_ghost:hover { color: var(--atlas-color-brand); background: var(--atlas-color-brand-soft); }
+.buttonIcon { display: inline-flex; }
+.iconButton { display: inline-grid; width: var(--atlas-control-height-md); height: var(--atlas-control-height-md); place-items: center; padding: 0; border: 0; border-radius: var(--atlas-radius-sm); color: var(--atlas-color-text-secondary); background: transparent; cursor: pointer; }
+.iconButton:hover { color: var(--atlas-color-brand); background: var(--atlas-color-brand-soft); }
+.search { display: flex; align-items: center; gap: 8px; height: var(--atlas-control-height-md); padding: 0 10px; border: 1px solid var(--atlas-color-border); border-radius: 18px; color: var(--atlas-color-text-tertiary); background: var(--atlas-color-bg-subtle); transition: border-color .16s ease, background .16s ease; }
+.search:focus-within { border-color: var(--atlas-color-brand); background: var(--atlas-color-bg-surface); }
+.search input { width: 100%; min-width: 0; padding: 0; border: 0; outline: 0; color: var(--atlas-color-text-primary); background: transparent; font-size: 13px; }
+.search input::placeholder { color: var(--atlas-color-text-tertiary); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search kbd { flex: 0 0 auto; padding: 2px 5px; border: 1px solid var(--atlas-color-border); border-radius: 4px; color: var(--atlas-color-text-tertiary); background: var(--atlas-color-bg-surface); font-family: inherit; font-size: 10px; }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.panel { overflow: hidden; border: 1px solid var(--atlas-color-border); border-radius: var(--atlas-radius-md); background: var(--atlas-color-bg-surface); box-shadow: var(--atlas-shadow-panel); }
+.panelHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 0 20px; border-bottom: 1px solid var(--atlas-color-border); }
+.panelHeader h2 { margin: 0; color: var(--atlas-color-text-primary); font-size: 15px; font-weight: 650; }
+.panelBody { padding: 20px; }
+.badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge_success { color: var(--atlas-color-positive); background: color-mix(in srgb, var(--atlas-color-positive) 12%, transparent); }
+.badge_processing { color: var(--atlas-color-brand); background: var(--atlas-color-brand-soft); }
+.badge_warning { color: var(--atlas-color-warning); background: color-mix(in srgb, var(--atlas-color-warning) 12%, transparent); }
+.badge_danger { color: var(--atlas-color-danger); background: color-mix(in srgb, var(--atlas-color-danger) 12%, transparent); }
+.progressTrack { height: 7px; overflow: hidden; border-radius: 999px; background: var(--atlas-color-bg-subtle); }
+.progressValue { display: block; height: 100%; border-radius: inherit; transition: width .3s ease; }

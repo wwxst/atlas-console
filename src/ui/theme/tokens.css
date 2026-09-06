@@ -1,0 +1,11 @@
+:root {
+  --atlas-font-family-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --atlas-radius-sm: 6px;
+  --atlas-radius-md: 10px;
+  --atlas-control-height-md: 36px;
+  --atlas-header-height: 60px;
+  --atlas-sidebar-width: 240px;
+  --atlas-sidebar-collapsed-width: 72px;
+  --atlas-z-header: 100;
+  --atlas-z-popover: 120;
+}

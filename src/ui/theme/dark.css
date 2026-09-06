@@ -1,0 +1,17 @@
+:root[data-theme='dark'] {
+  --atlas-color-brand: #4080ff;
+  --atlas-color-brand-hover: #6aa1ff;
+  --atlas-color-brand-soft: #1e3158;
+  --atlas-color-bg-page: #101114;
+  --atlas-color-bg-surface: #17191f;
+  --atlas-color-bg-subtle: #20232b;
+  --atlas-color-text-primary: #f2f3f5;
+  --atlas-color-text-secondary: #c9cdd4;
+  --atlas-color-text-tertiary: #86909c;
+  --atlas-color-border: #30343d;
+  --atlas-color-positive: #23c343;
+  --atlas-color-warning: #ff9a2e;
+  --atlas-color-danger: #f76560;
+  --atlas-shadow-panel: 0 4px 16px rgba(0, 0, 0, 0.18);
+  --atlas-shadow-popover: 0 10px 32px rgba(0, 0, 0, 0.38);
+}

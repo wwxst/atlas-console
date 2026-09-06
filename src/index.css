@@ -1,0 +1,13 @@
+:root {
+  font-family: var(--atlas-font-family-sans);
+  color: var(--atlas-color-text-primary);
+  background: var(--atlas-color-bg-page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-width: 1200px; min-height: 100%; margin: 0; }
+body { min-height: 100vh; background: var(--atlas-color-bg-page); }
+button, input { font: inherit; }

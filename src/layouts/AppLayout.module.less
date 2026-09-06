@@ -1,0 +1,15 @@
+.shell { min-height: 100vh; background: var(--atlas-color-bg-page); }
+.sider { position: fixed; top: var(--atlas-header-height); bottom: 0; left: 0; z-index: calc(var(--atlas-z-header) - 1); display: flex; width: var(--atlas-sidebar-width); flex-direction: column; border-right: 1px solid var(--atlas-color-border); background: var(--atlas-color-bg-surface); transition: width .18s ease; }
+.siderCollapsed { width: var(--atlas-sidebar-collapsed-width); }
+.menu { display: grid; gap: 4px; padding: 16px 12px; }
+.menuItem { display: flex; align-items: center; width: 100%; min-height: 42px; padding: 0 12px; border: 0; border-radius: 7px; color: var(--atlas-color-text-secondary); background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
+.menuItem:hover, .menuItemActive { color: var(--atlas-color-brand); background: var(--atlas-color-brand-soft); }
+.menuIcon { display: inline-flex; flex: 0 0 auto; margin-right: 10px; }
+.menuLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.siderCollapsed .menuItem { justify-content: center; padding: 0; }
+.siderCollapsed .menuIcon { margin-right: 0; }
+.siderCollapsed .menuLabel { display: none; }
+.siderFooter { position: absolute; right: 0; bottom: 0; left: 0; display: flex; justify-content: flex-end; padding: 12px; border-top: 1px solid var(--atlas-color-border); }
+.main { min-width: 0; min-height: 100vh; margin-left: var(--atlas-sidebar-width); padding-top: var(--atlas-header-height); transition: margin-left .18s ease; }
+.mainCollapsed { margin-left: var(--atlas-sidebar-collapsed-width); }
+.content { min-height: calc(100vh - var(--atlas-header-height)); padding: 28px 32px; background: var(--atlas-color-bg-page); }
