@@ -1,0 +1,54 @@
+.field {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  overflow: hidden;
+  padding: 0 14px;
+  border: 1px solid var(--atlas-color-border);
+  border-radius: 999px;
+  color: var(--atlas-color-text-primary);
+  background: var(--atlas-color-bg-surface);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.field:focus-within {
+  border-color: var(--atlas-color-brand);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--atlas-color-brand) 12%, transparent);
+}
+
+.invalid,
+.invalid:focus-within {
+  border-color: var(--atlas-color-danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--atlas-color-danger) 12%, transparent);
+}
+
+.field :global(input) {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 14px;
+}
+
+.field :global(input)::placeholder {
+  color: var(--atlas-color-text-tertiary);
+}
+
+.startAdornment,
+.endAdornment {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.startAdornment {
+  margin-right: 8px;
+}
+
+.endAdornment {
+  margin-left: 8px;
+}

@@ -3,6 +3,7 @@
   --atlas-color-brand-hover: #6aa1ff;
   --atlas-color-brand-soft: #1e3158;
   --atlas-color-bg-page: #101114;
+  --atlas-color-bg-login: var(--atlas-color-bg-page);
   --atlas-color-bg-surface: #17191f;
   --atlas-color-bg-subtle: #20232b;
   --atlas-color-text-primary: #f2f3f5;
@@ -12,6 +13,10 @@
   --atlas-color-positive: #23c343;
   --atlas-color-warning: #ff9a2e;
   --atlas-color-danger: #f76560;
+  --atlas-color-toast-bg: #2b2f36;
+  --atlas-color-toast-text: #ffffff;
+  --atlas-color-toast-success: #23c343;
   --atlas-shadow-panel: 0 4px 16px rgba(0, 0, 0, 0.18);
   --atlas-shadow-popover: 0 10px 32px rgba(0, 0, 0, 0.38);
+  --atlas-shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.32);
 }

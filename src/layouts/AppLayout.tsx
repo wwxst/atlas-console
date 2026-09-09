@@ -1,7 +1,6 @@
-import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, LayoutDashboard, Settings, Users } from 'lucide-react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { IconButton } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
 import TopBar from './TopBar'
@@ -9,16 +8,14 @@ import styles from './AppLayout.module.less'
 
 const menuItems = [
   { key: '/', label: '工作台', icon: <LayoutDashboard size={17} /> },
-  { key: '/users', label: '用户列表', icon: <Users size={17} /> },
+  { key: '/system-users', label: '系统用户', icon: <Users size={17} /> },
   { key: '/settings', label: '系统设置', icon: <Settings size={17} /> },
 ]
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+export default function AppLayout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const { sidebarCollapsed, theme, toggleSidebar } = useAppStore()
-
-  useEffect(() => { document.documentElement.dataset.theme = theme }, [theme])
+  const { sidebarCollapsed, toggleSidebar } = useAppStore()
 
   return <div className={styles.shell}>
     <TopBar />
@@ -29,7 +26,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <div className={styles.siderFooter}><IconButton label={sidebarCollapsed ? '展开导航' : '收起导航'} onClick={toggleSidebar}>{sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}</IconButton></div>
     </aside>
     <div className={[styles.main, sidebarCollapsed ? styles.mainCollapsed : ''].join(' ')}>
-      <main className={styles.content}>{children}</main>
+      <main className={styles.content}>{children ?? <Outlet />}</main>
     </div>
   </div>
 }

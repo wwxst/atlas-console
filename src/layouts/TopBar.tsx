@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, ChevronDown, LogOut, Moon, Settings, Sun, User } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getNotifications } from '@/features/notifications/api'
-import { getCurrentUser } from '@/features/session/api'
+import { ADMIN_TOKEN_KEY, CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
 import { IconButton, SearchInput } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
 import styles from './TopBar.module.less'
@@ -12,6 +12,7 @@ type OpenPanel = 'notifications' | 'account' | null
 
 export default function TopBar() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const location = useLocation()
   const theme = useAppStore((state) => state.theme)
   const setTheme = useAppStore((state) => state.setTheme)
@@ -20,7 +21,7 @@ export default function TopBar() {
   const controlsRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const hoverCloseTimerRef = useRef<number | null>(null)
-  const user = useQuery({ queryKey: ['current-user'], queryFn: getCurrentUser })
+  const user = useQuery({ queryKey: CURRENT_SYS_USER_QUERY_KEY, queryFn: getCurrentSysUser, retry: false })
   const notifications = useQuery({ queryKey: ['notifications'], queryFn: getNotifications })
   const unreadCount = notifications.data?.filter((item) => item.unread).length ?? 0
 
@@ -93,15 +94,15 @@ export default function TopBar() {
 
       <div className={styles.control} onMouseEnter={() => showPanel('account')} onMouseLeave={schedulePanelClose}>
         <button type="button" className={styles.accountButton} aria-expanded={openPanel === 'account'} onClick={() => showPanel('account')}>
-          <span className={styles.avatar}>{user.data?.initials ?? '用'}</span>
-          <span className={styles.accountText}><strong>{user.data?.name ?? '用户'}</strong><small>{user.data?.role ?? '加载中'}</small></span>
+          <span className={styles.avatar}>{Array.from(user.data?.nickname ?? '系统').slice(-2).join('')}</span>
+          <span className={styles.accountText}><strong>{user.data?.nickname ?? '系统用户'}</strong><small>{user.data?.username ?? '加载中'}</small></span>
           <ChevronDown size={14} />
         </button>
         {openPanel === 'account' && <div className={[styles.popover, styles.accountPanel].join(' ')} role="menu">
           <button type="button" role="menuitem" onClick={() => { navigate('/profile'); setOpenPanel(null) }}><User size={16} />个人信息</button>
           <button type="button" role="menuitem" onClick={() => { navigate('/settings'); setOpenPanel(null) }}><Settings size={16} />系统设置</button>
           <div className={styles.menuDivider} />
-          <button type="button" role="menuitem" className={styles.logout} onClick={() => { localStorage.removeItem('atlas-token'); setOpenPanel(null); navigate('/') }}><LogOut size={16} />退出登录</button>
+          <button type="button" role="menuitem" className={styles.logout} onClick={() => { localStorage.removeItem(ADMIN_TOKEN_KEY); queryClient.clear(); setOpenPanel(null); navigate('/login', { replace: true }) }}><LogOut size={16} />退出登录</button>
         </div>}
       </div>
     </div>

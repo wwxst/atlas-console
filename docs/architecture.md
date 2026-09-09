@@ -77,7 +77,7 @@ AppLayout
 
 Mock data may implement the same typed async contract during early development. Replace it with HTTP calls without changing page ownership.
 
-The current user-list workflow follows this boundary: `src/features/users/api.ts` owns the typed mock contract, `UsersPage` uses TanStack Query for loading and creation, URL search parameters own `keyword`, `role`, `status`, and `page`, and dialog visibility/selected user remain local component state.
+The system-user workflow uses the backend contract documented at the workspace root. `src/features/auth/api.ts` owns login and current-system-user requests, while `src/features/systemUsers/api.ts` owns the paginated system-user query. The protected route validates the stored admin JWT before rendering the application shell. `SystemUsersPage` sends URL-owned `keyword`, `status`, and `page` values to the backend and keeps only dialog visibility and the selected row in local component state.
 
 ## Reference Projects
 

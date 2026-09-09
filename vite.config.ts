@@ -5,4 +5,9 @@ import path from 'node:path'
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { '@': path.resolve(import.meta.dirname, './src'), '@ui': path.resolve(import.meta.dirname, './src/ui'), '@features': path.resolve(import.meta.dirname, './src/features') } },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
 })

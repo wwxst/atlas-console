@@ -11,7 +11,7 @@ Build components when a current feature requires them. Match established behavio
 ## Layers
 
 1. Tokens define reusable visual decisions such as color, spacing, type, radius, and elevation.
-2. Primitives in `src/ui` provide focused controls such as buttons, panels, badges, and progress bars.
+2. Primitives in `src/ui` provide focused controls such as buttons, panels, badges, progress bars, auth fields, and toasts.
 3. Feature-local components combine primitives for one business domain.
 4. Pages arrange features and route-level content.
 
@@ -33,6 +33,8 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 - Buttons expose clear variants and preserve native button attributes.
 - Icon-only buttons require an accessible label and visible hover tooltip through `title` or a future tooltip primitive.
 - Form controls require labels, keyboard access, focus treatment, disabled behavior, and error messaging.
+- `AuthField` is a style-only field shell. Features own the actual input content, labels, validation, and business-specific adornments.
+- `Toast` is a controlled, fixed-position status surface. Features own visibility and dismissal timing; the component owns the shared visual treatment and live-region semantics.
 - Dialogs, menus, selects, date controls, and other complex widgets require deliberate focus and keyboard behavior; use a focused headless primitive dependency when implementing them correctly would otherwise dominate product work.
 - Keep component dimensions stable so labels, icons, loading states, and dynamic content do not shift surrounding layout.
 
@@ -41,6 +43,7 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 - Light and dark modes switch through `data-theme` on the document root.
 - Components consume semantic tokens such as `--atlas-color-bg-surface` and `--atlas-color-text-primary`, not raw theme-specific colors.
 - `tokens.css` owns theme-independent values; `light.css` and `dark.css` own their respective theme values; `index.css` is the public theme entrypoint.
+- `--atlas-color-bg-login` is the light-gray backdrop for the login page (and future standalone auth screens): `#f2f3f5` in light mode, following `--atlas-color-bg-page` in dark mode.
 - Brand, success, warning, and danger communicate different meanings and must remain visually distinguishable.
 - New tokens must represent a reusable design decision, not a one-off component value.
 

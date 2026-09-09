@@ -2,6 +2,10 @@ import { forwardRef, useId } from 'react'
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react'
 import { Search } from 'lucide-react'
 import styles from './ui.module.less'
+export { AuthField } from './AuthField'
+export type { AuthFieldProps } from './AuthField'
+export { Toast } from './Toast'
+export type { ToastProps } from './Toast'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost'
 
