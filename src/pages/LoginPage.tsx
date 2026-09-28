@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ADMIN_TOKEN_KEY, CURRENT_SYS_USER_QUERY_KEY, loginSysUser } from '@/features/auth/api'
-import { getApiErrorMessage } from '@/services/api'
 import { AppButton, AuthField, IconButton, Toast } from '@ui/index'
 import loginVisual from '@/assets/login-visual.png'
 import styles from './LoginPage.module.less'
@@ -95,8 +94,6 @@ export default function LoginPage() {
           </AuthField>
           {fieldErrors.password && <span id="password-error" className={styles.fieldError}>{fieldErrors.password}</span>}
         </label>
-
-        {loginMutation.isError && <p className={styles.error} role="alert">{getApiErrorMessage(loginMutation.error, '登录失败，请稍后重试')}</p>}
 
         <AppButton className={styles.submit} type="submit" variant="primary" disabled={loginMutation.isPending}>
           {loginMutation.isPending ? '正在登录...' : '登录'}

@@ -3,7 +3,6 @@ import axios from 'axios'
 import { LogOut, RotateCcw } from 'lucide-react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ADMIN_TOKEN_KEY, CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
-import { getApiErrorMessage } from '@/services/api'
 import { AppButton } from '@ui/index'
 import styles from './RequireAdmin.module.less'
 
@@ -41,7 +40,7 @@ export default function RequireAdmin() {
     return <main className={styles.page}>
       <section className={styles.state}>
         <h1>无法进入管理后台</h1>
-        <p>{getApiErrorMessage(currentUserQuery.error, '登录状态验证失败，请稍后重试')}</p>
+        <p>登录状态验证失败，请重试。</p>
         <div className={styles.actions}>
           <AppButton icon={<RotateCcw size={16} />} onClick={() => void currentUserQuery.refetch()}>重试</AppButton>
           <AppButton variant="ghost" icon={<LogOut size={16} />} onClick={signOut}>退出登录</AppButton>

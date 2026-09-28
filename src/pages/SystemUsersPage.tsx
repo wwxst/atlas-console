@@ -5,7 +5,6 @@ import type { FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getSysUsers } from '@/features/systemUsers/api'
 import type { SysUser, SysUserStatus } from '@/features/systemUsers/api'
-import { getApiErrorMessage } from '@/services/api'
 import { AppButton, IconButton, Panel, StatusBadge } from '@ui/index'
 import styles from './SystemUsersPage.module.less'
 
@@ -114,7 +113,7 @@ export default function SystemUsersPage() {
           <thead><tr><th>系统用户</th><th>登录账号</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead>
           <tbody>
             {usersQuery.isPending && <tr><td colSpan={6}><div className={styles.state}>正在加载系统用户...</div></td></tr>}
-            {usersQuery.isError && <tr><td colSpan={6}><div className={styles.state}><p role="alert">{getApiErrorMessage(usersQuery.error, '系统用户加载失败，请稍后重试')}</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
+            {usersQuery.isError && <tr><td colSpan={6}><div className={styles.state}><p role="alert">系统用户加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
             {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={6}><div className={styles.state}>没有符合当前条件的系统用户</div></td></tr>}
             {records.map((user) => <tr key={user.id}>
               <td><div className={styles.userCell}><span className={styles.avatar}>{getInitials(user)}</span><span><strong>{user.nickname}</strong><small>系统用户 ID：{user.id}</small></span></div></td>

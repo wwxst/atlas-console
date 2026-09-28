@@ -77,6 +77,13 @@ AppLayout
 
 Mock data may implement the same typed async contract during early development. Replace it with HTTP calls without changing page ownership.
 
+### Request Error Flow
+
+- Axios transport failures are normalized by `src/services/api.ts` and published by `src/services/http.ts` to the shared request-error channel.
+- HTTP 200 responses with a failed backend code are published by `requireApiData` through the same channel before the original error is rethrown to TanStack Query.
+- `RequestErrorToast` is mounted at the application root, so login and protected routes use the same global Chinese error surface.
+- Feature pages retain loading, failure, and retry controls but do not render transport-specific error strings; the global Toast owns that feedback.
+
 The system-user workflow uses the backend contract documented at the workspace root. `src/features/auth/api.ts` owns login and current-system-user requests, while `src/features/systemUsers/api.ts` owns the paginated system-user query. The protected route validates the stored admin JWT before rendering the application shell. `SystemUsersPage` sends URL-owned `keyword`, `status`, and `page` values to the backend and keeps only dialog visibility and the selected row in local component state.
 
 ## Reference Projects

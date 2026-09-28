@@ -6,6 +6,7 @@ export { AuthField } from './AuthField'
 export type { AuthFieldProps } from './AuthField'
 export { Toast } from './Toast'
 export type { ToastProps } from './Toast'
+export { RequestErrorToast } from './RequestErrorToast'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost'
 

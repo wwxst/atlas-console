@@ -34,7 +34,8 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 - Icon-only buttons require an accessible label and visible hover tooltip through `title` or a future tooltip primitive.
 - Form controls require labels, keyboard access, focus treatment, disabled behavior, and error messaging.
 - `AuthField` is a style-only field shell. Features own the actual input content, labels, validation, and business-specific adornments.
-- `Toast` is a controlled, fixed-position status surface. Features own visibility and dismissal timing; the component owns the shared visual treatment and live-region semantics.
+- `Toast` is a controlled, fixed-position status surface. Features own visibility and dismissal timing; the component owns the shared visual treatment and live-region semantics. `RequestErrorToast` is the application-level host for all request failures: it uses the danger tone, stays at the top center, dismisses after 4 seconds, and suppresses identical messages within a short dedupe window.
+- Request error fallbacks are Chinese: 401 means “登录状态已失效，请重新登录”, 403 means “没有权限执行此操作”, 404 means “请求的资源不存在”, 408/timeout means “请求超时，请稍后重试”, 429 means “请求过于频繁，请稍后重试”, 5xx means “服务暂时不可用，请稍后重试”, and other network failures mean “网络异常，请检查连接后重试”. A valid backend business message takes precedence.
 - Dialogs, menus, selects, date controls, and other complex widgets require deliberate focus and keyboard behavior; use a focused headless primitive dependency when implementing them correctly would otherwise dominate product work.
 - Keep component dimensions stable so labels, icons, loading states, and dynamic content do not shift surrounding layout.
 

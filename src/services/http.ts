@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { getApiErrorMessage } from './api.ts'
+import { emitRequestError } from './requestErrorBus.ts'
 
 export const ADMIN_TOKEN_KEY = 'atlas-token'
 
@@ -14,6 +16,7 @@ http.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) localStorage.removeItem(ADMIN_TOKEN_KEY)
+    emitRequestError(getApiErrorMessage(error, '请求失败，请稍后重试'))
     return Promise.reject(error)
   },
 )
