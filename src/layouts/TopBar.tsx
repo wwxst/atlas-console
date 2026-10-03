@@ -3,7 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, ChevronDown, LogOut, Moon, Settings, Sun, User } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getNotifications } from '@/features/notifications/api'
-import { ADMIN_TOKEN_KEY, CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
+import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, logoutSysUser } from '@/features/auth/api'
+import { clearAuthTokens } from '@/services/http'
 import { IconButton, SearchInput } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
 import styles from './TopBar.module.less'
@@ -73,6 +74,20 @@ export default function TopBar() {
     }, 150)
   }
 
+  const handleLogout = async () => {
+    try {
+      // 退出登录调用后端接口删除当前 Session
+      await logoutSysUser()
+    } catch {
+      // 后端失败、Session 已不存在或网络异常时，仍然清理本地登录状态
+    } finally {
+      clearAuthTokens()
+      queryClient.clear()
+      setOpenPanel(null)
+      navigate('/login', { replace: true })
+    }
+  }
+
   return <header className={styles.topbar}>
     <button type="button" className={styles.brand} onClick={() => navigate('/')} aria-label="返回工作台">
       <span className={styles.brandMark}>A</span>
@@ -102,7 +117,7 @@ export default function TopBar() {
           <button type="button" role="menuitem" onClick={() => { navigate('/profile'); setOpenPanel(null) }}><User size={16} />个人信息</button>
           <button type="button" role="menuitem" onClick={() => { navigate('/settings'); setOpenPanel(null) }}><Settings size={16} />系统设置</button>
           <div className={styles.menuDivider} />
-          <button type="button" role="menuitem" className={styles.logout} onClick={() => { localStorage.removeItem(ADMIN_TOKEN_KEY); queryClient.clear(); setOpenPanel(null); navigate('/login', { replace: true }) }}><LogOut size={16} />退出登录</button>
+          <button type="button" role="menuitem" className={styles.logout} onClick={() => void handleLogout()}><LogOut size={16} />退出登录</button>
         </div>}
       </div>
     </div>

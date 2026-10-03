@@ -3,7 +3,9 @@ import type { FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ADMIN_TOKEN_KEY, CURRENT_SYS_USER_QUERY_KEY, loginSysUser } from '@/features/auth/api'
+import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, loginSysUser } from '@/features/auth/api'
+import type { LoginInput } from '@/features/auth/api'
+import { clearAuthTokens, saveAuthTokens } from '@/services/http'
 import { AppButton, AuthField, IconButton, Toast } from '@ui/index'
 import loginVisual from '@/assets/login-visual.png'
 import styles from './LoginPage.module.less'
@@ -25,14 +27,19 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({})
   const [loginSuccess, setLoginSuccess] = useState(false)
   const loginMutation = useMutation({
-    mutationFn: loginSysUser,
-    onSuccess: (result) => {
-      localStorage.setItem(ADMIN_TOKEN_KEY, result.token)
-      queryClient.setQueryData(CURRENT_SYS_USER_QUERY_KEY, {
-        id: result.id,
-        username: result.username,
-        nickname: result.nickname,
-      })
+    mutationFn: async (input: LoginInput) => {
+      // 登录返回双 Token；系统用户资料随后由 /me 获取
+      const tokenPair = await loginSysUser(input)
+      saveAuthTokens(tokenPair.accessToken, tokenPair.refreshToken)
+      try {
+        return await getCurrentSysUser()
+      } catch (error) {
+        clearAuthTokens()
+        throw error
+      }
+    },
+    onSuccess: (currentUser) => {
+      queryClient.setQueryData(CURRENT_SYS_USER_QUERY_KEY, currentUser)
       setLoginSuccess(true)
     },
   })

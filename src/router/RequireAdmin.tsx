@@ -1,8 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { LogOut, RotateCcw } from 'lucide-react'
+import { useSyncExternalStore } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ADMIN_TOKEN_KEY, CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
+import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
+import {
+  clearAuthTokens,
+  getAccessToken,
+  getAuthTokenSnapshot,
+  getRefreshToken,
+  subscribeAuthTokens,
+} from '@/services/http'
 import { AppButton } from '@ui/index'
 import styles from './RequireAdmin.module.less'
 
@@ -10,15 +18,16 @@ export default function RequireAdmin() {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const token = localStorage.getItem(ADMIN_TOKEN_KEY)
+  useSyncExternalStore(subscribeAuthTokens, getAuthTokenSnapshot, getAuthTokenSnapshot)
+  const hasSession = Boolean(getAccessToken() || getRefreshToken())
   const currentUserQuery = useQuery({
     queryKey: CURRENT_SYS_USER_QUERY_KEY,
     queryFn: getCurrentSysUser,
-    enabled: Boolean(token),
+    enabled: hasSession,
     retry: false,
   })
 
-  if (!token) {
+  if (!hasSession) {
     return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
   }
 
@@ -32,7 +41,7 @@ export default function RequireAdmin() {
     }
 
     const signOut = () => {
-      localStorage.removeItem(ADMIN_TOKEN_KEY)
+      clearAuthTokens()
       queryClient.clear()
       navigate('/login', { replace: true })
     }
