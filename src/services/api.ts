@@ -14,13 +14,19 @@ export interface PageResult<T> {
   records: T[]
 }
 
-export function requireApiData<T>(result: ApiResult<T>): T {
-  if (result.code !== 200 || result.data === null) {
-    const error = new Error(result.msg ?? '请求失败，请稍后重试')
-    emitRequestError(getApiErrorMessage(error, '请求失败，请稍后重试'))
-    throw error
-  }
+function rejectApiResult(message: string | null): never {
+  const error = new Error(message ?? '请求失败，请稍后重试')
+  emitRequestError(getApiErrorMessage(error, '请求失败，请稍后重试'))
+  throw error
+}
 
+export function requireApiSuccess(result: ApiResult<unknown>): void {
+  if (result.code !== 200) rejectApiResult(result.msg)
+}
+
+export function requireApiData<T>(result: ApiResult<T>): T {
+  requireApiSuccess(result)
+  if (result.data === null) rejectApiResult(result.msg)
   return result.data
 }
 

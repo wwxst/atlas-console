@@ -57,6 +57,12 @@ src/
 
 Dependency direction is `pages -> features/ui -> services`. Infrastructure must not import pages. Shared UI must not import business features.
 
+`PaginatedListPanel` in `src/ui/index.tsx` owns the shared list card, toolbar layout, table scroll container, content-area minimum height, and fixed-height pagination footer used by ordinary-user and system-user pages. Pages provide their filters, table content, pagination values, and URL update callback; requests and row details stay in the pages and features.
+
+Both user pages use `ListFilters` for keyword search, status selection, reset, and result counts, and `DataTable` for table density and 14px headers. Pages keep ownership of column widths, rows, request state, and URL updates. `Avatar` provides the shared 40px neutral placeholder or image in the top bar, user rows, and details. User rows show the name without a secondary account ID. Avatar colors follow the active theme.
+
+The system-user page groups the avatar and nickname in the user column and uses `PATCH /sys-user/sys-users/{id}/status` for enable/disable actions. Its creation-time header cycles through ascending, descending, and default order. The URL and query key include `createdAtOrder`; sorting resets to page 1 and the backend sorts before pagination. The mutation invalidates the paginated system-user query so the returned `status` remains the source of truth. The details drawer supports creating, editing, resetting a password, and deleting a system user through the corresponding typed mutations.
+
 ## Application Shell
 
 ```text
@@ -84,7 +90,9 @@ Mock data may implement the same typed async contract during early development. 
 - `RequestErrorToast` is mounted at the application root, so login and protected routes use the same global Chinese error surface.
 - Feature pages retain loading, failure, and retry controls but do not render transport-specific error strings; the global Toast owns that feedback.
 
-The system-user workflow uses the backend contract documented at the workspace root. `src/features/auth/api.ts` owns login and current-system-user requests, while `src/features/systemUsers/api.ts` owns the paginated system-user query. The protected route validates the stored admin JWT before rendering the application shell. `SystemUsersPage` sends URL-owned `keyword`, `status`, and `page` values to the backend and keeps only dialog visibility and the selected row in local component state.
+The system-user workflow follows `../backend/docs/api.md`. `src/features/auth/api.ts` owns login and current-system-user requests, while `src/features/systemUsers/api.ts` owns the paginated system-user query. The protected route validates the session through `/me`, with Access/Refresh renewal handled in the transport layer. `SystemUsersPage` sends URL-owned `keyword`, `status`, and `page` values to the backend and keeps only dialog visibility and the selected row in local component state.
+
+`/settings` uses `src/features/settings/api.ts` for the ordinary-user phone and email authentication channels. Query owns the four saved server flags; each channel form owns its unsaved draft. PUT sends both `enabled` and `codeEnabled` for one channel, checks the business code even when response data is null, updates that channel's cached flags on success, then refetches server state. Saving is serialized across the two forms. The page blocks closing the final enabled channel based on saved server state; the backend remains authoritative for concurrent updates. A disabled channel retains its code flag. Failed saves preserve the draft, use the global request-error Toast, and refetch current configuration to reconcile concurrent or uncertain writes; query failure exposes retry and disables editing until a successful read. No organization, notification, or system-user account settings are presented without corresponding backend APIs.
 
 ## Reference Projects
 

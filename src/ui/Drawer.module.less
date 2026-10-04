@@ -1,0 +1,47 @@
+.drawer:modal {
+  position: fixed;
+  inset: 0;
+  width: 32rem;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--atlas-color-border);
+  border-radius: 0;
+  color: var(--atlas-color-text-primary);
+  background: var(--atlas-color-bg-surface-overlay);
+  box-shadow: var(--atlas-shadow-modal);
+}
+
+.drawer::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--atlas-space-xl);
+  padding: var(--atlas-space-xl);
+  border-bottom: 1px solid var(--atlas-color-border);
+}
+
+.header h2 {
+  margin: 0;
+  font-size: var(--atlas-text-lg);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.header p {
+  margin: var(--atlas-space-xs) 0 0;
+  color: var(--atlas-color-text-tertiary);
+  font-size: var(--atlas-text-sm);
+  line-height: 1.4;
+}
+
+.body {
+  min-width: 0;
+}

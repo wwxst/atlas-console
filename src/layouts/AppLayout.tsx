@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, LayoutDashboard, Settings, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LayoutDashboard, Settings, Users, UserCog } from 'lucide-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { IconButton } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
@@ -8,7 +8,8 @@ import styles from './AppLayout.module.less'
 
 const menuItems = [
   { key: '/', label: '工作台', icon: <LayoutDashboard size={17} /> },
-  { key: '/system-users', label: '系统用户', icon: <Users size={17} /> },
+  { key: '/users', label: '普通用户', icon: <Users size={17} /> },
+  { key: '/system-users', label: '系统用户', icon: <UserCog size={17} /> },
   { key: '/settings', label: '系统设置', icon: <Settings size={17} /> },
 ]
 

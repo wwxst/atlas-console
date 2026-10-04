@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getNotifications } from '@/features/notifications/api'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, logoutSysUser } from '@/features/auth/api'
 import { clearAuthTokens } from '@/services/http'
-import { IconButton, SearchInput } from '@ui/index'
+import { Avatar, IconButton, SearchInput } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
 import styles from './TopBar.module.less'
 
@@ -109,7 +109,7 @@ export default function TopBar() {
 
       <div className={styles.control} onMouseEnter={() => showPanel('account')} onMouseLeave={schedulePanelClose}>
         <button type="button" className={styles.accountButton} aria-expanded={openPanel === 'account'} onClick={() => showPanel('account')}>
-          <span className={styles.avatar}>{Array.from(user.data?.nickname ?? '系统').slice(-2).join('')}</span>
+          <Avatar size={40}>{Array.from(user.data?.nickname ?? '系统').slice(0, 2).join('')}</Avatar>
           <span className={styles.accountText}><strong>{user.data?.nickname ?? '系统用户'}</strong><small>{user.data?.username ?? '加载中'}</small></span>
           <ChevronDown size={14} />
         </button>

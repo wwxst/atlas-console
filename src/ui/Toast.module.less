@@ -1,41 +1,44 @@
+/* ===== Toast ===== */
 .toast {
   position: fixed;
   z-index: var(--atlas-z-toast);
   left: 50%;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 48px;
-  max-width: min(420px, calc(100vw - 32px));
-  padding: 0 17px;
-  border: 1px solid transparent;
-  border-radius: 12px;
+  gap: var(--atlas-space-sm);
+  min-height: 3rem;
+  max-width: clamp(20rem, 90vw, 26rem);
+  padding: 0 var(--atlas-space-lg);
+  border: 1px solid var(--atlas-color-toast-border);
+  border-radius: var(--atlas-radius-lg);
   box-shadow: var(--atlas-shadow-toast);
   transform: translateX(-50%);
-  animation: toast-in .2s ease-out;
+  animation: toast-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--atlas-color-toast-text);
   background: var(--atlas-color-toast-bg);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.35;
+  backdrop-filter: blur(12px);
+  font-size: var(--atlas-text-md);
+  font-weight: 500;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .toast_top_center {
-  top: 24px;
+  top: var(--atlas-space-xl);
 }
 
 .toast_bottom_center {
-  bottom: 24px;
+  bottom: var(--atlas-space-xl);
 }
 
+/* ===== Icon ===== */
 .icon {
   flex: 0 0 auto;
-  color: var(--atlas-color-toast-success);
+  color: var(--atlas-color-success);
 }
 
 .toast_info .icon {
-  color: var(--atlas-color-brand);
+  color: var(--atlas-color-info);
 }
 
 .toast_warning .icon {
@@ -46,10 +49,11 @@
   color: var(--atlas-color-danger);
 }
 
+/* ===== Animation ===== */
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -6px);
+    transform: translate(-50%, -0.5rem);
   }
 
   to {

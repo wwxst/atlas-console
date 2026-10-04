@@ -1,23 +1,64 @@
 :root,
 :root[data-theme='light'] {
-  --atlas-color-brand: #165dff;
-  --atlas-color-brand-hover: #0e4fd6;
-  --atlas-color-brand-soft: #e8f3ff;
-  --atlas-color-bg-page: #f5f7fa;
-  --atlas-color-bg-login: #f2f3f5;
-  --atlas-color-bg-surface: #ffffff;
-  --atlas-color-bg-subtle: #f7f8fa;
-  --atlas-color-text-primary: #1d2129;
-  --atlas-color-text-secondary: #4e5969;
-  --atlas-color-text-tertiary: #86909c;
-  --atlas-color-border: #e5e6eb;
-  --atlas-color-positive: #00b42a;
-  --atlas-color-warning: #ff7d00;
-  --atlas-color-danger: #f53f3f;
-  --atlas-color-toast-bg: #333333;
-  --atlas-color-toast-text: #ffffff;
-  --atlas-color-toast-success: #23c343;
-  --atlas-shadow-panel: 0 4px 16px rgba(29, 33, 41, 0.04);
-  --atlas-shadow-popover: 0 10px 32px rgba(29, 33, 41, 0.14);
-  --atlas-shadow-toast: 0 6px 18px rgba(29, 33, 41, 0.2);
+  /* Brand - professional blue */
+  --atlas-color-brand: #2563EB;
+  --atlas-color-brand-hover: #1D4ED8;
+  --atlas-color-brand-active: #1E40AF;
+  --atlas-color-brand-soft: rgba(37, 99, 235, 0.08);
+  --atlas-color-brand-softer: rgba(37, 99, 235, 0.04);
+
+  /* Surface ladder - clean grays */
+  --atlas-color-bg-page: #F8F9FB;
+  --atlas-color-bg-canvas: #F3F4F6;
+  --atlas-color-bg-surface: #FFFFFF;
+  --atlas-color-bg-surface-raised: #FFFFFF;
+  --atlas-color-bg-surface-overlay: #FFFFFF;
+  --atlas-color-bg-subtle: rgba(0, 0, 0, 0.02);
+  --atlas-color-bg-muted: rgba(0, 0, 0, 0.04);
+  --atlas-color-bg-hover: rgba(0, 0, 0, 0.03);
+  --atlas-color-bg-active: rgba(0, 0, 0, 0.06);
+
+  --atlas-color-bg-login: #F3F4F6;
+
+  /* Text hierarchy */
+  --atlas-color-text-primary: #111827;
+  --atlas-color-text-secondary: #4B5563;
+  --atlas-color-text-tertiary: #6B7280;
+  --atlas-color-text-quaternary: #9CA3AF;
+  --atlas-color-text-disabled: #D1D5DB;
+  --atlas-color-text-inverse: #FFFFFF;
+
+  /* Borders */
+  --atlas-color-border: rgba(0, 0, 0, 0.08);
+  --atlas-color-border-strong: rgba(0, 0, 0, 0.12);
+  --atlas-color-border-subtle: rgba(0, 0, 0, 0.04);
+
+  /* Semantic colors */
+  --atlas-color-success: #10B981;
+  --atlas-color-success-soft: rgba(16, 185, 129, 0.08);
+  --atlas-color-warning: #F59E0B;
+  --atlas-color-warning-soft: rgba(245, 158, 11, 0.08);
+  --atlas-color-danger: #EF4444;
+  --atlas-color-danger-soft: rgba(239, 68, 68, 0.08);
+  --atlas-color-info: #2563EB;
+  --atlas-color-info-soft: rgba(37, 99, 235, 0.08);
+
+  /* Legacy aliases for backward compatibility */
+  --atlas-color-positive: var(--atlas-color-success);
+
+  /* Toast system */
+  --atlas-color-toast-bg: #1F2937;
+  --atlas-color-toast-text: #F9FAFB;
+  --atlas-color-toast-border: rgba(255, 255, 255, 0.1);
+
+  /* Shadows - subtle, professional */
+  --atlas-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --atlas-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --atlas-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --atlas-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+  --atlas-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08);
+  --atlas-shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --atlas-shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --atlas-shadow-modal: 0 20px 48px rgba(0, 0, 0, 0.16);
+  --atlas-shadow-toast: 0 8px 16px rgba(0, 0, 0, 0.16);
 }

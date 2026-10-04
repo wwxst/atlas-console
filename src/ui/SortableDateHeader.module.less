@@ -1,0 +1,28 @@
+.sortHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--atlas-space-xs);
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sortArrows {
+  display: flex;
+  flex-direction: column;
+  color: var(--atlas-color-text-tertiary);
+  line-height: 0.7;
+}
+
+.sortArrows svg {
+  width: 15px;
+  height: 12px;
+}
+
+.sortArrows svg[data-active='true'] {
+  color: var(--atlas-color-brand);
+}

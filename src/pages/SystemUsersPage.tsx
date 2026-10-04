@@ -1,18 +1,31 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { ChevronLeft, ChevronRight, Eye, RotateCcw, Search, X } from 'lucide-react'
-import { useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye, KeyRound, Pencil, Plus, Power, RotateCcw, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getSysUsers } from '@/features/systemUsers/api'
-import type { SysUser, SysUserStatus } from '@/features/systemUsers/api'
-import { AppButton, IconButton, Panel, StatusBadge } from '@ui/index'
+import { createSysUser, deleteSysUser, getSysUsers, resetSysUserPassword, updateSysUser, updateSysUserStatus, uploadSysUserAvatar } from '@/features/systemUsers/api'
+import type { CreateSysUserInput, SysUser, SysUserStatus, UpdateSysUserInput } from '@/features/systemUsers/api'
+import { getApiErrorMessage } from '@/services/api'
+import { AppButton, Avatar, DataTable, Drawer, EmptyState, ListFilters, PaginatedListPanel, SortableDateHeader, StatusBadge, StatusIndicator } from '@ui/index'
 import styles from './SystemUsersPage.module.less'
 
-const PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 20
+const PAGE_SIZE_OPTIONS = [10, 20, 50]
+const USERNAME_MAX_LENGTH = 20
+const NICKNAME_MAX_LENGTH = 30
+const PASSWORD_MIN_LENGTH = 8
+const PASSWORD_MAX_LENGTH = 24
+const AVATAR_MAX_SIZE = 2 * 1024 * 1024
+const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 function parsePage(value: string | null): number {
   const page = Number(value ?? '1')
   return Number.isInteger(page) && page > 0 ? page : 1
+}
+
+function parsePageSize(value: string | null): number {
+  const pageSize = Number(value ?? DEFAULT_PAGE_SIZE)
+  return PAGE_SIZE_OPTIONS.includes(pageSize) ? pageSize : DEFAULT_PAGE_SIZE
 }
 
 function parseStatus(value: string | null): SysUserStatus | undefined {
@@ -23,7 +36,7 @@ function parseStatus(value: string | null): SysUserStatus | undefined {
 
 function getInitials(user: SysUser): string {
   const label = user.nickname.trim() || user.username.trim()
-  return Array.from(label).slice(-2).join('').toUpperCase()
+  return Array.from(label).slice(0, 2).join('').toUpperCase()
 }
 
 function formatDateTime(value: string): string {
@@ -31,22 +44,108 @@ function formatDateTime(value: string): string {
   return time ? `${date} ${time.slice(0, 5)}` : date
 }
 
+interface SysUserFormValues {
+  username: string
+  nickname: string
+  status?: SysUserStatus
+  password?: string
+  avatarFile?: File
+}
+
+function readSysUserForm(form: HTMLFormElement, includeCreateFields: boolean): SysUserFormValues | string {
+  const data = new FormData(form)
+  const username = String(data.get('username') ?? '').trim()
+  const nickname = String(data.get('nickname') ?? '').trim()
+  const statusValue = String(data.get('status') ?? '')
+  const password = String(data.get('password') ?? '')
+
+  if (!username) return '请输入登录账号'
+  if (username.length > USERNAME_MAX_LENGTH) return `登录账号不能超过 ${USERNAME_MAX_LENGTH} 个字符`
+  if (!nickname) return '请输入系统用户昵称'
+  if (nickname.length > NICKNAME_MAX_LENGTH) return `系统用户昵称不能超过 ${NICKNAME_MAX_LENGTH} 个字符`
+  if (includeCreateFields && statusValue !== '0' && statusValue !== '1') return '请选择有效的账号状态'
+  if (includeCreateFields && (!password.trim() || password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH)) {
+    return `登录密码需为 ${PASSWORD_MIN_LENGTH} 到 ${PASSWORD_MAX_LENGTH} 个字符`
+  }
+  const avatarEntry = data.get('avatar')
+  const avatarFile = avatarEntry instanceof File && avatarEntry.size > 0 ? avatarEntry : undefined
+  if (avatarFile && !AVATAR_TYPES.includes(avatarFile.type)) return '头像仅支持 JPG、PNG 或 WEBP 格式'
+  if (avatarFile && avatarFile.size > AVATAR_MAX_SIZE) return '头像文件不能超过 2MB'
+
+  return {
+    username,
+    nickname,
+    ...(statusValue === '0' || statusValue === '1' ? { status: Number(statusValue) as SysUserStatus } : {}),
+    ...(includeCreateFields ? { password } : {}),
+    ...(avatarFile ? { avatarFile } : {}),
+  }
+}
+
+function readPasswordForm(form: HTMLFormElement): { password: string } | { error: string } {
+  const password = String(new FormData(form).get('password') ?? '')
+  if (!password.trim() || password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
+    return { error: `登录密码需为 ${PASSWORD_MIN_LENGTH} 到 ${PASSWORD_MAX_LENGTH} 个字符` }
+  }
+  return { password }
+}
+
 export default function SystemUsersPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const detailsDialogRef = useRef<HTMLDialogElement>(null)
+  const queryClient = useQueryClient()
   const [selectedUser, setSelectedUser] = useState<SysUser | null>(null)
+  const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; user?: SysUser } | null>(null)
+  const [passwordUser, setPasswordUser] = useState<SysUser | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+
+  useEffect(() => () => {
+    if (avatarPreview?.startsWith('blob:')) URL.revokeObjectURL(avatarPreview)
+  }, [avatarPreview])
   const keyword = searchParams.get('keyword')?.trim() ?? ''
   const status = parseStatus(searchParams.get('status'))
+  const pageSize = parsePageSize(searchParams.get('pageSize'))
   const page = parsePage(searchParams.get('page'))
+  const orderParam = searchParams.get('createdAtOrder')
+  const createdAtOrder = orderParam === 'asc' || orderParam === 'desc' ? orderParam : undefined
   const usersQuery = useQuery({
-    queryKey: ['system-users', { page, pageSize: PAGE_SIZE, keyword, status }],
+    queryKey: ['system-users', { page, pageSize, keyword, status, createdAtOrder }],
     queryFn: () => getSysUsers({
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
       keyword: keyword || undefined,
       status,
+      createdAtOrder,
     }),
     placeholderData: keepPreviousData,
+  })
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: SysUserStatus }) => updateSysUserStatus(id, status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['system-users'] }),
+  })
+  const createMutation = useMutation({
+    mutationFn: async ({ input, avatarFile }: { input: CreateSysUserInput; avatarFile?: File }) => {
+      const user = await createSysUser(input)
+      return avatarFile ? uploadSysUserAvatar(user.id, avatarFile) : user
+    },
+    onSuccess: () => { setFormError(null); setAvatarPreview(null); setEditor(null); void queryClient.invalidateQueries({ queryKey: ['system-users'] }) },
+    onError: (error) => setFormError(getApiErrorMessage(error, '新增系统用户失败，请检查输入后重试。')),
+  })
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, input, avatarFile }: { id: number; input: UpdateSysUserInput; avatarFile?: File }) => {
+      const user = await updateSysUser(id, input)
+      return avatarFile ? uploadSysUserAvatar(user.id, avatarFile) : user
+    },
+    onSuccess: () => { setFormError(null); setAvatarPreview(null); setEditor(null); setSelectedUser(null); void queryClient.invalidateQueries({ queryKey: ['system-users'] }) },
+    onError: (error) => setFormError(getApiErrorMessage(error, '编辑系统用户失败，请检查输入后重试。')),
+  })
+  const passwordMutation = useMutation({
+    mutationFn: ({ id, password }: { id: number; password: string }) => resetSysUserPassword(id, password),
+    onSuccess: () => { setFormError(null); setPasswordUser(null) },
+    onError: (error) => setFormError(getApiErrorMessage(error, '重置密码失败，请检查输入后重试。')),
+  })
+  const deleteMutation = useMutation({
+    mutationFn: deleteSysUser,
+    onSuccess: () => { setSelectedUser(null); void queryClient.invalidateQueries({ queryKey: ['system-users'] }) },
   })
 
   const updateParams = (updates: Record<string, string | undefined>) => {
@@ -58,13 +157,6 @@ export default function SystemUsersPage() {
     setSearchParams(next, { replace: true })
   }
 
-  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    const nextKeyword = String(formData.get('keyword') ?? '').trim()
-    updateParams({ keyword: nextKeyword || undefined, page: undefined })
-  }
-
   const resetFilters = () => {
     setSearchParams(new URLSearchParams(), { replace: true })
   }
@@ -73,81 +165,155 @@ export default function SystemUsersPage() {
     updateParams({ page: nextPage <= 1 ? undefined : String(nextPage) })
   }
 
+  const changePageSize = (nextPageSize: number) => {
+    updateParams({ pageSize: nextPageSize === DEFAULT_PAGE_SIZE ? undefined : String(nextPageSize), page: undefined })
+  }
+
+  const changeCreatedAtOrder = () => {
+    updateParams({ createdAtOrder: createdAtOrder === undefined ? 'asc' : createdAtOrder === 'asc' ? 'desc' : undefined, page: undefined })
+  }
+
   const openDetails = (user: SysUser) => {
     setSelectedUser(user)
-    requestAnimationFrame(() => detailsDialogRef.current?.showModal())
+  }
+
+  const openEditor = (nextEditor: { mode: 'create' | 'edit'; user?: SysUser }) => {
+    setFormError(null)
+    setAvatarPreview(null)
+    setEditor(nextEditor)
+  }
+
+  const closeEditor = () => {
+    setFormError(null)
+    setAvatarPreview(null)
+    setEditor(null)
+  }
+
+  const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!AVATAR_TYPES.includes(file.type)) {
+      setFormError('头像仅支持 JPG、PNG 或 WEBP 格式')
+      event.target.value = ''
+      return
+    }
+    if (file.size > AVATAR_MAX_SIZE) {
+      setFormError('头像文件不能超过 2MB')
+      event.target.value = ''
+      return
+    }
+    setFormError(null)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
+
+  const openPasswordEditor = (user: SysUser) => {
+    setFormError(null)
+    setPasswordUser(user)
+  }
+
+  const closePasswordEditor = () => {
+    setFormError(null)
+    setPasswordUser(null)
+  }
+
+  const submitSysUserForm = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const values = readSysUserForm(event.currentTarget, editor?.mode === 'create')
+    if (typeof values === 'string') {
+      setFormError(values)
+      return
+    }
+
+    setFormError(null)
+    if (editor?.mode === 'create') {
+      createMutation.mutate({ input: { username: values.username, nickname: values.nickname, status: values.status!, password: values.password! }, avatarFile: values.avatarFile })
+      return
+    }
+    if (editor?.user) updateMutation.mutate({ id: editor.user.id, input: { username: values.username, nickname: values.nickname }, avatarFile: values.avatarFile })
+  }
+
+  const submitPasswordForm = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!passwordUser) return
+    const values = readPasswordForm(event.currentTarget)
+    if ('error' in values) {
+      setFormError(values.error)
+      return
+    }
+    setFormError(null)
+    passwordMutation.mutate({ id: passwordUser.id, password: values.password })
   }
 
   const result = usersQuery.data
-  const pageCount = Math.max(1, Math.ceil((result?.total ?? 0) / PAGE_SIZE))
   const records = result?.records ?? []
 
   return <div className={styles.page}>
-    <div className={styles.pageHeader}>
-      <div><h1>系统用户</h1><p>查询管理后台登录账号及当前状态</p></div>
-    </div>
+    <PaginatedListPanel
+      page={result?.page ?? page}
+      pageSize={pageSize}
+      pageSizeOptions={PAGE_SIZE_OPTIONS}
+      total={result?.total ?? 0}
+      loading={usersQuery.isPending}
+      onPageChange={changePage}
+      onPageSizeChange={changePageSize}
+      toolbar={<><ListFilters
+          keyword={keyword}
+          status={status === undefined ? 'all' : status === 1 ? '1' : '0'}
+          searchPlaceholder="搜索登录账号或昵称"
+          searchLabel="搜索系统用户"
+          onSearch={(value) => updateParams({ keyword: value || undefined, page: undefined })}
+          onStatusChange={(value) => updateParams({ status: value === 'all' ? undefined : value, page: undefined })}
+          onReset={resetFilters}
+          summary={usersQuery.isFetching && result ? '正在更新...' : `共 ${result?.total ?? 0} 个系统用户`}
+        /><AppButton variant="primary" icon={<Plus size={15} />} onClick={() => openEditor({ mode: 'create' })}>新增用户</AppButton></>}
+    >
+      <DataTable className={styles.table}>
+        <thead><tr><th>用户</th><th>账号</th>
+          <th aria-sort={createdAtOrder === 'asc' ? 'ascending' : createdAtOrder === 'desc' ? 'descending' : 'none'}>
+            <SortableDateHeader order={createdAtOrder} onClick={changeCreatedAtOrder} />
+          </th>
+          <th>状态</th><th>操作</th></tr></thead>
+        <tbody>
+          {usersQuery.isPending && <tr><td colSpan={5}><div className={styles.state}>正在加载系统用户...</div></td></tr>}
+          {usersQuery.isError && <tr><td colSpan={5}><div className={styles.state}><p role="alert">系统用户加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
+          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={5}><EmptyState description="没有符合当前条件的系统用户" /></td></tr>}
+          {records.map((user) => <tr key={user.id}>
+            <td><div className={styles.userCell}><Avatar size={40} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar><span><strong>{user.nickname}</strong></span></div></td>
+            <td><span className={styles.username}>{user.username}</span></td>
+            <td>{formatDateTime(user.createdAt)}</td>
+            <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
+            <td><div className={styles.rowActions}><button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button><button type="button" className={styles.statusButton} disabled={statusMutation.isPending} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}><Power size={15} />{user.status === 1 ? '停用' : '启用'}</button></div></td>
+          </tr>)}
+        </tbody>
+      </DataTable>
+    </PaginatedListPanel>
 
-    <Panel className={styles.listPanel}>
-      <div className={styles.toolbar}>
-        <form className={styles.searchForm} onSubmit={submitSearch} role="search">
-          <label className={styles.searchField}>
-            <Search size={16} aria-hidden="true" />
-            <input key={keyword} name="keyword" defaultValue={keyword} maxLength={30} placeholder="搜索登录账号或昵称" aria-label="搜索系统用户" />
-          </label>
-          <AppButton type="submit" variant="primary" icon={<Search size={15} />}>查询</AppButton>
-        </form>
-        <label className={styles.selectField}>
-          <span>状态</span>
-          <select value={status === undefined ? 'all' : String(status)} onChange={(event) => updateParams({ status: event.target.value === 'all' ? undefined : event.target.value, page: undefined })}>
-            <option value="all">全部状态</option>
-            <option value="1">正常</option>
-            <option value="0">已停用</option>
-          </select>
-        </label>
-        <AppButton variant="ghost" icon={<RotateCcw size={15} />} onClick={resetFilters}>重置</AppButton>
-        <span className={styles.resultCount}>{usersQuery.isFetching && result ? '正在更新...' : `共 ${result?.total ?? 0} 个系统用户`}</span>
-      </div>
-
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead><tr><th>系统用户</th><th>登录账号</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead>
-          <tbody>
-            {usersQuery.isPending && <tr><td colSpan={6}><div className={styles.state}>正在加载系统用户...</div></td></tr>}
-            {usersQuery.isError && <tr><td colSpan={6}><div className={styles.state}><p role="alert">系统用户加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
-            {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={6}><div className={styles.state}>没有符合当前条件的系统用户</div></td></tr>}
-            {records.map((user) => <tr key={user.id}>
-              <td><div className={styles.userCell}><span className={styles.avatar}>{getInitials(user)}</span><span><strong>{user.nickname}</strong><small>系统用户 ID：{user.id}</small></span></div></td>
-              <td><span className={styles.username}>{user.username}</span></td>
-              <td><StatusBadge tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusBadge></td>
-              <td>{formatDateTime(user.createdAt)}</td>
-              <td>{formatDateTime(user.updatedAt)}</td>
-              <td><button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button></td>
-            </tr>)}
-          </tbody>
-        </table>
-      </div>
-
-      <div className={styles.tableFooter}>
-        <span>第 {result?.page ?? page} 页，共 {pageCount} 页</span>
-        <div className={styles.pagination}>
-          <IconButton label="上一页" disabled={page <= 1 || usersQuery.isPending} onClick={() => changePage(page - 1)}><ChevronLeft size={17} /></IconButton>
-          <span>{result?.page ?? page}</span>
-          <IconButton label="下一页" disabled={page >= pageCount || usersQuery.isPending} onClick={() => changePage(page + 1)}><ChevronRight size={17} /></IconButton>
-        </div>
-      </div>
-    </Panel>
-
-    <dialog ref={detailsDialogRef} className={styles.dialog} onClose={() => setSelectedUser(null)}>
+    <Drawer open={selectedUser !== null} title="系统用户详情" subtitle={selectedUser && `系统用户 ID：${selectedUser.id}`} onClose={() => setSelectedUser(null)}>
       {selectedUser && <>
-        <div className={styles.dialogHeader}><div><h2>系统用户详情</h2><p>系统用户 ID：{selectedUser.id}</p></div><IconButton label="关闭" onClick={() => detailsDialogRef.current?.close()}><X size={18} /></IconButton></div>
-        <div className={styles.detailsIdentity}><span className={styles.detailsAvatar}>{getInitials(selectedUser)}</span><div><strong>{selectedUser.nickname}</strong><span>{selectedUser.username}</span></div><StatusBadge tone={selectedUser.status === 1 ? 'success' : 'danger'}>{selectedUser.status === 1 ? '正常' : '已停用'}</StatusBadge></div>
+        <div className={styles.detailsIdentity}><Avatar size={40} src={selectedUser.avatar ?? undefined}>{getInitials(selectedUser)}</Avatar><div><strong>{selectedUser.nickname}</strong><span>{selectedUser.username}</span></div><StatusBadge tone={selectedUser.status === 1 ? 'success' : 'danger'}>{selectedUser.status === 1 ? '正常' : '已停用'}</StatusBadge></div>
+        <div className={styles.detailsActions}><AppButton icon={<Pencil size={15} />} onClick={() => { setSelectedUser(null); openEditor({ mode: 'edit', user: selectedUser }) }}>编辑</AppButton><AppButton icon={<KeyRound size={15} />} onClick={() => { setSelectedUser(null); openPasswordEditor(selectedUser) }}>重置密码</AppButton><AppButton icon={<Trash2 size={15} />} disabled={deleteMutation.isPending} onClick={() => { if (window.confirm(`确定删除系统用户“${selectedUser.username}”吗？`)) deleteMutation.mutate(selectedUser.id) }}>{deleteMutation.isPending ? '删除中...' : '删除'}</AppButton></div>
         <dl className={styles.detailsGrid}>
           <div><dt>登录账号</dt><dd>{selectedUser.username}</dd></div>
           <div><dt>系统用户昵称</dt><dd>{selectedUser.nickname}</dd></div>
           <div><dt>创建时间</dt><dd>{formatDateTime(selectedUser.createdAt)}</dd></div>
-          <div><dt>更新时间</dt><dd>{formatDateTime(selectedUser.updatedAt)}</dd></div>
         </dl>
       </>}
-    </dialog>
+    </Drawer>
+
+    <Drawer open={editor !== null} title={editor?.mode === 'create' ? '新增系统用户' : '编辑系统用户'} onClose={closeEditor}>
+      {editor && <form className={styles.form} onSubmit={submitSysUserForm}>
+        <label>登录账号<input name="username" defaultValue={editor.user?.username} maxLength={USERNAME_MAX_LENGTH} required /></label>
+        <label>系统用户昵称<input name="nickname" defaultValue={editor.user?.nickname} maxLength={NICKNAME_MAX_LENGTH} required /></label>
+        {editor.mode === 'create' && <label>登录密码<input name="password" type="password" maxLength={PASSWORD_MAX_LENGTH} minLength={PASSWORD_MIN_LENGTH} required /></label>}
+        <div className={styles.avatarField}><span>头像</span><div className={styles.avatarPicker}><Avatar size={40} src={avatarPreview ?? editor.user?.avatar ?? undefined}>{editor.user ? getInitials(editor.user) : '头像'}</Avatar><label className={styles.fileButton}>选择图片<input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} /></label><small>支持 JPG、PNG、WEBP，最大 2MB</small></div></div>
+        {editor.mode === 'create' && <label>状态<select name="status" defaultValue="1"><option value="1">正常</option><option value="0">已停用</option></select></label>}
+        {formError && <p className={styles.formError} role="alert">{formError}</p>}
+        <div className={styles.formActions}><AppButton type="button" onClick={closeEditor}>取消</AppButton><AppButton type="submit" variant="primary" disabled={createMutation.isPending || updateMutation.isPending}>{createMutation.isPending || updateMutation.isPending ? '保存中...' : '保存'}</AppButton></div>
+      </form>}
+    </Drawer>
+
+    <Drawer open={passwordUser !== null} title="重置系统用户密码" subtitle={passwordUser?.username} onClose={closePasswordEditor}>
+      {passwordUser && <form className={styles.form} onSubmit={submitPasswordForm}><label>新密码<input name="password" type="password" minLength={PASSWORD_MIN_LENGTH} maxLength={PASSWORD_MAX_LENGTH} required autoFocus /></label>{formError && <p className={styles.formError} role="alert">{formError}</p>}<div className={styles.formActions}><AppButton type="button" onClick={closePasswordEditor}>取消</AppButton><AppButton type="submit" variant="primary" disabled={passwordMutation.isPending}>{passwordMutation.isPending ? '提交中...' : '确认重置'}</AppButton></div></form>}
+    </Drawer>
   </div>
 }

@@ -1,12 +1,50 @@
 :root {
+  /* Typography */
   --atlas-font-family-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --atlas-radius-sm: 6px;
-  --atlas-radius-md: 10px;
-  --atlas-control-height-md: 36px;
-  --atlas-header-height: 60px;
-  --atlas-sidebar-width: 240px;
-  --atlas-sidebar-collapsed-width: 72px;
+  --atlas-font-family-mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+
+  /* Fluid type scale */
+  --atlas-text-xs: clamp(0.6875rem, 0.67rem + 0.09vw, 0.75rem);
+  --atlas-text-sm: clamp(0.8125rem, 0.79rem + 0.11vw, 0.875rem);
+  --atlas-text-base: clamp(0.875rem, 0.85rem + 0.13vw, 0.9375rem);
+  --atlas-text-md: clamp(0.9375rem, 0.91rem + 0.14vw, 1rem);
+  --atlas-text-lg: clamp(1.0625rem, 1.02rem + 0.21vw, 1.1875rem);
+  --atlas-text-xl: clamp(1.25rem, 1.19rem + 0.31vw, 1.4375rem);
+  --atlas-text-2xl: clamp(1.5rem, 1.42rem + 0.42vw, 1.75rem);
+
+  /* Spacing scale */
+  --atlas-space-xs: 0.25rem;
+  --atlas-space-sm: 0.5rem;
+  --atlas-space-md: 0.75rem;
+  --atlas-space-lg: 1rem;
+  --atlas-space-xl: 1.5rem;
+  --atlas-space-2xl: 2rem;
+  --atlas-space-3xl: 3rem;
+
+  /* Radii */
+  --atlas-radius-xs: 0.25rem;
+  --atlas-radius-sm: 0.375rem;
+  --atlas-radius-md: 0.5rem;
+  --atlas-radius-lg: 0.75rem;
+  --atlas-radius-xl: 1rem;
+  --atlas-radius-pill: 999px;
+  --atlas-radius-circle: 50%;
+
+  /* Controls */
+  --atlas-control-height-sm: 2rem;
+  --atlas-control-height-md: 2.25rem;
+  --atlas-control-height-lg: 2.5rem;
+
+  /* Layout */
+  --atlas-header-height: 3.75rem;
+  --atlas-sidebar-width: 15rem;
+  --atlas-sidebar-collapsed-width: 4.5rem;
+
+  /* Z-index scale */
+  --atlas-z-base: 0;
+  --atlas-z-sidebar: 90;
   --atlas-z-header: 100;
   --atlas-z-popover: 120;
+  --atlas-z-modal: 130;
   --atlas-z-toast: 140;
 }

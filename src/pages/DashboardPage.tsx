@@ -18,10 +18,7 @@ export default function DashboardPage() {
   ]
 
   return <div className={styles.page}>
-    <div className={styles.pageIntro}>
-      <div><h1>早上好，林晓</h1><p>这是今天的业务概览，祝你工作顺利。</p></div>
-      <div className={styles.actions}><AppButton icon={<Download size={16} />}>导出报告</AppButton><AppButton variant="primary" icon={<Plus size={16} />}>新建项目</AppButton></div>
-    </div>
+    <div className={styles.actions}><AppButton icon={<Download size={16} />}>导出报告</AppButton><AppButton variant="primary" icon={<Plus size={16} />}>新建项目</AppButton></div>
 
     <div className={styles.metrics}>{metrics.map((metric) => <Panel key={metric.label} className={styles.metric}><span className={styles.secondary}>{metric.label}</span><div className={styles.metricValue}>{metric.value}</div><div className={styles.metricChange}><ArrowUpRight size={15} /> {metric.change}% <span>{metric.note}</span></div></Panel>)}</div>
 

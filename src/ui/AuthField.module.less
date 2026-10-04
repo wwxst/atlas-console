@@ -1,54 +1,57 @@
+/* ===== Auth Field ===== */
 .field {
   display: flex;
   align-items: center;
-  min-height: 48px;
+  min-height: 3rem;
   overflow: hidden;
-  padding: 0 14px;
+  padding: 0 var(--atlas-space-lg);
   border: 1px solid var(--atlas-color-border);
-  border-radius: 999px;
+  border-radius: var(--atlas-radius-pill);
   color: var(--atlas-color-text-primary);
   background: var(--atlas-color-bg-surface);
-  transition: border-color .16s ease, box-shadow .16s ease;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .field:focus-within {
   border-color: var(--atlas-color-brand);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--atlas-color-brand) 12%, transparent);
+  box-shadow: 0 0 0 3px var(--atlas-color-brand-soft);
 }
 
 .invalid,
 .invalid:focus-within {
   border-color: var(--atlas-color-danger);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--atlas-color-danger) 12%, transparent);
+  box-shadow: 0 0 0 3px var(--atlas-color-danger-soft);
 }
 
 .field :global(input) {
   width: 100%;
   min-width: 0;
-  height: 46px;
+  height: 2.875rem;
   padding: 0;
   border: 0;
   outline: 0;
   color: inherit;
   background: transparent;
-  font-size: 14px;
+  font-size: var(--atlas-text-md);
 }
 
 .field :global(input)::placeholder {
   color: var(--atlas-color-text-tertiary);
 }
 
+/* ===== Adornments ===== */
 .startAdornment,
 .endAdornment {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
+  color: var(--atlas-color-text-tertiary);
 }
 
 .startAdornment {
-  margin-right: 8px;
+  margin-right: var(--atlas-space-sm);
 }
 
 .endAdornment {
-  margin-left: 8px;
+  margin-left: var(--atlas-space-sm);
 }

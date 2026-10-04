@@ -1,13 +1,7 @@
-/* ===== Page Layout ===== */
-.page {
-  max-width: 90rem;
-  margin: 0 auto;
-}
-
-/* ===== Empty State ===== */
-.empty {
+.emptyState {
   display: grid;
   min-height: 14rem;
+  padding: var(--atlas-space-xl);
   place-items: center;
   align-content: center;
   gap: var(--atlas-space-md);
@@ -16,7 +10,13 @@
   text-align: center;
 }
 
-.empty p {
+.illustration {
+  display: block;
+  width: 112px;
+  height: 84px;
+}
+
+.emptyState p {
   margin: 0;
   line-height: 1.5;
 }

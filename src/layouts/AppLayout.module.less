@@ -1,15 +1,123 @@
-.shell { min-height: 100vh; background: var(--atlas-color-bg-page); }
-.sider { position: fixed; top: var(--atlas-header-height); bottom: 0; left: 0; z-index: calc(var(--atlas-z-header) - 1); display: flex; width: var(--atlas-sidebar-width); flex-direction: column; border-right: 1px solid var(--atlas-color-border); background: var(--atlas-color-bg-surface); transition: width .18s ease; }
-.siderCollapsed { width: var(--atlas-sidebar-collapsed-width); }
-.menu { display: grid; gap: 4px; padding: 16px 12px; }
-.menuItem { display: flex; align-items: center; width: 100%; min-height: 42px; padding: 0 12px; border: 0; border-radius: 7px; color: var(--atlas-color-text-secondary); background: transparent; cursor: pointer; font-size: 13px; text-align: left; }
-.menuItem:hover, .menuItemActive { color: var(--atlas-color-brand); background: var(--atlas-color-brand-soft); }
-.menuIcon { display: inline-flex; flex: 0 0 auto; margin-right: 10px; }
-.menuLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.siderCollapsed .menuItem { justify-content: center; padding: 0; }
-.siderCollapsed .menuIcon { margin-right: 0; }
-.siderCollapsed .menuLabel { display: none; }
-.siderFooter { position: absolute; right: 0; bottom: 0; left: 0; display: flex; justify-content: flex-end; padding: 12px; border-top: 1px solid var(--atlas-color-border); }
-.main { min-width: 0; min-height: 100vh; margin-left: var(--atlas-sidebar-width); padding-top: var(--atlas-header-height); transition: margin-left .18s ease; }
-.mainCollapsed { margin-left: var(--atlas-sidebar-collapsed-width); }
-.content { min-height: calc(100vh - var(--atlas-header-height)); padding: 28px 32px; background: var(--atlas-color-bg-page); }
+/* ===== Shell ===== */
+.shell {
+  min-height: 100vh;
+  background: var(--atlas-color-bg-page);
+}
+
+/* ===== Sidebar ===== */
+.sider {
+  position: fixed;
+  top: var(--atlas-header-height);
+  bottom: 0;
+  left: 0;
+  z-index: var(--atlas-z-sidebar);
+  display: flex;
+  width: var(--atlas-sidebar-width);
+  flex-direction: column;
+  border-right: 1px solid var(--atlas-color-border);
+  background: var(--atlas-color-bg-surface);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.siderCollapsed {
+  width: var(--atlas-sidebar-collapsed-width);
+}
+
+/* ===== Menu ===== */
+.menu {
+  display: grid;
+  gap: var(--atlas-space-xs);
+  padding: var(--atlas-space-lg) var(--atlas-space-md);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 2.625rem;
+  padding: 0 var(--atlas-space-md);
+  border: 0;
+  border-radius: var(--atlas-radius-md);
+  color: var(--atlas-color-text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font-size: var(--atlas-text-sm);
+  font-weight: 500;
+  text-align: left;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.menuItem:hover {
+  color: var(--atlas-color-text-primary);
+  background: var(--atlas-color-bg-hover);
+}
+
+.menuItemActive {
+  color: var(--atlas-color-brand);
+  background: var(--atlas-color-brand-soft);
+}
+
+.menuItemActive:hover {
+  background: var(--atlas-color-brand-soft);
+}
+
+.menuIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-right: var(--atlas-space-md);
+  transition: margin 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menuLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed state */
+.siderCollapsed .menuItem {
+  justify-content: center;
+  padding: 0;
+}
+
+.siderCollapsed .menuIcon {
+  margin-right: 0;
+}
+
+.siderCollapsed .menuLabel {
+  opacity: 0;
+  width: 0;
+}
+
+/* ===== Sidebar Footer ===== */
+.siderFooter {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--atlas-space-md);
+  border-top: 1px solid var(--atlas-color-border);
+}
+
+/* ===== Main Content Area ===== */
+.main {
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: var(--atlas-sidebar-width);
+  padding-top: var(--atlas-header-height);
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mainCollapsed {
+  margin-left: var(--atlas-sidebar-collapsed-width);
+}
+
+.content {
+  min-height: calc(100vh - var(--atlas-header-height));
+  padding: var(--atlas-space-2xl) var(--atlas-space-2xl);
+  background: var(--atlas-color-bg-page);
+}

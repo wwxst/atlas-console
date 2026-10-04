@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { AxiosError } from 'axios'
-import { getApiErrorMessage, requireApiData } from '../../src/services/api.ts'
+import { getApiErrorMessage, requireApiData, requireApiSuccess } from '../../src/services/api.ts'
 import { emitRequestError, subscribeRequestErrors } from '../../src/services/requestErrorBus.ts'
 
 function axiosError(status: number, code = 'ERR_BAD_RESPONSE') {
@@ -45,4 +45,17 @@ test('suppresses duplicate messages during the dedupe window', () => {
   emitRequestError(message)
   unsubscribe()
   assert.deepEqual(messages, [message])
+})
+
+test('accepts a successful mutation with null data but still rejects missing query data', () => {
+  assert.doesNotThrow(() => requireApiSuccess({ code: 200, msg: null, data: null }))
+  assert.throws(() => requireApiData({ code: 200, msg: '配置响应缺少数据', data: null }), /配置响应缺少数据/)
+})
+
+test('publishes a rejected mutation instead of treating null data as success', () => {
+  const messages: string[] = []
+  const unsubscribe = subscribeRequestErrors((message) => messages.push(message))
+  assert.throws(() => requireApiSuccess({ code: 40018, msg: '不能同时关闭所有认证渠道', data: null }), /不能同时关闭/)
+  unsubscribe()
+  assert.deepEqual(messages, ['不能同时关闭所有认证渠道'])
 })
