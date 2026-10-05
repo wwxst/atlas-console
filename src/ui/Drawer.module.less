@@ -23,6 +23,27 @@
   width: 52rem;
 }
 
+.drawer.centered:modal {
+  inset: 50% auto auto 50%;
+  width: min(36rem, calc(100vw - 2rem));
+  height: auto;
+  max-height: calc(100dvh - 2rem);
+  margin: 0;
+  border: 1px solid var(--atlas-color-border);
+  border-radius: var(--atlas-radius-lg);
+  transform: translate(-50%, -50%);
+  box-shadow: var(--atlas-shadow-modal);
+}
+
+.drawer.centered .header {
+  min-height: 3.5rem;
+  padding: 0 var(--atlas-space-lg);
+}
+
+.drawer.centered .body {
+  overflow-y: auto;
+}
+
 .header {
   display: flex;
   align-items: center;

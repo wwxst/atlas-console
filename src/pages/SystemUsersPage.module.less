@@ -143,6 +143,49 @@
   padding: var(--atlas-space-xl);
 }
 
+.form > label,
+.statusField {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--atlas-space-md);
+}
+
+.statusField {
+  display: grid;
+  grid-template-columns: 5.25rem minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.statusField legend {
+  float: left;
+  width: 5.25rem;
+  color: var(--atlas-color-text-secondary);
+  font-size: var(--atlas-text-sm);
+}
+
+.statusOptions {
+  display: flex;
+  align-items: center;
+  gap: var(--atlas-space-lg);
+}
+
+.statusOptions > label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--atlas-space-xs);
+  width: fit-content;
+  color: var(--atlas-color-text-secondary);
+  font-size: var(--atlas-text-sm);
+}
+
+.statusField input[type='radio'] {
+  accent-color: var(--atlas-color-brand);
+}
+
 .form label {
   display: grid;
   gap: var(--atlas-space-xs);

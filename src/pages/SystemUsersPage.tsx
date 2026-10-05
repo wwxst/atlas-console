@@ -49,6 +49,7 @@ interface SysUserFormValues {
   nickname: string
   status?: SysUserStatus
   password?: string
+  confirmPassword?: string
   avatarFile?: File
 }
 
@@ -58,6 +59,7 @@ function readSysUserForm(form: HTMLFormElement, includeCreateFields: boolean): S
   const nickname = String(data.get('nickname') ?? '').trim()
   const statusValue = String(data.get('status') ?? '')
   const password = String(data.get('password') ?? '')
+  const confirmPassword = String(data.get('confirmPassword') ?? '')
 
   if (!username) return '请输入登录账号'
   if (username.length > USERNAME_MAX_LENGTH) return `登录账号不能超过 ${USERNAME_MAX_LENGTH} 个字符`
@@ -67,6 +69,7 @@ function readSysUserForm(form: HTMLFormElement, includeCreateFields: boolean): S
   if (includeCreateFields && (!password.trim() || password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH)) {
     return `登录密码需为 ${PASSWORD_MIN_LENGTH} 到 ${PASSWORD_MAX_LENGTH} 个字符`
   }
+  if (includeCreateFields && password !== confirmPassword) return '两次输入的密码不一致'
   const avatarEntry = data.get('avatar')
   const avatarFile = avatarEntry instanceof File && avatarEntry.size > 0 ? avatarEntry : undefined
   if (avatarFile && !AVATAR_TYPES.includes(avatarFile.type)) return '头像仅支持 JPG、PNG 或 WEBP 格式'
@@ -77,6 +80,7 @@ function readSysUserForm(form: HTMLFormElement, includeCreateFields: boolean): S
     nickname,
     ...(statusValue === '0' || statusValue === '1' ? { status: Number(statusValue) as SysUserStatus } : {}),
     ...(includeCreateFields ? { password } : {}),
+    ...(includeCreateFields ? { confirmPassword } : {}),
     ...(avatarFile ? { avatarFile } : {}),
   }
 }
@@ -229,7 +233,7 @@ export default function SystemUsersPage() {
 
     setFormError(null)
     if (editor?.mode === 'create') {
-      createMutation.mutate({ input: { username: values.username, nickname: values.nickname, status: values.status!, password: values.password! }, avatarFile: values.avatarFile })
+      createMutation.mutate({ input: { username: values.username, nickname: values.nickname, status: values.status!, password: values.password! } })
       return
     }
     if (editor?.user) updateMutation.mutate({ id: editor.user.id, input: { username: values.username, nickname: values.nickname }, avatarFile: values.avatarFile })
@@ -249,7 +253,6 @@ export default function SystemUsersPage() {
 
   const result = usersQuery.data
   const records = result?.records ?? []
-
   return <div className={styles.page}>
     <PaginatedListPanel
       page={result?.page ?? page}
@@ -301,8 +304,8 @@ export default function SystemUsersPage() {
           <AppButton type="button" disabled={updateMutation.isPending} onClick={closeEditor}>取消</AppButton>
           <AppButton type="submit" variant="primary" disabled={updateMutation.isPending}>{updateMutation.isPending ? '保存中...' : '保存'}</AppButton>
         </> : <>
-          <AppButton type="button" icon={<KeyRound size={14} />} onClick={() => { setSelectedUser(null); openPasswordEditor(selectedUser) }}>重置密码</AppButton>
-          <AppButton type="button" variant="primary" icon={<Pencil size={14} />} onClick={() => openEditor({ mode: 'edit', user: selectedUser })}>编辑</AppButton>
+          <AppButton type="button" icon={<KeyRound size={14} />} onClick={(event) => { event.preventDefault(); setSelectedUser(null); openPasswordEditor(selectedUser) }}>重置密码</AppButton>
+          <AppButton type="button" variant="primary" icon={<Pencil size={14} />} onClick={(event) => { event.preventDefault(); openEditor({ mode: 'edit', user: selectedUser }) }}>编辑</AppButton>
         </>}>
           <UserDetailsSection title="基本信息">
             <UserDetailsField label="用户昵称" htmlFor={editor?.mode === 'edit' ? 'sys-detail-nickname' : undefined} full compact>{editor?.mode === 'edit' ? <input id="sys-detail-nickname" name="nickname" defaultValue={selectedUser.nickname} maxLength={NICKNAME_MAX_LENGTH} required autoFocus disabled={updateMutation.isPending} /> : selectedUser.nickname}</UserDetailsField>
@@ -315,13 +318,19 @@ export default function SystemUsersPage() {
       </form>}
     </Drawer>
 
-    <Drawer open={editor?.mode === 'create'} title="新增系统用户" onClose={closeEditor}>
+    <Drawer open={editor?.mode === 'create'} title="新增系统用户" centered onClose={closeEditor}>
       {editor?.mode === 'create' && <form className={styles.form} onSubmit={submitSysUserForm}>
-        <label>登录账号<input name="username" defaultValue={editor.user?.username} maxLength={USERNAME_MAX_LENGTH} required /></label>
-        <label>系统用户昵称<input name="nickname" defaultValue={editor.user?.nickname} maxLength={NICKNAME_MAX_LENGTH} required /></label>
-        {editor.mode === 'create' && <label>登录密码<input name="password" type="password" maxLength={PASSWORD_MAX_LENGTH} minLength={PASSWORD_MIN_LENGTH} required /></label>}
-        <div className={styles.avatarField}><span>头像</span><div className={styles.avatarPicker}><Avatar size={40} src={avatarPreview ?? editor.user?.avatar ?? undefined}>{editor.user ? getInitials(editor.user) : '头像'}</Avatar><label className={styles.fileButton}>选择图片<input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} /></label><small>支持 JPG、PNG、WEBP，最大 2MB</small></div></div>
-        {editor.mode === 'create' && <label>状态<select name="status" defaultValue="1"><option value="1">正常</option><option value="0">已停用</option></select></label>}
+        <label>用户昵称<input name="nickname" maxLength={NICKNAME_MAX_LENGTH} placeholder="请输入用户昵称" required /></label>
+        <label>登录账号<input name="username" maxLength={USERNAME_MAX_LENGTH} placeholder="请输入登录账号" required /></label>
+        <label>登录密码<input name="password" type="password" maxLength={PASSWORD_MAX_LENGTH} minLength={PASSWORD_MIN_LENGTH} placeholder="请输入登录密码" required /></label>
+        <label>确认密码<input name="confirmPassword" type="password" maxLength={PASSWORD_MAX_LENGTH} minLength={PASSWORD_MIN_LENGTH} placeholder="请再次输入登录密码" required /></label>
+        <fieldset className={styles.statusField}>
+          <legend>状态</legend>
+          <div className={styles.statusOptions}>
+            <label><input type="radio" name="status" value="1" defaultChecked />开启</label>
+            <label><input type="radio" name="status" value="0" />关闭</label>
+          </div>
+        </fieldset>
         {formError && <p className={styles.formError} role="alert">{formError}</p>}
         <div className={styles.formActions}><AppButton type="button" onClick={closeEditor}>取消</AppButton><AppButton type="submit" variant="primary" disabled={createMutation.isPending || updateMutation.isPending}>{createMutation.isPending || updateMutation.isPending ? '保存中...' : '保存'}</AppButton></div>
       </form>}

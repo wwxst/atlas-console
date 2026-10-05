@@ -38,7 +38,7 @@ export function UserDetailsDrawer({ user, onClose, onSaved }: { user: User; onCl
       <UserDetailsLayout id={user.id} name={name} avatar={user.avatar} initials={Array.from(name).slice(0, 2).join('')} actions={editing ? <>
         <AppButton type="button" disabled={mutation.isPending} onClick={cancelEdit}>取消</AppButton>
         <AppButton type="submit" variant="primary" disabled={mutation.isPending}>{mutation.isPending ? '保存中...' : '保存'}</AppButton>
-      </> : <AppButton type="button" variant="primary" icon={<Pencil size={14} />} onClick={() => setEditing(true)}>编辑</AppButton>}>
+      </> : <AppButton type="button" variant="primary" icon={<Pencil size={14} />} onClick={(event) => { event.preventDefault(); setEditing(true) }}>编辑</AppButton>}>
         <UserDetailsSection title="基本信息">
           <UserDetailsField label="用户昵称" htmlFor={editing ? nicknameId : undefined} full compact>{editing ? <input id={nicknameId} name="nickname" defaultValue={user.nickname ?? ''} maxLength={50} required autoFocus disabled={mutation.isPending} /> : user.nickname || '未设置'}</UserDetailsField>
           <UserDetailsField label="手机号" htmlFor={editing ? phoneId : undefined}>{editing ? <input id={phoneId} name="phone" type="tel" defaultValue={user.phone ?? ''} maxLength={11} pattern="1[0-9]{10}" disabled={mutation.isPending} /> : user.phone || '未绑定'}</UserDetailsField>
