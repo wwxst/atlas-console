@@ -7,7 +7,7 @@ const { updateUser, updateUserStatus } = await import('../../src/features/users/
 
 test('admin edits ordinary user contacts directly and receives the saved user', async () => {
   const input = { nickname: '用户昵称', phone: '13800138000', email: null }
-  const saved = { id: 9, ...input, status: 1, createdAt: '2026-10-02T10:05:00', updatedAt: '2026-10-05T10:05:00' }
+  const saved = { id: 9, userNo: '583729', ...input, status: 1, createdAt: '2026-10-02T10:05:00', updatedAt: '2026-10-05T10:05:00' }
   http.defaults.adapter = async (config) => {
     assert.equal(config.method, 'put')
     assert.equal(config.url, '/sys-user/users/9')

@@ -28,7 +28,7 @@ function parseStatus(value: string | null): UserStatus | undefined {
 }
 
 function getDisplayName(user: User): string {
-  return user.nickname || user.phone || user.email || `用户 ${user.id}`
+  return user.nickname || user.phone || user.email || `用户 ${user.userNo}`
 }
 
 function getInitials(user: User): string {
@@ -115,7 +115,7 @@ export default function UsersPage() {
       toolbar={<ListFilters
         keyword={keyword}
         status={status === undefined ? 'all' : status === 1 ? '1' : '0'}
-        searchPlaceholder="搜索手机号、邮箱或昵称"
+        searchPlaceholder="搜索用户ID、手机号、邮箱或昵称"
         searchLabel="搜索用户"
         onSearch={(value) => updateParams({ keyword: value || undefined, page: undefined })}
         onStatusChange={(value) => updateParams({ status: value === 'all' ? undefined : value, page: undefined })}
@@ -123,16 +123,17 @@ export default function UsersPage() {
       />}
     >
       <DataTable className={styles.table}>
-        <thead><tr><th>用户</th><th>手机</th><th>邮箱</th>
+        <thead><tr><th>用户ID</th><th>用户</th><th>手机</th><th>邮箱</th>
           <th aria-sort={createdAtOrder === 'asc' ? 'ascending' : createdAtOrder === 'desc' ? 'descending' : 'none'}>
             <SortableDateHeader order={createdAtOrder} onClick={changeCreatedAtOrder} />
           </th>
           <th>状态</th><th>操作</th></tr></thead>
         <tbody>
-          {usersQuery.isPending && <tr><td colSpan={6}><div className={styles.state}>正在加载用户列表...</div></td></tr>}
-          {usersQuery.isError && <tr><td colSpan={6}><div className={styles.state}><p role="alert">用户列表加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
-          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={6}><EmptyState description="没有符合当前条件的用户" /></td></tr>}
+          {usersQuery.isPending && <tr><td colSpan={7}><div className={styles.state}>正在加载用户列表...</div></td></tr>}
+          {usersQuery.isError && <tr><td colSpan={7}><div className={styles.state}><p role="alert">用户列表加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
+          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={7}><EmptyState description="没有符合当前条件的用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
+            <td className={styles.userId}>{user.userNo}</td>
             <td><div className={styles.userCell}><Avatar size={40} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar><span><strong>{getDisplayName(user)}</strong></span></div></td>
             <td><span className={styles.contact}>{user.phone || '未绑定'}</span></td>
             <td><span className={styles.contact}>{user.email || '未绑定'}</span></td>

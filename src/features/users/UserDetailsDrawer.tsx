@@ -19,7 +19,7 @@ export function UserDetailsDrawer({ user, onClose, onSaved }: { user: User; onCl
     mutationFn: (input: UpdateUserInput) => updateUser(user.id, input),
     onSuccess: (saved) => { setEditing(false); setError(null); onSaved(saved) },
   })
-  const name = user.nickname || user.phone || user.email || `用户 ${user.id}`
+  const name = user.nickname || user.phone || user.email || `用户 ${user.userNo}`
   const cancelEdit = () => { formRef.current?.reset(); setEditing(false); setError(null) }
   const save = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -35,7 +35,7 @@ export function UserDetailsDrawer({ user, onClose, onSaved }: { user: User; onCl
   }
   return <Drawer open title="用户详情" size="wide" onClose={onClose}>
     <form id={formId} ref={formRef} onSubmit={save}>
-      <UserDetailsLayout id={user.id} name={name} avatar={user.avatar} initials={Array.from(name).slice(0, 2).join('')} actions={editing ? <>
+      <UserDetailsLayout id={user.userNo} name={name} avatar={user.avatar} initials={Array.from(name).slice(0, 2).join('')} actions={editing ? <>
         <AppButton type="button" disabled={mutation.isPending} onClick={cancelEdit}>取消</AppButton>
         <AppButton type="submit" variant="primary" disabled={mutation.isPending}>{mutation.isPending ? '保存中...' : '保存'}</AppButton>
       </> : <AppButton type="button" variant="primary" icon={<Pencil size={14} />} onClick={(event) => { event.preventDefault(); setEditing(true) }}>编辑</AppButton>}>

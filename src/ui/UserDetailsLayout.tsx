@@ -3,7 +3,7 @@ import { Avatar } from './index'
 import styles from './UserDetailsLayout.module.less'
 
 interface UserDetailsLayoutProps {
-  id: number
+  id: number | string
   name: string
   avatar?: string | null
   initials: string

@@ -6,6 +6,7 @@ export type UserStatus = 0 | 1
 
 export interface User {
   id: number
+  userNo: string
   phone?: string | null
   email?: string | null
   nickname?: string | null
