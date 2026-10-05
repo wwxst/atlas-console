@@ -1,8 +1,8 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Eye, RotateCcw } from 'lucide-react'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Eye, Power, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getUsers } from '@/features/users/api'
+import { getUsers, updateUserStatus } from '@/features/users/api'
 import type { User, UserStatus } from '@/features/users/api'
 import { UserDetailsDrawer } from '@/features/users/UserDetailsDrawer'
 import { AppButton, Avatar, DataTable, EmptyState, ListFilters, PaginatedListPanel, SortableDateHeader, StatusIndicator } from '@ui/index'
@@ -60,6 +60,14 @@ export default function UsersPage() {
       createdAtOrder,
     }),
     placeholderData: keepPreviousData,
+  })
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: UserStatus }) => updateUserStatus(id, status),
+    onSuccess: async (_, { id, status }) => {
+      setSelectedUser((current) => current?.id === id ? { ...current, status } : current)
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
   })
 
   const updateParams = (updates: Record<string, string | undefined>) => {
@@ -130,7 +138,12 @@ export default function UsersPage() {
             <td><span className={styles.contact}>{user.email || '未绑定'}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
             <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
-            <td><button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button></td>
+            <td><div className={styles.rowActions}>
+              <button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button>
+              <button type="button" className={styles.statusButton} disabled={statusMutation.isPending} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}>
+                <Power size={15} />{statusMutation.isPending && statusMutation.variables?.id === user.id ? '处理中...' : user.status === 1 ? '停用' : '启用'}
+              </button>
+            </div></td>
           </tr>)}
         </tbody>
       </DataTable>

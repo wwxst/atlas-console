@@ -69,6 +69,11 @@ The system-user page groups the avatar and nickname in the user column and uses 
 
 ## Application Shell
 
+The ordinary-user table provides view and enable/disable actions. `PATCH /sys-user/users/{id}/status`
+sets status to 0 or 1, accepts successful void responses, and rejects failed business responses through
+the global Chinese Toast. Status actions are disabled during a mutation and list refetch; successful
+changes update an open detail's status and invalidate all ordinary-user list queries, including status filters.
+
 ```text
 AppLayout
 |-- TopBar: brand, global search, theme, notifications, account

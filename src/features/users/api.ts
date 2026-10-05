@@ -1,4 +1,4 @@
-import { requireApiData } from '../../services/api.ts'
+import { requireApiData, requireApiSuccess } from '../../services/api.ts'
 import type { ApiResult, PageResult } from '../../services/api.ts'
 import { http } from '../../services/http.ts'
 
@@ -32,6 +32,11 @@ export interface UpdateUserInput {
 export async function updateUser(id: number, input: UpdateUserInput): Promise<User> {
   const response = await http.put<ApiResult<User>>(`/sys-user/users/${id}`, input)
   return requireApiData(response.data)
+}
+
+export async function updateUserStatus(id: number, status: UserStatus): Promise<void> {
+  const response = await http.patch<ApiResult<null>>(`/sys-user/users/${id}/status`, { status })
+  requireApiSuccess(response.data)
 }
 
 export async function getUsers(query: UserQuery): Promise<PageResult<User>> {
