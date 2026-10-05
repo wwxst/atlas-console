@@ -98,9 +98,28 @@
   bottom: 0;
   left: 0;
   display: flex;
-  justify-content: flex-end;
-  padding: var(--atlas-space-md);
+  align-items: center;
+  justify-content: flex-start;
+  padding: var(--atlas-space-md) var(--atlas-space-md) var(--atlas-space-md) 0;
   border-top: 1px solid var(--atlas-color-border);
+}
+
+.siderCollapsed .siderFooter {
+  flex-direction: column;
+  gap: var(--atlas-space-sm);
+  padding: var(--atlas-space-md);
+}
+
+.siderFooter > button:first-child {
+  flex: 1;
+}
+
+.collapseButton {
+  flex: 0 0 auto;
+}
+
+.siderCollapsed .siderFooter > button:first-child {
+  flex: 0 0 auto;
 }
 
 /* ===== Main Content Area ===== */
@@ -118,6 +137,6 @@
 
 .content {
   min-height: calc(100vh - var(--atlas-header-height));
-  padding: var(--atlas-space-2xl) var(--atlas-space-2xl);
+  padding: 12px 12px var(--atlas-space-xl);
   background: var(--atlas-color-bg-page);
 }

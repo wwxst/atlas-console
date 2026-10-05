@@ -1,7 +1,7 @@
 /* ===== Page Layout ===== */
 .page {
-  max-width: 90rem;
-  margin: 0 auto;
+  width: 100%;
+  min-width: 0;
 }
 
 /* ===== Table ===== */
@@ -22,7 +22,7 @@
 }
 
 .table th:last-child {
-  width: 5.625rem;
+  width: 13.5rem;
 }
 
 /* ===== User Cell ===== */
@@ -80,9 +80,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.125rem;
+  white-space: nowrap;
 }
 
-.statusButton {
+.statusButton,
+.deleteButton {
   display: inline-flex;
   align-items: center;
   gap: var(--atlas-space-xs);
@@ -97,12 +99,18 @@
   font-weight: 500;
 }
 
-.statusButton:hover:not(:disabled) {
+.deleteButton {
+  color: var(--atlas-color-danger);
+}
+
+.statusButton:hover:not(:disabled),
+.deleteButton:hover:not(:disabled) {
   color: var(--atlas-color-danger);
   background: var(--atlas-color-danger-soft);
 }
 
-.statusButton:disabled {
+.statusButton:disabled,
+.deleteButton:disabled {
   cursor: wait;
   opacity: 0.5;
 }
@@ -122,64 +130,6 @@
   margin: 0;
 }
 
-/* ===== Details Identity ===== */
-.detailsIdentity {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--atlas-space-md);
-  padding: var(--atlas-space-xl);
-  border-bottom: 1px solid var(--atlas-color-border);
-}
-
-.detailsIdentity div > strong,
-.detailsIdentity div > span {
-  display: block;
-  line-height: 1.4;
-}
-
-.detailsIdentity strong {
-  font-size: var(--atlas-text-md);
-  font-weight: 600;
-}
-
-.detailsIdentity div > span {
-  margin-top: var(--atlas-space-xs);
-  color: var(--atlas-color-text-tertiary);
-  font-size: var(--atlas-text-sm);
-}
-
-/* ===== Details Grid ===== */
-.detailsGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--atlas-space-xl) var(--atlas-space-2xl);
-  margin: 0;
-  padding: var(--atlas-space-xl);
-}
-
-.detailsGrid div {
-  min-width: 0;
-}
-
-.detailsGrid dt {
-  color: var(--atlas-color-text-tertiary);
-  font-size: var(--atlas-text-xs);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  line-height: 1.4;
-}
-
-.detailsGrid dd {
-  margin: var(--atlas-space-sm) 0 0;
-  overflow-wrap: anywhere;
-  color: var(--atlas-color-text-primary);
-  font-size: var(--atlas-text-sm);
-  line-height: 1.5;
-}
-
-.detailsActions,
 .formActions {
   display: flex;
   flex-wrap: wrap;
@@ -253,12 +203,12 @@
   color: var(--atlas-color-text-primary);
   background: var(--atlas-color-bg-subtle);
   font: inherit;
+  transition: border-color 140ms ease-out;
 }
 
 .form input:focus,
 .form select:focus {
-  outline: 2px solid var(--atlas-color-brand-soft);
-  border-color: var(--atlas-color-brand);
+  border-color: var(--atlas-color-border-focus);
 }
 
 .formActions {

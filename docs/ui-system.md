@@ -33,8 +33,9 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 - Buttons expose clear variants and preserve native button attributes.
 - Icon-only buttons require an accessible label and visible hover tooltip through `title` or a future tooltip primitive.
 - Form controls require labels, keyboard access, focus treatment, disabled behavior, and error messaging.
+- Input, search, and select controls indicate focus with a 1 px border using `--atlas-color-border-focus`, a muted blue defined for each theme, and a 140 ms border-color transition. Keep the border width and control dimensions stable between states. Do not add focus shadows, glow, or outer rings; invalid fields use a danger-colored border without a shadow. Hover must not override the focused border color. Forms that highlight focus within also use the focus border token without a focus shadow. Keep the existing keyboard focus outlines for buttons and switches.
 - `AuthField` is a style-only field shell. Features own the actual input content, labels, validation, and business-specific adornments.
-- `Toast` is a controlled, fixed-position status surface. Features own visibility and dismissal timing; the component owns the shared visual treatment and live-region semantics. `RequestErrorToast` is the application-level host for all request failures: it uses the danger tone, stays at the top center, dismisses after 4 seconds, and suppresses identical messages within a short dedupe window.
+- `Toast` is a controlled, fixed-position status surface in the browser's top layer (`popover="manual"`), so request failures remain visible above modal drawers without taking focus. Features own visibility and dismissal timing; the component owns the shared visual treatment and live-region semantics. `RequestErrorToast` is the application-level host for all request failures: it uses the danger tone, stays at the top center, dismisses after 4 seconds, and suppresses identical messages within a short dedupe window.
 - Request error fallbacks are Chinese: 401 means “登录状态已失效，请重新登录”, 403 means “没有权限执行此操作”, 404 means “请求的资源不存在”, 408/timeout means “请求超时，请稍后重试”, 429 means “请求过于频繁，请稍后重试”, 5xx means “服务暂时不可用，请稍后重试”, and other network failures mean “网络异常，请检查连接后重试”. A valid backend business message takes precedence.
 - Dialogs, menus, selects, date controls, and other complex widgets require deliberate focus and keyboard behavior; use a focused headless primitive dependency when implementing them correctly would otherwise dominate product work.
 - Keep component dimensions stable so labels, icons, loading states, and dynamic content do not shift surrounding layout.
@@ -44,7 +45,7 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 - Light and dark modes switch through `data-theme` on the document root.
 - Components consume semantic tokens such as `--atlas-color-bg-surface` and `--atlas-color-text-primary`, not raw theme-specific colors.
 - `tokens.css` owns theme-independent values; `light.css` and `dark.css` own their respective theme values; `index.css` is the public theme entrypoint.
-- `--atlas-color-bg-login` is the light-gray backdrop for the login page (and future standalone auth screens): `#f2f3f5` in light mode, following `--atlas-color-bg-page` in dark mode.
+- `--atlas-color-bg-login` is the dedicated backdrop for standalone auth screens: `#F3F4F6` in light mode and `#0A0D12` in dark mode.
 - Brand, success, warning, and danger communicate different meanings and must remain visually distinguishable.
 - New tokens must represent a reusable design decision, not a one-off component value.
 
@@ -62,7 +63,9 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 - Open notification and account panels on pointer hover or explicit activation; keep the panel open while the pointer is inside it.
 - Start the sidebar below the top bar. Use a 240 px expanded width and a 72 px user-collapsed width.
 - Keep route-specific titles, descriptions, and actions inside page content rather than repeating them in the global top bar.
+- Page roots fill the available content width without a centered maximum-width cap. The shell owns the outer spacing: 12 px at the top and both sides, with `--atlas-space-xl` bottom padding; pages do not add extra side margins. Keep this behavior when the sidebar is collapsed and on wide desktop screens.
 - Change sidebar width only through the explicit collapse control, not through viewport breakpoints.
+- The sidebar footer centers an unboxed 20 px SVG package icon and the version from `package.json` in `--atlas-text-md` in the space between the sidebar's left edge and the collapse button, without a secondary caption or badge background. Keep the collapse control at the right. Activating the version opens a nonmodal popover with the current version and a GitHub release/changelog link. Native popover dismissal supports outside clicks and Escape; opening focuses the close control and Escape restores the trigger focus. In the collapsed sidebar, keep a labeled version icon above the expand control. Do not claim the latest-version status or expose update/rollback actions without a real update source.
 
 ## Current Top-Bar Interaction
 
@@ -74,3 +77,4 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 
 - List pages should provide a route-level title and description, a primary action, compact filters, a count, a semantic table, and pagination when the dataset needs it.
 - Use feature-local dialogs for details and creation when the workflow needs them. Reset a cancelled creation form so reopening starts from a clean draft.
+- User details use a 52rem wide drawer and shared `UserDetailsLayout` with a top identity summary, upper-right edit/cancel/save actions, and separate basic/account sections. Keep labels and values aligned horizontally with Chinese colons; nickname inputs are at most 260px wide and occupy one row. ID is shown only as `用户ID：N` beneath the name. Do not show a status badge beside the name or add a user-type field. Account status and creation time remain read-only text during editing. Creation and password-reset forms retain the default drawer width.

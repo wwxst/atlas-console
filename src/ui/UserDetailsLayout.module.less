@@ -1,0 +1,59 @@
+.identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--atlas-space-md);
+  padding: var(--atlas-space-xl) var(--atlas-space-2xl);
+}
+
+.person {
+  flex: 1;
+  min-width: 7rem;
+}
+
+.person strong,
+.person span { display: block; overflow-wrap: anywhere; }
+.person strong { font-size: var(--atlas-text-md); font-weight: 600; }
+.person span { margin-top: var(--atlas-space-xs); color: var(--atlas-color-text-tertiary); font-size: var(--atlas-text-sm); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--atlas-space-sm); margin-left: auto; }
+
+.strip {
+  padding: var(--atlas-space-md) var(--atlas-space-2xl);
+  border-bottom: 1px solid var(--atlas-color-border);
+  color: var(--atlas-color-brand);
+  background: var(--atlas-color-bg-subtle);
+  font-size: var(--atlas-text-sm);
+  font-weight: 500;
+}
+
+.content { padding: 0 var(--atlas-space-2xl) var(--atlas-space-xl); }
+.section { padding: var(--atlas-space-xl) 0; border-bottom: 1px dashed var(--atlas-color-border); }
+.section:last-child { border-bottom: 0; }
+.section h3 {
+  margin: 0 0 var(--atlas-space-xl);
+  padding-left: var(--atlas-space-sm);
+  border-left: 3px solid var(--atlas-color-brand);
+  font-size: var(--atlas-text-sm);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--atlas-space-lg) var(--atlas-space-xl); margin: 0; }
+.field { display: grid; grid-template-columns: 5rem minmax(0, 1fr); align-items: center; gap: var(--atlas-space-sm); min-width: 0; font-size: var(--atlas-text-sm); }
+.field dt { color: var(--atlas-color-text-secondary); }
+.field dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.full { grid-column: 1 / -1; }
+.compact dd { max-width: 260px; }
+.field input,
+.field select {
+  width: 100%;
+  min-height: var(--atlas-control-height-md);
+  padding: 0 var(--atlas-space-md);
+  border: 1px solid var(--atlas-color-border);
+  border-radius: var(--atlas-radius-sm);
+  color: var(--atlas-color-text-primary);
+  background: var(--atlas-color-bg-surface);
+  font: inherit;
+}
+.field input:focus,
+.field select:focus { border-color: var(--atlas-color-border-focus); }
+.field input:disabled { color: var(--atlas-color-text-disabled); background: var(--atlas-color-bg-subtle); }

@@ -124,13 +124,12 @@
   border-radius: var(--atlas-radius-pill);
   color: var(--atlas-color-text-tertiary);
   background: var(--atlas-color-bg-subtle);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 140ms ease-out, background-color 140ms ease-out;
 }
 
 .search:focus-within {
-  border-color: var(--atlas-color-brand);
+  border-color: var(--atlas-color-border-focus);
   background: var(--atlas-color-bg-surface);
-  box-shadow: 0 0 0 3px var(--atlas-color-brand-soft);
 }
 
 .search input {
@@ -308,6 +307,10 @@
   box-shadow: inset 0 -1px 0 var(--atlas-color-border);
 }
 
+.listToolbar > .button_primary {
+  margin-left: auto;
+}
+
 .listFooter {
   display: flex;
   align-items: center;
@@ -382,13 +385,14 @@
   appearance: none;
   height: 2rem;
   padding: 0 2rem 0 var(--atlas-space-md);
-  border: 0;
+  border: 1px solid transparent;
   border-radius: var(--atlas-radius-xs);
   outline: 0;
   color: var(--atlas-color-text-primary);
   background: var(--atlas-color-bg-canvas);
   font-size: var(--atlas-text-sm);
   cursor: pointer;
+  transition: border-color 140ms ease-out;
 }
 
 .pageSizeArrow {
@@ -399,7 +403,7 @@
 }
 
 .pageSizeSelect select:focus {
-  box-shadow: 0 0 0 2px var(--atlas-color-brand-soft);
+  border-color: var(--atlas-color-border-focus);
 }
 
 .listPagination button:disabled {
@@ -430,6 +434,11 @@
   object-fit: cover;
 }
 
+.avatarExtraLarge {
+  width: 3.125rem;
+  height: 3.125rem;
+}
+
 .avatarLarge {
   flex-basis: 40px;
   width: 40px;
@@ -456,12 +465,11 @@
   border-radius: var(--atlas-radius-md);
   color: var(--atlas-color-text-tertiary);
   background: var(--atlas-color-bg-surface);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 140ms ease-out;
 }
 
 .filterSearchField:focus-within {
-  border-color: var(--atlas-color-brand);
-  box-shadow: 0 0 0 3px var(--atlas-color-brand-soft);
+  border-color: var(--atlas-color-border-focus);
 }
 
 .filterSearchField input {
@@ -500,7 +508,7 @@
   background: var(--atlas-color-bg-surface);
   font-size: var(--atlas-text-sm);
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 140ms ease-out;
 }
 
 .filterSelectControl {
@@ -517,18 +525,11 @@
 }
 
 .filterSelectField select:focus {
-  border-color: var(--atlas-color-brand);
-  box-shadow: 0 0 0 3px var(--atlas-color-brand-soft);
+  border-color: var(--atlas-color-border-focus);
 }
 
-.filterSelectField select:hover {
+.filterSelectField select:hover:not(:focus) {
   border-color: var(--atlas-color-border-strong);
-}
-
-.filterSummary {
-  margin-left: auto;
-  color: var(--atlas-color-text-tertiary);
-  font-size: var(--atlas-text-sm);
 }
 
 

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowUpRight, Download, MoreHorizontal, Plus } from 'lucide-react'
+import { ArrowUpRight, MoreHorizontal } from 'lucide-react'
 import { getDashboardSummary, getRecentActivity } from '@/features/dashboard/api'
 import { AppButton, IconButton, Panel, ProgressBar, StatusBadge } from '@ui/index'
 import styles from './DashboardPage.module.less'
@@ -18,8 +18,6 @@ export default function DashboardPage() {
   ]
 
   return <div className={styles.page}>
-    <div className={styles.actions}><AppButton icon={<Download size={16} />}>导出报告</AppButton><AppButton variant="primary" icon={<Plus size={16} />}>新建项目</AppButton></div>
-
     <div className={styles.metrics}>{metrics.map((metric) => <Panel key={metric.label} className={styles.metric}><span className={styles.secondary}>{metric.label}</span><div className={styles.metricValue}>{metric.value}</div><div className={styles.metricChange}><ArrowUpRight size={15} /> {metric.change}% <span>{metric.note}</span></div></Panel>)}</div>
 
     <div className={styles.mainGrid}>

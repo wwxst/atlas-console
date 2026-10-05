@@ -1,6 +1,9 @@
 /* ===== Toast ===== */
 .toast {
   position: fixed;
+  inset: auto;
+  margin: 0;
+  width: max-content;
   z-index: var(--atlas-z-toast);
   left: 50%;
   display: inline-flex;
@@ -22,6 +25,8 @@
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
+
+.toast:not(:popover-open) { display: none; }
 
 .toast_top_center {
   top: var(--atlas-space-xl);

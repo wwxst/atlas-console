@@ -1,15 +1,15 @@
-import { requireApiData } from '@/services/api'
-import type { ApiResult, PageResult } from '@/services/api'
-import { http } from '@/services/http'
+import { requireApiData } from '../../services/api.ts'
+import type { ApiResult, PageResult } from '../../services/api.ts'
+import { http } from '../../services/http.ts'
 
 export type UserStatus = 0 | 1
 
 export interface User {
   id: number
-  phone?: string
-  email?: string
-  nickname?: string
-  avatar?: string
+  phone?: string | null
+  email?: string | null
+  nickname?: string | null
+  avatar?: string | null
   status: UserStatus
   createdAt: string
   updatedAt: string
@@ -21,6 +21,17 @@ export interface UserQuery {
   keyword?: string
   status?: UserStatus
   createdAtOrder?: 'asc' | 'desc'
+}
+
+export interface UpdateUserInput {
+  nickname: string
+  phone: string | null
+  email: string | null
+}
+
+export async function updateUser(id: number, input: UpdateUserInput): Promise<User> {
+  const response = await http.put<ApiResult<User>>(`/sys-user/users/${id}`, input)
+  return requireApiData(response.data)
 }
 
 export async function getUsers(query: UserQuery): Promise<PageResult<User>> {

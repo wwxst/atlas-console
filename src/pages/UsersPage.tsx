@@ -1,10 +1,11 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Eye, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getUsers } from '@/features/users/api'
 import type { User, UserStatus } from '@/features/users/api'
-import { AppButton, Avatar, DataTable, Drawer, EmptyState, ListFilters, PaginatedListPanel, SortableDateHeader, StatusBadge, StatusIndicator } from '@ui/index'
+import { UserDetailsDrawer } from '@/features/users/UserDetailsDrawer'
+import { AppButton, Avatar, DataTable, EmptyState, ListFilters, PaginatedListPanel, SortableDateHeader, StatusIndicator } from '@ui/index'
 import styles from './UsersPage.module.less'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -30,11 +31,6 @@ function getDisplayName(user: User): string {
   return user.nickname || user.phone || user.email || `用户 ${user.id}`
 }
 
-function getContactInfo(user: User): string {
-  if (user.phone && user.email) return `${user.phone} · ${user.email}`
-  return user.phone || user.email || '未绑定联系方式'
-}
-
 function getInitials(user: User): string {
   return Array.from(getDisplayName(user)).slice(0, 2).join('').toUpperCase()
 }
@@ -45,6 +41,7 @@ function formatDateTime(value: string): string {
 }
 
 export default function UsersPage() {
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const keyword = searchParams.get('keyword')?.trim() ?? ''
@@ -103,6 +100,7 @@ export default function UsersPage() {
       pageSize={pageSize}
       pageSizeOptions={PAGE_SIZE_OPTIONS}
       total={result?.total ?? 0}
+      totalUnit="个用户"
       loading={usersQuery.isPending}
       onPageChange={changePage}
       onPageSizeChange={changePageSize}
@@ -114,7 +112,6 @@ export default function UsersPage() {
         onSearch={(value) => updateParams({ keyword: value || undefined, page: undefined })}
         onStatusChange={(value) => updateParams({ status: value === 'all' ? undefined : value, page: undefined })}
         onReset={resetFilters}
-        summary={usersQuery.isFetching && result ? '正在更新...' : `共 ${result?.total ?? 0} 个用户`}
       />}
     >
       <DataTable className={styles.table}>
@@ -128,7 +125,7 @@ export default function UsersPage() {
           {usersQuery.isError && <tr><td colSpan={6}><div className={styles.state}><p role="alert">用户列表加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
           {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={6}><EmptyState description="没有符合当前条件的用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
-            <td><div className={styles.userCell}><Avatar size={40} src={user.avatar}>{getInitials(user)}</Avatar><span><strong>{getDisplayName(user)}</strong></span></div></td>
+            <td><div className={styles.userCell}><Avatar size={40} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar><span><strong>{getDisplayName(user)}</strong></span></div></td>
             <td><span className={styles.contact}>{user.phone || '未绑定'}</span></td>
             <td><span className={styles.contact}>{user.email || '未绑定'}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
@@ -139,17 +136,9 @@ export default function UsersPage() {
       </DataTable>
     </PaginatedListPanel>
 
-    <Drawer open={selectedUser !== null} title="用户详情" subtitle={selectedUser && `用户 ID：${selectedUser.id}`} onClose={() => setSelectedUser(null)}>
-      {selectedUser && <>
-        <div className={styles.detailsIdentity}><Avatar size={40} src={selectedUser.avatar}>{getInitials(selectedUser)}</Avatar><div><strong>{getDisplayName(selectedUser)}</strong><span>{getContactInfo(selectedUser)}</span></div><StatusBadge tone={selectedUser.status === 1 ? 'success' : 'danger'}>{selectedUser.status === 1 ? '正常' : '已停用'}</StatusBadge></div>
-        <dl className={styles.detailsGrid}>
-          <div><dt>用户昵称</dt><dd>{selectedUser.nickname || '未设置'}</dd></div>
-          <div><dt>手机号</dt><dd>{selectedUser.phone || '未绑定'}</dd></div>
-          <div><dt>邮箱</dt><dd>{selectedUser.email || '未绑定'}</dd></div>
-          <div><dt>头像</dt><dd>{selectedUser.avatar ? '已设置' : '未设置'}</dd></div>
-          <div><dt>创建时间</dt><dd>{formatDateTime(selectedUser.createdAt)}</dd></div>
-        </dl>
-      </>}
-    </Drawer>
+    {selectedUser && <UserDetailsDrawer key={selectedUser.id} user={selectedUser} onClose={() => setSelectedUser(null)} onSaved={(saved) => {
+      setSelectedUser((current) => current?.id === saved.id ? saved : current)
+      void queryClient.invalidateQueries({ queryKey: ['users'] })
+    }} />}
   </div>
 }

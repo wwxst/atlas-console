@@ -8,6 +8,7 @@ export { Toast } from './Toast'
 export type { ToastProps } from './Toast'
 export { RequestErrorToast } from './RequestErrorToast'
 export { Drawer } from './Drawer'
+export { UserDetailsLayout, UserDetailsSection, UserDetailsField } from './UserDetailsLayout'
 export { EmptyState } from './EmptyState'
 export { SortableDateHeader } from './SortableDateHeader'
 export type { SortOrder } from './SortableDateHeader'
@@ -22,8 +23,8 @@ export function IconButton({ label, children, className, ...props }: ButtonHTMLA
   return <button {...props} aria-label={label} title={label} className={[styles.iconButton, className].filter(Boolean).join(' ')}>{children}</button>
 }
 
-export function Avatar({ src, children, size = 32 }: { src?: string; children?: ReactNode; size?: 32 | 40 }) {
-  return <span className={[styles.avatar, size === 40 && styles.avatarLarge].filter(Boolean).join(' ')} aria-hidden="true">{src ? <img src={src} alt="" /> : children ?? <User size={size === 40 ? 22 : 18} />}</span>
+export function Avatar({ src, children, size = 32 }: { src?: string; children?: ReactNode; size?: 32 | 40 | 50 }) {
+  return <span className={[styles.avatar, size === 40 && styles.avatarLarge, size === 50 && styles.avatarExtraLarge].filter(Boolean).join(' ')} aria-hidden="true">{src ? <img src={src} alt="" /> : children ?? <User size={size >= 40 ? 22 : 18} />}</span>
 }
 
 export function DataTable({ children, className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
@@ -35,13 +36,12 @@ interface ListFiltersProps {
   status: 'all' | '0' | '1'
   searchPlaceholder: string
   searchLabel: string
-  summary: ReactNode
   onSearch: (keyword: string) => void
   onStatusChange: (status: 'all' | '0' | '1') => void
   onReset: () => void
 }
 
-export function ListFilters({ keyword, status, searchPlaceholder, searchLabel, summary, onSearch, onStatusChange, onReset }: ListFiltersProps) {
+export function ListFilters({ keyword, status, searchPlaceholder, searchLabel, onSearch, onStatusChange, onReset }: ListFiltersProps) {
   return <>
     <form className={styles.filterSearchForm} role="search" onSubmit={(event) => {
       event.preventDefault()
@@ -65,7 +65,6 @@ export function ListFilters({ keyword, status, searchPlaceholder, searchLabel, s
       <AppButton type="submit" variant="primary" icon={<Search size={15} />}>查询</AppButton>
     </form>
     <AppButton variant="ghost" icon={<RotateCcw size={15} />} onClick={onReset}>重置</AppButton>
-    <span className={styles.filterSummary}>{summary}</span>
   </>
 }
 
@@ -99,6 +98,7 @@ interface PaginatedListPanelProps {
   pageSize: number
   pageSizeOptions?: number[]
   total: number
+  totalUnit?: string
   loading: boolean
   onPageChange: (page: number) => void
   onPageSizeChange?: (pageSize: number) => void
@@ -112,7 +112,7 @@ function getPageItems(page: number, pageCount: number): Array<number | 'ellipsis
   return [1, ...(start > 2 ? ['ellipsis' as const] : []), ...Array.from({ length: end - start + 1 }, (_, index) => start + index), ...(end < pageCount - 1 ? ['ellipsis' as const] : []), pageCount]
 }
 
-export function PaginatedListPanel({ toolbar, children, page, pageSize, pageSizeOptions = [10, 20, 50], total, loading, onPageChange, onPageSizeChange }: PaginatedListPanelProps) {
+export function PaginatedListPanel({ toolbar, children, page, pageSize, pageSizeOptions = [10, 20, 50], total, totalUnit = '条', loading, onPageChange, onPageSizeChange }: PaginatedListPanelProps) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const pageItems = getPageItems(page, pageCount)
 
@@ -120,7 +120,7 @@ export function PaginatedListPanel({ toolbar, children, page, pageSize, pageSize
     <div className={styles.listToolbar}>{toolbar}</div>
     <div className={styles.listTableWrap}>{children}</div>
     <div className={styles.listFooter}>
-      <span className={styles.listTotal}>共 {total} 条</span>
+      <span className={styles.listTotal}>共 {total} {totalUnit}</span>
       <nav className={styles.listPagination} aria-label="列表分页">
         <IconButton label="上一页" disabled={page <= 1 || loading} onClick={() => onPageChange(page - 1)}><ChevronLeft size={16} /></IconButton>
         {pageItems.map((item, index) => item === 'ellipsis'

@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom'
 import { createSysUser, deleteSysUser, getSysUsers, resetSysUserPassword, updateSysUser, updateSysUserStatus, uploadSysUserAvatar } from '@/features/systemUsers/api'
 import type { CreateSysUserInput, SysUser, SysUserStatus, UpdateSysUserInput } from '@/features/systemUsers/api'
 import { getApiErrorMessage } from '@/services/api'
-import { AppButton, Avatar, DataTable, Drawer, EmptyState, ListFilters, PaginatedListPanel, SortableDateHeader, StatusBadge, StatusIndicator } from '@ui/index'
+import { AppButton, Avatar, DataTable, Drawer, EmptyState, ListFilters, PaginatedListPanel, SortableDateHeader, StatusIndicator, UserDetailsLayout, UserDetailsField, UserDetailsSection } from '@ui/index'
 import styles from './SystemUsersPage.module.less'
 
 const DEFAULT_PAGE_SIZE = 20
@@ -106,7 +106,7 @@ export default function SystemUsersPage() {
   const pageSize = parsePageSize(searchParams.get('pageSize'))
   const page = parsePage(searchParams.get('page'))
   const orderParam = searchParams.get('createdAtOrder')
-  const createdAtOrder = orderParam === 'asc' || orderParam === 'desc' ? orderParam : undefined
+  const createdAtOrder = orderParam === 'desc' ? 'desc' : 'asc'
   const usersQuery = useQuery({
     queryKey: ['system-users', { page, pageSize, keyword, status, createdAtOrder }],
     queryFn: () => getSysUsers({
@@ -135,8 +135,7 @@ export default function SystemUsersPage() {
       const user = await updateSysUser(id, input)
       return avatarFile ? uploadSysUserAvatar(user.id, avatarFile) : user
     },
-    onSuccess: () => { setFormError(null); setAvatarPreview(null); setEditor(null); setSelectedUser(null); void queryClient.invalidateQueries({ queryKey: ['system-users'] }) },
-    onError: (error) => setFormError(getApiErrorMessage(error, '编辑系统用户失败，请检查输入后重试。')),
+    onSuccess: (saved) => { setFormError(null); setAvatarPreview(null); setEditor(null); setSelectedUser((current) => current?.id === saved.id ? saved : current); void queryClient.invalidateQueries({ queryKey: ['system-users'] }) },
   })
   const passwordMutation = useMutation({
     mutationFn: ({ id, password }: { id: number; password: string }) => resetSysUserPassword(id, password),
@@ -170,10 +169,13 @@ export default function SystemUsersPage() {
   }
 
   const changeCreatedAtOrder = () => {
-    updateParams({ createdAtOrder: createdAtOrder === undefined ? 'asc' : createdAtOrder === 'asc' ? 'desc' : undefined, page: undefined })
+    updateParams({ createdAtOrder: createdAtOrder === 'asc' ? 'desc' : undefined, page: undefined })
   }
 
   const openDetails = (user: SysUser) => {
+    setEditor(null)
+    setFormError(null)
+    setAvatarPreview(null)
     setSelectedUser(user)
   }
 
@@ -218,6 +220,7 @@ export default function SystemUsersPage() {
 
   const submitSysUserForm = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (createMutation.isPending || updateMutation.isPending) return
     const values = readSysUserForm(event.currentTarget, editor?.mode === 'create')
     if (typeof values === 'string') {
       setFormError(values)
@@ -253,6 +256,7 @@ export default function SystemUsersPage() {
       pageSize={pageSize}
       pageSizeOptions={PAGE_SIZE_OPTIONS}
       total={result?.total ?? 0}
+      totalUnit="个用户"
       loading={usersQuery.isPending}
       onPageChange={changePage}
       onPageSizeChange={changePageSize}
@@ -264,7 +268,6 @@ export default function SystemUsersPage() {
           onSearch={(value) => updateParams({ keyword: value || undefined, page: undefined })}
           onStatusChange={(value) => updateParams({ status: value === 'all' ? undefined : value, page: undefined })}
           onReset={resetFilters}
-          summary={usersQuery.isFetching && result ? '正在更新...' : `共 ${result?.total ?? 0} 个系统用户`}
         /><AppButton variant="primary" icon={<Plus size={15} />} onClick={() => openEditor({ mode: 'create' })}>新增用户</AppButton></>}
     >
       <DataTable className={styles.table}>
@@ -282,26 +285,38 @@ export default function SystemUsersPage() {
             <td><span className={styles.username}>{user.username}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
             <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
-            <td><div className={styles.rowActions}><button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button><button type="button" className={styles.statusButton} disabled={statusMutation.isPending} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}><Power size={15} />{user.status === 1 ? '停用' : '启用'}</button></div></td>
+            <td><div className={styles.rowActions}>
+              <button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button>
+              <button type="button" className={styles.statusButton} disabled={statusMutation.isPending} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}><Power size={15} />{user.status === 1 ? '停用' : '启用'}</button>
+              <button type="button" className={styles.deleteButton} disabled={deleteMutation.isPending} onClick={() => { if (window.confirm(`确定删除系统用户“${user.username}”吗？`)) deleteMutation.mutate(user.id) }}><Trash2 size={15} />{deleteMutation.isPending && deleteMutation.variables === user.id ? '删除中...' : '删除'}</button>
+            </div></td>
           </tr>)}
         </tbody>
       </DataTable>
     </PaginatedListPanel>
 
-    <Drawer open={selectedUser !== null} title="系统用户详情" subtitle={selectedUser && `系统用户 ID：${selectedUser.id}`} onClose={() => setSelectedUser(null)}>
-      {selectedUser && <>
-        <div className={styles.detailsIdentity}><Avatar size={40} src={selectedUser.avatar ?? undefined}>{getInitials(selectedUser)}</Avatar><div><strong>{selectedUser.nickname}</strong><span>{selectedUser.username}</span></div><StatusBadge tone={selectedUser.status === 1 ? 'success' : 'danger'}>{selectedUser.status === 1 ? '正常' : '已停用'}</StatusBadge></div>
-        <div className={styles.detailsActions}><AppButton icon={<Pencil size={15} />} onClick={() => { setSelectedUser(null); openEditor({ mode: 'edit', user: selectedUser }) }}>编辑</AppButton><AppButton icon={<KeyRound size={15} />} onClick={() => { setSelectedUser(null); openPasswordEditor(selectedUser) }}>重置密码</AppButton><AppButton icon={<Trash2 size={15} />} disabled={deleteMutation.isPending} onClick={() => { if (window.confirm(`确定删除系统用户“${selectedUser.username}”吗？`)) deleteMutation.mutate(selectedUser.id) }}>{deleteMutation.isPending ? '删除中...' : '删除'}</AppButton></div>
-        <dl className={styles.detailsGrid}>
-          <div><dt>登录账号</dt><dd>{selectedUser.username}</dd></div>
-          <div><dt>系统用户昵称</dt><dd>{selectedUser.nickname}</dd></div>
-          <div><dt>创建时间</dt><dd>{formatDateTime(selectedUser.createdAt)}</dd></div>
-        </dl>
-      </>}
+    <Drawer open={selectedUser !== null} title="系统用户详情" size="wide" onClose={() => { setSelectedUser(null); closeEditor() }}>
+      {selectedUser && <form onSubmit={submitSysUserForm}>
+        <UserDetailsLayout id={selectedUser.id} name={selectedUser.nickname} avatar={avatarPreview ?? selectedUser.avatar} initials={getInitials(selectedUser)} actions={editor?.mode === 'edit' ? <>
+          <AppButton type="button" disabled={updateMutation.isPending} onClick={closeEditor}>取消</AppButton>
+          <AppButton type="submit" variant="primary" disabled={updateMutation.isPending}>{updateMutation.isPending ? '保存中...' : '保存'}</AppButton>
+        </> : <>
+          <AppButton type="button" icon={<KeyRound size={14} />} onClick={() => { setSelectedUser(null); openPasswordEditor(selectedUser) }}>重置密码</AppButton>
+          <AppButton type="button" variant="primary" icon={<Pencil size={14} />} onClick={() => openEditor({ mode: 'edit', user: selectedUser })}>编辑</AppButton>
+        </>}>
+          <UserDetailsSection title="基本信息">
+            <UserDetailsField label="用户昵称" htmlFor={editor?.mode === 'edit' ? 'sys-detail-nickname' : undefined} full compact>{editor?.mode === 'edit' ? <input id="sys-detail-nickname" name="nickname" defaultValue={selectedUser.nickname} maxLength={NICKNAME_MAX_LENGTH} required autoFocus disabled={updateMutation.isPending} /> : selectedUser.nickname}</UserDetailsField>
+            <UserDetailsField label="登录账号" htmlFor={editor?.mode === 'edit' ? 'sys-detail-username' : undefined}>{editor?.mode === 'edit' ? <input id="sys-detail-username" name="username" defaultValue={selectedUser.username} maxLength={USERNAME_MAX_LENGTH} required disabled={updateMutation.isPending} /> : selectedUser.username}</UserDetailsField>
+            {editor?.mode === 'edit' && <UserDetailsField label="头像" full><div className={styles.avatarPicker}><Avatar size={40} src={avatarPreview ?? selectedUser.avatar ?? undefined}>{getInitials(selectedUser)}</Avatar><label className={styles.fileButton}>选择图片<input name="avatar" type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} disabled={updateMutation.isPending} /></label><small>支持 JPG、PNG、WEBP，最大 2MB</small></div></UserDetailsField>}
+          </UserDetailsSection>
+          <UserDetailsSection title="账号信息"><UserDetailsField label="用户状态">{selectedUser.status === 1 ? '正常' : '已停用'}</UserDetailsField><UserDetailsField label="创建时间">{formatDateTime(selectedUser.createdAt)}</UserDetailsField></UserDetailsSection>
+          {formError && editor?.mode === 'edit' && <p className={styles.formError} role="alert">{formError}</p>}
+        </UserDetailsLayout>
+      </form>}
     </Drawer>
 
-    <Drawer open={editor !== null} title={editor?.mode === 'create' ? '新增系统用户' : '编辑系统用户'} onClose={closeEditor}>
-      {editor && <form className={styles.form} onSubmit={submitSysUserForm}>
+    <Drawer open={editor?.mode === 'create'} title="新增系统用户" onClose={closeEditor}>
+      {editor?.mode === 'create' && <form className={styles.form} onSubmit={submitSysUserForm}>
         <label>登录账号<input name="username" defaultValue={editor.user?.username} maxLength={USERNAME_MAX_LENGTH} required /></label>
         <label>系统用户昵称<input name="nickname" defaultValue={editor.user?.nickname} maxLength={NICKNAME_MAX_LENGTH} required /></label>
         {editor.mode === 'create' && <label>登录密码<input name="password" type="password" maxLength={PASSWORD_MAX_LENGTH} minLength={PASSWORD_MIN_LENGTH} required /></label>}

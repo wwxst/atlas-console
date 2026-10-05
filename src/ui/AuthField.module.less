@@ -9,18 +9,16 @@
   border-radius: var(--atlas-radius-pill);
   color: var(--atlas-color-text-primary);
   background: var(--atlas-color-bg-surface);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 140ms ease-out;
 }
 
 .field:focus-within {
-  border-color: var(--atlas-color-brand);
-  box-shadow: 0 0 0 3px var(--atlas-color-brand-soft);
+  border-color: var(--atlas-color-border-focus);
 }
 
 .invalid,
 .invalid:focus-within {
   border-color: var(--atlas-color-danger);
-  box-shadow: 0 0 0 3px var(--atlas-color-danger-soft);
 }
 
 .field :global(input) {

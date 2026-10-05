@@ -7,7 +7,7 @@ import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, loginSysUser } from '@/f
 import type { LoginInput } from '@/features/auth/api'
 import { clearAuthTokens, saveAuthTokens } from '@/services/http'
 import { AppButton, AuthField, IconButton, Toast } from '@ui/index'
-import loginVisual from '@/assets/login-visual.png'
+import loginOrbit from '@/assets/login-orbit.svg'
 import styles from './LoginPage.module.less'
 
 interface LoginLocationState {
@@ -73,8 +73,12 @@ export default function LoginPage() {
   }
 
   return <main className={styles.page}>
-    <aside className={styles.visualPanel} aria-hidden="true">
-      <img src={loginVisual} alt="" />
+    <aside className={styles.visualPanel}>
+      <div className={styles.visualContent}>
+        <h1>Atlas Console<br />运营管理平台</h1>
+        <p>集中管理用户、数据与系统设置</p>
+        <img className={styles.visualIllustration} src={loginOrbit} alt="" aria-hidden="true" />
+      </div>
     </aside>
     <section className={styles.loginPanel}>
       <div className={styles.logo} role="img" aria-label="Atlas Console 运营平台">

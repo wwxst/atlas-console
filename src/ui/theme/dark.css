@@ -31,6 +31,7 @@
   --atlas-color-border: rgba(255, 255, 255, 0.08);
   --atlas-color-border-strong: rgba(255, 255, 255, 0.12);
   --atlas-color-border-subtle: rgba(255, 255, 255, 0.04);
+  --atlas-color-border-focus: #779BD6;
 
   /* Semantic colors */
   --atlas-color-success: #23C55E;
