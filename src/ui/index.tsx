@@ -19,6 +19,10 @@ export function AppButton({ variant = 'secondary', icon, children, className, ..
   return <button {...props} className={[styles.button, styles[`button_${variant}`], className].filter(Boolean).join(' ')}>{icon && <span className={styles.buttonIcon}>{icon}</span>}{children}</button>
 }
 
+export function FormField({ label, htmlFor, required = false, children }: { label: ReactNode; htmlFor?: string; required?: boolean; children: ReactNode }) {
+  return <div className={styles.formField}><label className={styles.formFieldLabel} htmlFor={htmlFor}>{required && <span className={styles.formRequired} aria-hidden="true">*</span>}{label}<span aria-hidden="true">：</span></label><div className={styles.formFieldControl}>{children}</div></div>
+}
+
 export function IconButton({ label, children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return <button {...props} aria-label={label} title={label} className={[styles.iconButton, className].filter(Boolean).join(' ')}>{children}</button>
 }

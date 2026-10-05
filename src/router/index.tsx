@@ -6,6 +6,7 @@ import PlaceholderPage from '@/pages/PlaceholderPage'
 import SystemUsersPage from '@/pages/SystemUsersPage'
 import UsersPage from '@/pages/UsersPage'
 import SettingsPage from '@/pages/SettingsPage'
+import StorageSettingsPage from '@/pages/StorageSettingsPage'
 import RequireAdmin from './RequireAdmin'
 
 export default function AppRouter() {
@@ -19,6 +20,7 @@ export default function AppRouter() {
         <Route path="/team" element={<Navigate to="/system-users" replace />} />
         <Route path="/profile" element={<PlaceholderPage description="个人资料和账号安全设置将在这里展开。" />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/settings/storage" element={<StorageSettingsPage />} />
       </Route>
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />

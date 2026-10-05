@@ -1,0 +1,208 @@
+.toolbarActions {
+  display: flex;
+  gap: var(--atlas-space-md);
+}
+
+.syncButton {
+  border-color: var(--atlas-color-success);
+  color: var(--atlas-color-text-inverse);
+  background: var(--atlas-color-success);
+}
+
+.configureButton {
+  margin-left: auto;
+}
+
+.table {
+  table-layout: fixed;
+  min-width: 860px;
+}
+
+.table th {
+  background: var(--atlas-color-brand-soft);
+}
+
+.table th:nth-child(1) { width: 14%; }
+.table th:nth-child(2) { width: 9%; }
+.table th:nth-child(3) { width: 17%; }
+.table th:nth-child(4) { width: 10%; }
+.table th:nth-child(5),
+.table th:nth-child(6) { width: 16%; }
+.table th:nth-child(7) { width: 18%; }
+
+.tableCaption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.empty {
+  color: var(--atlas-color-text-tertiary);
+  text-align: center;
+}
+
+.table .domain {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.table td:first-child,
+.table td:nth-child(2) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.time {
+  white-space: nowrap;
+  font-size: var(--atlas-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.statusToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 5px 3px 3px;
+  border-radius: var(--atlas-radius-pill);
+  color: var(--atlas-color-text-secondary);
+  background: var(--atlas-color-bg-active);
+}
+
+.statusToggle > span {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: var(--atlas-radius-circle);
+  background: var(--atlas-color-bg-surface);
+}
+
+.statusToggle small {
+  font-size: var(--atlas-text-xs);
+  line-height: 1;
+}
+
+.statusToggleOn {
+  flex-direction: row-reverse;
+  color: var(--atlas-color-text-inverse);
+  background: var(--atlas-color-brand);
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--atlas-space-sm);
+}
+
+.rowActions button {
+  color: var(--atlas-color-brand);
+  font-size: var(--atlas-text-xs);
+}
+
+.rowActions button:hover {
+  text-decoration: underline;
+}
+
+.statusToggle:focus-visible,
+.rowActions button:focus-visible {
+  outline: 2px solid var(--atlas-color-brand);
+  outline-offset: 3px;
+}
+
+.previewNote {
+  margin-top: var(--atlas-space-sm);
+  color: var(--atlas-color-text-tertiary);
+  font-size: var(--atlas-text-sm);
+}
+
+.form {
+  display: grid;
+  gap: var(--atlas-space-xl);
+  padding: var(--atlas-space-xl);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--atlas-space-md);
+}
+
+.formRow > label,
+.permissionRow legend {
+  text-align: right;
+  white-space: nowrap;
+  font-size: var(--atlas-text-sm);
+}
+
+.required {
+  margin-right: var(--atlas-space-xs);
+  color: var(--atlas-color-danger);
+}
+
+.form input:not([type='radio']),
+.form select {
+  width: 100%;
+  min-width: 0;
+  height: var(--atlas-control-height-lg);
+  padding: 0 var(--atlas-space-md);
+  border: 1px solid var(--atlas-color-border-strong);
+  border-radius: var(--atlas-radius-sm);
+  background: var(--atlas-color-bg-surface);
+  transition: border-color 140ms ease;
+}
+
+.form input:focus,
+.form select:focus {
+  border-color: var(--atlas-color-border-focus);
+}
+
+.permissionRow {
+  border: 0;
+}
+
+.permissionRow legend {
+  float: left;
+  width: 8.5rem;
+  margin-right: var(--atlas-space-md);
+}
+
+.permissionRow > div,
+.permissionRow label {
+  display: flex;
+  align-items: center;
+  gap: var(--atlas-space-sm);
+}
+
+.permissionRow > div {
+  flex-wrap: wrap;
+  gap: var(--atlas-space-md);
+}
+
+.permissionRow label {
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: var(--atlas-text-sm);
+}
+
+.permissionRow input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--atlas-color-brand);
+}
+
+.formNote {
+  color: var(--atlas-color-text-tertiary);
+  font-size: var(--atlas-text-sm);
+}
+
+.formError {
+  color: var(--atlas-color-danger);
+  font-size: var(--atlas-text-sm);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--atlas-space-md);
+}

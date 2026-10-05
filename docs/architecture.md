@@ -83,6 +83,10 @@ AppLayout
 
 `AppLayout` owns only persistent application chrome. Pages retain ownership of route-specific headings and actions. The sidebar becomes an icon rail only when the user explicitly collapses it.
 
+The sidebar's `系统设置` group expands to `认证配置` at `/settings` and `存储配置` at `/settings/storage`. The group uses a native disclosure button; child routes retain their own active state and labeled icons when the sidebar is collapsed. Existing `/settings` links continue to open authentication settings.
+
+`StorageSettingsPage` is a frontend-only configuration preview. A general tab selects local storage or Qiniu, Alibaba, Tencent, JD, Huawei, or Tianyi cloud storage, with thumbnail and watermark settings. Each provider tab shows its setup guidance and a paginated storage-space table through the page-local `StorageProviderPanel`. The table includes name, region, domain, status, creation/update times, domain editing, and deletion. It starts empty; adding a space, toggling status, editing its domain, and deleting it operate only on explicitly labeled preview state. Duplicate names within one provider are rejected. `修改配置信息` opens a two-field credentials modal; credential saving and space synchronization stay disabled until APIs are implemented. Adding a space requires provider credentials, a name, and a region. Alibaba's add dialog uses the eight region choices in the supplied reference and public-read (default) or public-read-write permissions, retained in the preview row; these choices are not live service discovery. Domain editing remains a separate row action. Cancelling and reopening addition clears its draft. The `tab` URL parameter owns the active tab; switching tabs preserves independent provider previews and configuration drafts without writing credentials to browser storage. Notice dismissal is independent per tab. The preview does not configure uploads, create real cloud buckets, generate thumbnails, or apply watermarks; do not treat its defaults as the deployment's effective configuration.
+
 ## Data Flow
 
 1. A page or feature calls a typed query or mutation hook.

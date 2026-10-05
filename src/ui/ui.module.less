@@ -78,6 +78,48 @@
   flex-shrink: 0;
 }
 
+/* ===== Shared Form Fields ===== */
+.formField {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--atlas-space-md);
+}
+
+.formFieldLabel {
+  color: var(--atlas-color-text-secondary);
+  font-size: var(--atlas-text-sm);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.formRequired {
+  margin-right: var(--atlas-space-xs);
+  color: var(--atlas-color-danger);
+}
+
+.formFieldControl {
+  min-width: 0;
+}
+
+.formFieldControl > input,
+.formFieldControl > select {
+  width: 100%;
+  min-height: var(--atlas-control-height-md);
+  padding: 0 var(--atlas-space-md);
+  border: 1px solid var(--atlas-color-border);
+  border-radius: var(--atlas-radius-sm);
+  color: var(--atlas-color-text-primary);
+  background: var(--atlas-color-bg-subtle);
+  font: inherit;
+  transition: border-color 140ms ease-out;
+}
+
+.formFieldControl > input:focus,
+.formFieldControl > select:focus {
+  border-color: var(--atlas-color-border-focus);
+}
+
 /* ===== Icon Button ===== */
 .iconButton {
   display: inline-grid;
