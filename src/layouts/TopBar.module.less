@@ -87,6 +87,36 @@
   position: relative;
 }
 
+.iconAction {
+  --icon-bounce-duration: 120ms;
+}
+
+.iconGlyph > svg,
+.accountButton > svg,
+.desktopSearch svg {
+  stroke-width: 1.2;
+}
+
+.iconGlyph {
+  display: inline-flex;
+  transform: scale(1);
+  transform-origin: center;
+}
+
+@keyframes iconFocusShrink {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(0.3);
+  }
+}
+
+.iconGlyphMotion {
+  animation: iconFocusShrink var(--icon-bounce-duration) ease-in-out;
+}
+
 /* ===== Notification ===== */
 .notificationDot {
   position: absolute;

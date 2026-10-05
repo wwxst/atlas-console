@@ -261,6 +261,7 @@ export default function SystemUsersPage() {
       total={result?.total ?? 0}
       totalUnit="个用户"
       loading={usersQuery.isPending}
+      refreshing={usersQuery.isFetching && !usersQuery.isPending}
       onPageChange={changePage}
       onPageSizeChange={changePageSize}
       toolbar={<><ListFilters

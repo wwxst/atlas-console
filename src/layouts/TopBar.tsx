@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, ChevronDown, LogOut, Moon, Settings, Sun, User } from 'lucide-react'
+import type { ComponentProps, ReactNode } from 'react'
+import { useIsFetching, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Bell, ChevronDown, LogOut, Moon, RotateCw, Settings, Sun, User } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getNotifications } from '@/features/notifications/api'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, logoutSysUser } from '@/features/auth/api'
@@ -11,6 +12,21 @@ import styles from './TopBar.module.less'
 
 type OpenPanel = 'notifications' | 'account' | null
 
+function HeaderIconButton({ icon, children, ...props }: ComponentProps<typeof IconButton> & { icon: ReactNode }) {
+  const [animating, setAnimating] = useState(false)
+
+  return <IconButton {...props} className={styles.iconAction}
+    onMouseEnter={() => setAnimating(true)}
+    onMouseLeave={() => setAnimating(false)}
+    onFocus={(event) => { if (event.currentTarget.matches(':focus-visible')) setAnimating(true) }}
+    onPointerDown={() => setAnimating(false)}
+    onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') setAnimating(false) }}
+  >
+    <span aria-hidden="true" className={[styles.iconGlyph, animating ? styles.iconGlyphMotion : ''].filter(Boolean).join(' ')} onAnimationEnd={() => setAnimating(false)}>{icon}</span>
+    {children}
+  </IconButton>
+}
+
 export default function TopBar() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -18,6 +34,7 @@ export default function TopBar() {
   const theme = useAppStore((state) => state.theme)
   const setTheme = useAppStore((state) => state.setTheme)
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
+  const isRefreshing = useIsFetching({ type: 'active' }) > 0
   const [searchValue, setSearchValue] = useState(() => new URLSearchParams(location.search).get('q') ?? '')
   const controlsRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -74,6 +91,12 @@ export default function TopBar() {
     }, 150)
   }
 
+  const handleRefresh = () => {
+    clearScheduledClose()
+    setOpenPanel(null)
+    void queryClient.refetchQueries({ type: 'active' })
+  }
+
   const handleLogout = async () => {
     try {
       // 退出登录调用后端接口删除当前 Session
@@ -96,10 +119,11 @@ export default function TopBar() {
 
     <div className={styles.actions} ref={controlsRef}>
       <div className={styles.desktopSearch}><SearchInput ref={searchRef} value={searchValue} onValueChange={setSearchValue} onSubmit={submitSearch} placeholder="搜索菜单、成员或项目" label="全局搜索" /></div>
-      <IconButton label={theme === 'light' ? '切换深色主题' : '切换浅色主题'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</IconButton>
+      <HeaderIconButton label={isRefreshing ? '正在刷新' : '刷新当前页面'} aria-busy={isRefreshing} onClick={handleRefresh} icon={<RotateCw size={18} />} />
+      <HeaderIconButton label={theme === 'light' ? '切换深色主题' : '切换浅色主题'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} icon={theme === 'light' ? <Moon size={18} /> : <Sun size={18} />} />
 
       <div className={styles.control} onMouseEnter={() => showPanel('notifications')} onMouseLeave={schedulePanelClose}>
-        <IconButton label={`通知${unreadCount ? `，${unreadCount} 条未读` : ''}`} aria-expanded={openPanel === 'notifications'} onClick={() => showPanel('notifications')}><Bell size={18} />{unreadCount > 0 && <span className={styles.notificationDot} />}</IconButton>
+        <HeaderIconButton label={`通知${unreadCount ? `，${unreadCount} 条未读` : ''}`} aria-expanded={openPanel === 'notifications'} onClick={() => showPanel('notifications')} icon={<Bell size={18} />}>{unreadCount > 0 && <span className={styles.notificationDot} />}</HeaderIconButton>
         {openPanel === 'notifications' && <div className={[styles.popover, styles.notificationPanel].join(' ')} role="dialog" aria-label="通知">
           <div className={styles.popoverHeader}><strong>通知</strong><span>{unreadCount} 条未读</span></div>
           <div className={styles.notificationList}>{notifications.data?.map((item) => <button type="button" key={item.id} className={styles.notificationItem}><span className={item.unread ? styles.unread : ''} /><span><strong>{item.title}</strong><small>{item.time}</small></span></button>)}</div>

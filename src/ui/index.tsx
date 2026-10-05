@@ -100,6 +100,7 @@ interface PaginatedListPanelProps {
   total: number
   totalUnit?: string
   loading: boolean
+  refreshing?: boolean
   onPageChange: (page: number) => void
   onPageSizeChange?: (pageSize: number) => void
 }
@@ -112,13 +113,16 @@ function getPageItems(page: number, pageCount: number): Array<number | 'ellipsis
   return [1, ...(start > 2 ? ['ellipsis' as const] : []), ...Array.from({ length: end - start + 1 }, (_, index) => start + index), ...(end < pageCount - 1 ? ['ellipsis' as const] : []), pageCount]
 }
 
-export function PaginatedListPanel({ toolbar, children, page, pageSize, pageSizeOptions = [10, 20, 50], total, totalUnit = '条', loading, onPageChange, onPageSizeChange }: PaginatedListPanelProps) {
+export function PaginatedListPanel({ toolbar, children, page, pageSize, pageSizeOptions = [10, 20, 50], total, totalUnit = '条', loading, refreshing = false, onPageChange, onPageSizeChange }: PaginatedListPanelProps) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
   const pageItems = getPageItems(page, pageCount)
 
   return <Panel>
     <div className={styles.listToolbar}>{toolbar}</div>
-    <div className={styles.listTableWrap}>{children}</div>
+    <div className={styles.listTableRegion}>
+      <div className={styles.listTableWrap} aria-busy={refreshing} inert={refreshing}>{children}</div>
+      {refreshing && <div className={styles.listRefreshOverlay} role="status" aria-label="正在刷新表格"><span className={styles.listRefreshSpinner} aria-hidden="true" /></div>}
+    </div>
     <div className={styles.listFooter}>
       <span className={styles.listTotal}>共 {total} {totalUnit}</span>
       <nav className={styles.listPagination} aria-label="列表分页">
