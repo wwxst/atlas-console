@@ -13,7 +13,7 @@ export { EmptyState } from './EmptyState'
 export { SortableDateHeader } from './SortableDateHeader'
 export type { SortOrder } from './SortableDateHeader'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 export function AppButton({ variant = 'secondary', icon, children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant; icon?: ReactNode }) {
   return <button {...props} className={[styles.button, styles[`button_${variant}`], className].filter(Boolean).join(' ')}>{icon && <span className={styles.buttonIcon}>{icon}</span>}{children}</button>
@@ -124,7 +124,7 @@ export function PaginatedListPanel({ toolbar, children, page, pageSize, pageSize
   return <Panel>
     <div className={styles.listToolbar}>{toolbar}</div>
     <div className={styles.listTableRegion}>
-      <div className={styles.listTableWrap} aria-busy={refreshing} inert={refreshing}>{children}</div>
+      <div className={styles.listTableWrap} aria-busy={refreshing}>{children}</div>
       {refreshing && <div className={styles.listRefreshOverlay} role="status" aria-label="正在刷新表格"><span className={styles.listRefreshSpinner} aria-hidden="true" /></div>}
     </div>
     <div className={styles.listFooter}>

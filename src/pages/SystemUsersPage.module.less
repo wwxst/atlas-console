@@ -5,6 +5,10 @@
 }
 
 /* ===== Table ===== */
+.table {
+  table-layout: fixed;
+}
+
 .table th:first-child {
   width: 28%;
 }
@@ -83,12 +87,13 @@
   white-space: nowrap;
 }
 
-.statusButton,
-.deleteButton {
+.statusButton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--atlas-space-xs);
   height: 1.875rem;
+  min-width: 4.5rem;
   padding: 0 0.375rem;
   border: 0;
   border-radius: var(--atlas-radius-sm);
@@ -100,16 +105,34 @@
 }
 
 .deleteButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--atlas-space-xs);
+  height: 1.875rem;
+  padding: 0 0.375rem;
+  border: 0;
+  border-radius: var(--atlas-radius-sm);
+  font-size: var(--atlas-text-xs);
+  font-weight: 500;
   color: var(--atlas-color-danger);
+  background: transparent;
+  cursor: pointer;
 }
 
-.statusButton:hover:not(:disabled),
-.deleteButton:hover:not(:disabled) {
+.statusButton:hover:not(:disabled) {
   color: var(--atlas-color-danger);
   background: var(--atlas-color-danger-soft);
 }
 
-.statusButton:disabled,
+.statusButton:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.deleteButton:hover:not(:disabled) {
+  background: var(--atlas-color-danger-soft);
+}
+
 .deleteButton:disabled {
   cursor: wait;
   opacity: 0.5;

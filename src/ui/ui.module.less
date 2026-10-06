@@ -73,6 +73,19 @@
   background: var(--atlas-color-bg-active);
 }
 
+.button_danger {
+  color: var(--atlas-color-danger);
+  border-color: var(--atlas-color-danger);
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+.button_danger:hover:not(:disabled),
+.button_danger:active:not(:disabled) {
+  color: var(--atlas-color-danger);
+  background: var(--atlas-color-danger-soft);
+}
+
 .buttonIcon {
   display: inline-flex;
   flex-shrink: 0;
@@ -285,6 +298,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--atlas-space-sm);
+  min-width: 4.75rem;
   color: var(--atlas-color-text-primary);
   font-size: var(--atlas-text-sm);
   line-height: 1.4;
