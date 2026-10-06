@@ -41,8 +41,7 @@
   border-bottom-color: var(--atlas-color-brand);
 }
 
-.tab:focus-visible,
-.toggle:focus-visible {
+.tab:focus-visible {
   outline: 2px solid var(--atlas-color-brand);
   outline-offset: 3px;
 }
@@ -65,10 +64,6 @@
   width: 1.5rem;
   height: 1.5rem;
   color: var(--atlas-color-text-tertiary);
-}
-
-.configSection {
-  min-height: 18rem;
 }
 
 .storageOptions {
@@ -104,113 +99,11 @@
   accent-color: var(--atlas-color-brand);
 }
 
-.settingSection {
-  margin-top: var(--atlas-space-xl);
-  padding: var(--atlas-space-lg) 0 var(--atlas-space-xl);
-}
-
-.settingSection + .settingSection {
-  margin-top: 0;
-  border-top: 1px solid var(--atlas-color-border);
-}
-
-.settingRow {
-  display: flex;
-  align-items: center;
-  gap: var(--atlas-space-md);
-  min-height: 2rem;
-}
-
-.rowLabel {
-  min-width: 8rem;
-  color: var(--atlas-color-text-secondary);
-}
-
-.toggle {
-  flex-shrink: 0;
-  width: 2.5rem;
-  height: 1.375rem;
-  padding: 3px;
-  border-radius: var(--atlas-radius-pill);
-  background: var(--atlas-color-border-strong);
-  transition: background 140ms ease;
-}
-
-.toggle span {
-  display: block;
-  width: 1rem;
-  height: 1rem;
-  border-radius: var(--atlas-radius-circle);
-  background: var(--atlas-color-bg-surface);
-  transition: transform 140ms ease;
-}
-
-.toggleOn {
-  background: var(--atlas-color-brand);
-}
-
-.toggleOn span {
-  transform: translateX(1.125rem);
-}
-
-.extraFields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--atlas-space-xl);
-  margin-top: var(--atlas-space-lg);
-  padding-left: 8.75rem;
-}
-
-.field,
-.sizeField {
-  display: grid;
-  gap: var(--atlas-space-sm);
-}
-
-.field label,
-.sizeField label {
-  color: var(--atlas-color-text-secondary);
-}
-
-.sizeField > div {
-  display: flex;
-  align-items: center;
-  gap: var(--atlas-space-sm);
-}
-
-.sizeField input {
-  width: 5rem;
-}
-
-.sizeField small {
-  color: var(--atlas-color-text-tertiary);
-}
-
-.field input,
-.field select {
-  width: 16rem;
-}
-
-.configSection input:not([type='radio']),
-.configSection select {
-  min-width: 0;
-  height: var(--atlas-control-height-lg);
-  padding: 0 var(--atlas-space-md);
-  border: 1px solid var(--atlas-color-border-strong);
-  border-radius: var(--atlas-radius-sm);
-  background: var(--atlas-color-bg-surface);
-  transition: border-color 140ms ease;
-}
-
-.configSection input:focus,
-.configSection select:focus {
-  border-color: var(--atlas-color-border-focus);
-}
-
 .actions {
   display: flex;
   align-items: center;
   gap: var(--atlas-space-lg);
+  margin-top: var(--atlas-space-xl);
 }
 
 .actions p {

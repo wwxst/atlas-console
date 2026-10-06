@@ -1,18 +1,16 @@
 import { X } from 'lucide-react'
-import { useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import type { FormEvent, KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { AppButton, IconButton } from '@ui/index'
+import { AppButton, IconButton, Toast } from '@ui/index'
+import { getStorageSettings, STORAGE_SETTINGS_QUERY_KEY, updateStorageSettings } from '@/services/storage'
+import type { StorageType } from '@/services/storage'
 import { StorageProviderPanel } from './StorageProviderPanel'
 import styles from './StorageSettingsPage.module.less'
 
 const providers = [
-  { key: 'qiniu', label: '七牛云存储', accessLabel: 'AccessKey', secretLabel: 'SecretKey' },
   { key: 'aliyun', label: '阿里云存储', accessLabel: 'AccessKeyId', secretLabel: 'AccessKeySecret' },
-  { key: 'tencent', label: '腾讯云存储', accessLabel: 'SecretId', secretLabel: 'SecretKey' },
-  { key: 'jd', label: '京东云存储', accessLabel: 'AccessKey', secretLabel: 'SecretKey' },
-  { key: 'huawei', label: '华为云存储', accessLabel: 'Access Key ID', secretLabel: 'Secret Access Key' },
-  { key: 'tianyi', label: '天翼云存储', accessLabel: 'AccessKey', secretLabel: 'SecretKey' },
 ] as const
 
 type ProviderKey = typeof providers[number]['key']
@@ -20,15 +18,7 @@ type TabKey = 'general' | ProviderKey
 const tabs = [{ key: 'general', label: '存储配置' }, ...providers] as const
 
 const providerWebsites: Record<ProviderKey, string> = {
-  qiniu: 'https://www.qiniu.com', aliyun: 'https://www.aliyun.com', tencent: 'https://cloud.tencent.com',
-  jd: 'https://www.jdcloud.com', huawei: 'https://www.huaweicloud.com', tianyi: 'https://www.ctyun.cn',
-}
-
-function SettingSwitch({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
-  return <div className={styles.settingRow}>
-    <span className={styles.rowLabel}>{label}：</span>
-    <button type="button" role="switch" aria-label={label} aria-checked={checked} className={[styles.toggle, checked ? styles.toggleOn : ''].join(' ')} onClick={onChange}><span /></button>
-  </div>
+  aliyun: 'https://www.aliyun.com',
 }
 
 export default function StorageSettingsPage() {
@@ -36,12 +26,28 @@ export default function StorageSettingsPage() {
   const requestedTab = searchParams.get('tab')
   const activeTab: TabKey = providers.find(({ key }) => key === requestedTab)?.key ?? 'general'
   const provider = providers.find(({ key }) => key === activeTab)
-  const [storageType, setStorageType] = useState<'local' | ProviderKey>('local')
-  const [thumbnailEnabled, setThumbnailEnabled] = useState(false)
-  const [watermarkEnabled, setWatermarkEnabled] = useState(false)
-  const [thumbnailSizes, setThumbnailSizes] = useState(['800', '300', '150'])
-  const [watermarkText, setWatermarkText] = useState('')
-  const [watermarkPosition, setWatermarkPosition] = useState('bottom-right')
+  const queryClient = useQueryClient()
+  const [draftType, setDraftType] = useState<StorageType | null>(null)
+  const [successMessage, setSuccessMessage] = useState('')
+  const settingsQuery = useQuery({ queryKey: STORAGE_SETTINGS_QUERY_KEY, queryFn: getStorageSettings, retry: false, refetchOnWindowFocus: false })
+  const saveMutation = useMutation({ mutationFn: updateStorageSettings })
+  const storageType = draftType ?? settingsQuery.data?.storageType
+  const settingsBusy = settingsQuery.isFetching || saveMutation.isPending
+  const saveSettings = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!storageType || settingsBusy || settingsQuery.isError) return
+    setSuccessMessage('')
+    saveMutation.mutate({ storageType }, { onSuccess: (result) => {
+      queryClient.setQueryData(STORAGE_SETTINGS_QUERY_KEY, result.data)
+      setDraftType(null)
+      setSuccessMessage(result.message ?? '')
+    } })
+  }
+  useEffect(() => {
+    if (!successMessage) return
+    const timer = window.setTimeout(() => setSuccessMessage(''), 4_000)
+    return () => window.clearTimeout(timer)
+  }, [successMessage])
   const [hiddenNotices, setHiddenNotices] = useState<Partial<Record<TabKey, boolean>>>({})
 
   const selectTab = (key: TabKey) => {
@@ -68,44 +74,32 @@ export default function StorageSettingsPage() {
       <div className={styles.tabs} role="tablist" aria-label="存储配置分类">
         {tabs.map((tab, index) => <button key={tab.key} id={`storage-tab-${tab.key}`} type="button" role="tab" aria-selected={activeTab === tab.key} aria-controls={`storage-panel-${tab.key}`} tabIndex={activeTab === tab.key ? 0 : -1} className={[styles.tab, activeTab === tab.key ? styles.tabActive : ''].join(' ')} onClick={() => selectTab(tab.key)} onKeyDown={(event) => handleTabKey(event, index)}>{tab.label}</button>)}
       </div>
-      {!hiddenNotices[activeTab] && <div className={styles.notice}>
-        {provider ? <div>
+      {provider && !hiddenNotices[activeTab] && <div className={styles.notice}>
+        <div>
           <p>{provider.label}开通方法：<a href={providerWebsites[provider.key]} target="_blank" rel="noreferrer">查看官网</a></p>
-          <p>第一步：添加存储空间，空间名称不能重复。</p>
-          <p>第二步：开启存储空间的使用状态。</p>
+          <p>第一步：点击“添加存储空间”，在同一表单填写访问凭据、空间名称和区域；也可先修改配置信息，再同步已有空间。</p>
+          <p>第二步：设为默认空间，再到存储配置中选择阿里云存储并保存。</p>
           <p>第三步（可选）：修改空间域名，并在域名服务商完成解析配置。</p>
-        </div> : <div><p>缩略图默认尺寸：大图 800 × 800、中图 300 × 300、小图 150 × 150。</p><p>水印设置用于后续上传的图片，已上传的图片不追溯处理。</p></div>}
+        </div>
         <IconButton label="关闭存储提示" className={styles.closeNotice} onClick={() => setHiddenNotices((hidden) => ({ ...hidden, [activeTab]: true }))}><X size={15} /></IconButton>
       </div>}
     </section>
 
-    <form hidden={activeTab !== 'general'} id="storage-panel-general" role="tabpanel" aria-labelledby="storage-tab-general" className={styles.configSection} onSubmit={(event) => event.preventDefault()}>
-        <fieldset className={styles.storageOptions}>
+    <form hidden={activeTab !== 'general'} id="storage-panel-general" role="tabpanel" aria-labelledby="storage-tab-general" className={styles.configSection} onSubmit={saveSettings} aria-busy={settingsBusy}>
+        <fieldset className={styles.storageOptions} disabled={settingsBusy || !settingsQuery.data || settingsQuery.isError}>
           <legend>存储方式：</legend>
           <div className={styles.radios}>
-            {[{ key: 'local', label: '本地存储' }, ...providers].map((option) => <label key={option.key}><input type="radio" name="storageType" value={option.key} checked={storageType === option.key} onChange={() => setStorageType(option.key as 'local' | ProviderKey)} /><span>{option.label}</span></label>)}
+            {[{ key: 'local', label: '本地存储' }, ...providers].map((option) => <label key={option.key}><input type="radio" name="storageType" value={option.key} checked={storageType === option.key} onChange={() => { setDraftType(option.key as StorageType); setSuccessMessage('') }} /><span>{option.label}</span></label>)}
           </div>
         </fieldset>
 
-        <div className={styles.settingSection}>
-          <SettingSwitch label="是否开启缩略图" checked={thumbnailEnabled} onChange={() => setThumbnailEnabled((enabled) => !enabled)} />
-          {thumbnailEnabled && <div className={styles.extraFields}>
-            {['大图尺寸', '中图尺寸', '小图尺寸'].map((label, index) => <div key={label} className={styles.sizeField}><label htmlFor={`thumbnail-size-${index}`}>{label}</label><div><input id={`thumbnail-size-${index}`} type="number" min="1" step="1" value={thumbnailSizes[index]} onChange={(event) => setThumbnailSizes((sizes) => sizes.map((size, i) => i === index ? event.target.value : size))} /><span>×</span><span>{thumbnailSizes[index] || '—'}</span><small>px</small></div></div>)}
-          </div>}
-        </div>
-
-        <div className={styles.settingSection}>
-          <SettingSwitch label="是否开启水印" checked={watermarkEnabled} onChange={() => setWatermarkEnabled((enabled) => !enabled)} />
-          {watermarkEnabled && <div className={styles.extraFields}>
-            <div className={styles.field}><label htmlFor="watermark-text">水印文字</label><input id="watermark-text" value={watermarkText} onChange={(event) => setWatermarkText(event.target.value)} placeholder="请输入水印文字" maxLength={50} /></div>
-            <div className={styles.field}><label htmlFor="watermark-position">水印位置</label><select id="watermark-position" value={watermarkPosition} onChange={(event) => setWatermarkPosition(event.target.value)}><option value="bottom-right">右下角</option><option value="bottom-left">左下角</option><option value="top-right">右上角</option><option value="top-left">左上角</option><option value="center">居中</option></select></div>
-          </div>}
-        </div>
       <div className={styles.actions}>
-        <AppButton type="submit" variant="primary" disabled aria-describedby="storage-save-help">保存</AppButton>
-        <p id="storage-save-help">当前为页面预览，保存功能待开放。</p>
+        <AppButton type="submit" variant="primary" disabled={settingsBusy || !storageType || settingsQuery.isError || storageType === settingsQuery.data?.storageType}>{saveMutation.isPending ? '保存中…' : '保存'}</AppButton>
+        {settingsQuery.isPending && <p role="status">正在加载存储配置…</p>}
+        {settingsQuery.isError && <AppButton type="button" disabled={settingsBusy} onClick={() => void settingsQuery.refetch()}>重新加载配置</AppButton>}
       </div>
     </form>
-    {providers.map((item) => <div key={item.key} hidden={activeTab !== item.key} id={`storage-panel-${item.key}`} role="tabpanel" aria-labelledby={`storage-tab-${item.key}`}><StorageProviderPanel provider={item} /></div>)}
+    {providers.map((item) => <div key={item.key} hidden={activeTab !== item.key} id={`storage-panel-${item.key}`} role="tabpanel" aria-labelledby={`storage-tab-${item.key}`}><StorageProviderPanel provider={item} active={activeTab === item.key} /></div>)}
+    <Toast open={Boolean(successMessage)}>{successMessage}</Toast>
   </div>
 }

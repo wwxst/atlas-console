@@ -30,6 +30,10 @@ export function requireApiData<T>(result: ApiResult<T>): T {
   return result.data
 }
 
+export function requireApiDataWithMessage<T>(result: ApiResult<T>): { data: T; message: string | null } {
+  return { data: requireApiData(result), message: result.msg }
+}
+
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (axios.isAxiosError<ApiResult<unknown>>(error)) {
     const message = error.response?.data?.msg

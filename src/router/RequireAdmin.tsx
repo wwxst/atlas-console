@@ -52,7 +52,7 @@ export default function RequireAdmin() {
         <p>登录状态验证失败，请重试。</p>
         <div className={styles.actions}>
           <AppButton icon={<RotateCcw size={16} />} onClick={() => void currentUserQuery.refetch()}>重试</AppButton>
-          <AppButton variant="ghost" icon={<LogOut size={16} />} onClick={signOut}>退出登录</AppButton>
+          <AppButton variant="danger" icon={<LogOut size={16} />} onClick={signOut}>退出登录</AppButton>
         </div>
       </section>
     </main>

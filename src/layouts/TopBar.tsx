@@ -6,7 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getNotifications } from '@/features/notifications/api'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, logoutSysUser } from '@/features/auth/api'
 import { clearAuthTokens } from '@/services/http'
-import { Avatar, IconButton, SearchInput } from '@ui/index'
+import { AppButton, Avatar, IconButton, SearchInput } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
 import styles from './TopBar.module.less'
 
@@ -141,7 +141,7 @@ export default function TopBar() {
           <button type="button" role="menuitem" onClick={() => { navigate('/profile'); setOpenPanel(null) }}><User size={16} />个人信息</button>
           <button type="button" role="menuitem" onClick={() => { navigate('/settings'); setOpenPanel(null) }}><Settings size={16} />系统设置</button>
           <div className={styles.menuDivider} />
-          <button type="button" role="menuitem" className={styles.logout} onClick={() => void handleLogout()}><LogOut size={16} />退出登录</button>
+          <AppButton type="button" role="menuitem" variant="danger" className={styles.logout} icon={<LogOut size={16} />} onClick={() => void handleLogout()}>退出登录</AppButton>
         </div>}
       </div>
     </div>

@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" fill="none">
+  <defs>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" stroke="#6095F5" stroke-opacity=".3"/>
+      <circle cx="0" cy="0" r="1.5" fill="#6095F5" fill-opacity=".5"/>
+    </pattern>
+    <radialGradient id="grid-fade" cx="50%" cy="50%" r="65%">
+      <stop stop-color="white" stop-opacity=".12"/>
+      <stop offset=".45" stop-color="white" stop-opacity=".65"/>
+      <stop offset="1" stop-color="white"/>
+    </radialGradient>
+    <mask id="grid-mask">
+      <rect width="1600" height="900" fill="url(#grid-fade)"/>
+    </mask>
+    <radialGradient id="teal-glow">
+      <stop stop-color="#54BDB3" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#54BDB3" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="blue-panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6095F5" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#6095F5" stop-opacity=".03"/>
+    </linearGradient>
+    <linearGradient id="teal-panel" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#54BDB3" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#54BDB3" stop-opacity=".04"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="1430" cy="830" rx="590" ry="440" fill="url(#teal-glow)"/>
+  <rect width="1600" height="900" fill="url(#grid)" mask="url(#grid-mask)"/>
+  <g stroke="#6095F5" stroke-opacity=".48" stroke-width="1.5">
+    <circle cx="100" cy="140" r="235"/>
+    <circle cx="100" cy="140" r="280" stroke-dasharray="3 12"/>
+    <circle cx="1520" cy="800" r="250"/>
+    <circle cx="1520" cy="800" r="295" stroke-dasharray="3 12"/>
+    <path d="M90 610h110l48 48h120M1240 205h120l50 50h100"/>
+  </g>
+  <g fill="#6095F5" fill-opacity=".75">
+    <circle cx="335" cy="140" r="4"/>
+    <circle cx="1270" cy="800" r="4"/>
+    <circle cx="368" cy="658" r="3"/>
+    <circle cx="1240" cy="205" r="3"/>
+  </g>
+
+  <!-- Floating isometric blocks -->
+  <g transform="translate(190 190)" stroke="#6095F5" stroke-opacity=".6" stroke-width="1.5" stroke-linejoin="round">
+    <path d="m0 28 48-28 48 28-48 28Z" fill="url(#blue-panel)"/>
+    <path d="M0 28v55l48 28V56Z" fill="#6095F5" fill-opacity=".08"/>
+    <path d="M48 56v55l48-28V28Z" fill="#6095F5" fill-opacity=".16"/>
+    <path d="m12 21 48 28m-36-35 48 28M16 49v28m16-19v28" stroke-opacity=".3"/>
+    <path d="m117-20 23-13 23 13-23 14Z" fill="url(#teal-panel)" stroke="#54BDB3"/>
+    <path d="M117-20V7l23 14 23-14v-27m-23 14v27" fill="#54BDB3" fill-opacity=".08" stroke="#54BDB3"/>
+  </g>
+
+  <!-- A compact data panel away from the central state card -->
+  <g transform="translate(650 130)" stroke="#6095F5" stroke-opacity=".4" stroke-width="1.5" stroke-linecap="round">
+    <rect width="132" height="82" rx="10" fill="url(#blue-panel)"/>
+    <path d="M15 17h27m69 0h6M15 65h102"/>
+    <path d="m17 53 20-10 20 5 24-18 19 5 17-12" stroke-opacity=".7"/>
+    <g fill="#6095F5" fill-opacity=".3" stroke="none">
+      <rect x="17" y="56" width="9" height="9" rx="2"/>
+      <rect x="38" y="50" width="9" height="15" rx="2"/>
+      <rect x="59" y="53" width="9" height="12" rx="2"/>
+      <rect x="80" y="39" width="9" height="26" rx="2"/>
+      <rect x="101" y="43" width="9" height="22" rx="2"/>
+    </g>
+  </g>
+
+  <!-- Connected data nodes -->
+  <g transform="translate(1190 315)" stroke="#54BDB3" stroke-opacity=".55" stroke-width="1.5">
+    <path d="m0 35 70-35 80 47-55 68-95-80m70-35 25 115m-25-115 3 55 77-8M0 35l73 20 22 60"/>
+    <circle cx="73" cy="55" r="17" fill="url(#teal-panel)"/>
+    <circle cx="73" cy="55" r="6" fill="#54BDB3" fill-opacity=".45"/>
+    <g fill="#54BDB3" fill-opacity=".15">
+      <circle cy="35" r="7"/>
+      <circle cx="70" r="9"/>
+      <circle cx="150" cy="47" r="7"/>
+      <circle cx="95" cy="115" r="8"/>
+    </g>
+  </g>
+
+  <!-- Layered server trays -->
+  <g transform="translate(310 695)" stroke="#6095F5" stroke-opacity=".5" stroke-width="1.5" stroke-linejoin="round">
+    <rect x="-12" y="-13" width="154" height="124" rx="15" stroke-opacity=".2" stroke-dasharray="4 7"/>
+    <rect width="130" height="26" rx="6" fill="url(#blue-panel)"/>
+    <rect y="36" width="130" height="26" rx="6" fill="url(#blue-panel)"/>
+    <rect y="72" width="130" height="26" rx="6" fill="url(#blue-panel)"/>
+    <path d="M30 26v10m70-10v10M30 62v10m70-10v10M36 13h44M36 49h29M36 85h44"/>
+    <g fill="#54BDB3" fill-opacity=".65" stroke="none">
+      <circle cx="16" cy="13" r="3"/>
+      <circle cx="16" cy="49" r="3"/>
+      <circle cx="16" cy="85" r="3"/>
+    </g>
+    <path d="M106 10v6m7-6v6M106 46v6m7-6v6M106 82v6m7-6v6"/>
+  </g>
+
+  <!-- Offset orbital detail -->
+  <g transform="translate(1200 695)" stroke="#54BDB3" stroke-width="1.5">
+    <circle r="43" stroke-opacity=".25"/>
+    <circle r="32" stroke-opacity=".55" stroke-dasharray="68 19 21 93" transform="rotate(-35)"/>
+    <path d="M-53 0h14m78 0h14M0-53v14m0 78v14" stroke-opacity=".4"/>
+    <path d="m0-13 13 13L0 13-13 0Z" fill="url(#teal-panel)" stroke-opacity=".6"/>
+    <circle cx="37" cy="-22" r="4" fill="#54BDB3" fill-opacity=".6" stroke="none"/>
+  </g>
+
+  <!-- Small, irregularly placed marks -->
+  <g stroke="#6095F5" stroke-opacity=".5" stroke-width="1.5" stroke-linecap="round">
+    <path d="M473 310h14m-7-7v14M1034 140h10m-5-5v10M933 746h14m-7-7v14M1445 515h10m-5-5v10"/>
+    <path d="m493 545 9 9-9 9-9-9Zm520 72 7 7-7 7-7-7Z" fill="#6095F5" fill-opacity=".1"/>
+    <path d="M532 764h38m-38 8h23M1030 256h31m-31 8h15" stroke-opacity=".35"/>
+  </g>
+</svg>

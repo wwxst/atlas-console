@@ -1,6 +1,12 @@
-import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { Trash2 } from 'lucide-react'
 import { AppButton, DataTable, Drawer, FormField, PaginatedListPanel } from '@ui/index'
+import { bindStorageSpace, deleteStorageSpace, getOssCredentials, getStorageSpaces, OSS_CREDENTIALS_QUERY_KEY, setDefaultStorageSpace, STORAGE_SPACES_QUERY_KEY, syncStorageSpaces, updateOssCredentials, updateStorageSpaceDomain } from '@/services/storage'
+import type { OssCredentials, StorageSpace, StorageAccessPermission } from '@/services/storage'
+import type { PageResult } from '@/services/api'
+import { aliyunOssRegionGroups, getAliyunOssDefaultDomain, getAliyunOssRegionId, getAliyunOssRegionLabel } from './aliyunOssRegions'
 import styles from './StorageProviderPanel.module.less'
 
 interface StorageProvider {
@@ -10,119 +16,202 @@ interface StorageProvider {
   secretLabel: string
 }
 
-type StoragePermission = 'public-read' | 'public-read-write'
-const aliyunRegions = ['华东1（杭州）', '华东2（上海）', '华北1（青岛）', '华北2（北京）', '华北3（张家口）', '华北5（呼和浩特）', '华北6（乌兰察布）', '华南1（深圳）']
-
-interface StorageSpace {
-  id: string
-  name: string
-  region: string
-  domain: string
-  permission?: StoragePermission
-  enabled: boolean
-  createdAt: string
-  updatedAt: string
-}
-
 type Editor = { mode: 'add' } | { mode: 'config' } | { mode: 'domain'; space: StorageSpace } | { mode: 'delete'; space: StorageSpace }
+const emptyDraft = { bucketName: '', regionId: '', accessDomain: '' }
+const emptyCredentials = { accessKeyId: '', accessKeySecret: '' }
 
 function formatTime(value: string): string {
-  return new Date(value).toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai', hour12: false })
+  return value.replace('T', ' ').slice(0, 19)
 }
 
-function CredentialFields({ provider, value, onChange }: { provider: StorageProvider; value: { accessKey: string; secretKey: string }; onChange: (field: 'accessKey' | 'secretKey', value: string) => void }) {
+function CredentialFields({ provider, value, disabled, configured, required = true, onChange }: { provider: StorageProvider; value: OssCredentials; disabled: boolean; configured: boolean; required?: boolean; onChange: (field: keyof OssCredentials, value: string) => void }) {
   return <>
-    <FormField label={provider.accessLabel} htmlFor={`storage-${provider.key}-access`} required><input id={`storage-${provider.key}-access`} autoComplete="off" value={value.accessKey} onChange={(event) => onChange('accessKey', event.target.value)} placeholder={`请输入${provider.accessLabel}`} required /></FormField>
-    <FormField label={provider.secretLabel} htmlFor={`storage-${provider.key}-secret`} required><input id={`storage-${provider.key}-secret`} type="password" autoComplete="off" value={value.secretKey} onChange={(event) => onChange('secretKey', event.target.value)} placeholder={`请输入${provider.secretLabel}`} required /></FormField>
+    <FormField label={provider.accessLabel} htmlFor={`storage-${provider.key}-access`} required={required}><input id={`storage-${provider.key}-access`} autoComplete="off" value={value.accessKeyId} disabled={disabled} onChange={(event) => onChange('accessKeyId', event.target.value)} placeholder={`请输入${provider.accessLabel}`} required={required} /></FormField>
+    <FormField label={provider.secretLabel} htmlFor={`storage-${provider.key}-secret`} required={required}><input id={`storage-${provider.key}-secret`} type="password" autoComplete="new-password" className={configured ? styles.savedSecret : undefined} value={value.accessKeySecret} disabled={disabled} onChange={(event) => onChange('accessKeySecret', event.target.value)} placeholder={configured ? '••••••••••••' : `请输入${provider.secretLabel}`} required={required} /></FormField>
   </>
 }
 
-export function StorageProviderPanel({ provider }: { provider: StorageProvider }) {
-  const [spaces, setSpaces] = useState<StorageSpace[]>([])
+export function StorageProviderPanel({ provider, active }: { provider: StorageProvider; active: boolean }) {
+  const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(15)
   const [editor, setEditor] = useState<Editor | null>(null)
-  const [spaceDraft, setSpaceDraft] = useState({ name: '', region: '', domain: '', accessKey: '', secretKey: '', permission: 'public-read' as StoragePermission })
-  const [credentials, setCredentials] = useState({ accessKey: '', secretKey: '' })
+  const [spaceDraft, setSpaceDraft] = useState(emptyDraft)
+  const [accessPermission, setAccessPermission] = useState<StorageAccessPermission>('public-read')
+  const [credentials, setCredentials] = useState(emptyCredentials)
   const [formError, setFormError] = useState('')
-  const visibleSpaces = spaces.slice((page - 1) * pageSize, page * pageSize)
+  const [pendingAction, setPendingAction] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const mounted = useRef(false)
+  const actionPending = useRef(false)
+  const editorVersion = useRef(0)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
-  const openEditor = (next: Editor) => {
+  const spacesQuery = useQuery({ queryKey: [...STORAGE_SPACES_QUERY_KEY, { page, pageSize }], queryFn: () => getStorageSpaces({ page, pageSize }), enabled: active, retry: false, refetchOnWindowFocus: false })
+  const credentialsQuery = useQuery({ queryKey: OSS_CREDENTIALS_QUERY_KEY, queryFn: getOssCredentials, enabled: active, retry: false, refetchOnWindowFocus: false })
+  const spaces = spacesQuery.data?.records ?? []
+  const total = spacesQuery.data?.total ?? 0
+  const configured = credentialsQuery.data?.configured === true && !credentialsQuery.isError
+  const busy = Boolean(pendingAction) || spacesQuery.isFetching || credentialsQuery.isFetching
+
+  const closeEditor = () => {
+    editorVersion.current += 1
+    setEditor(null)
     setFormError('')
-    setSpaceDraft({ name: '', region: '', domain: '', accessKey: '', secretKey: '', permission: 'public-read', ...('space' in next ? { name: next.space.name, region: next.space.region, domain: next.space.domain, permission: next.space.permission ?? 'public-read' } : {}) })
+    setCredentials(emptyCredentials)
+    setSpaceDraft(emptyDraft)
+    setAccessPermission('public-read')
+  }
+  const openEditor = (next: Editor) => {
+    if (busy) return
+    editorVersion.current += 1
+    setFormError('')
+    setSuccessMessage('')
+    setCredentials(emptyCredentials)
+    setSpaceDraft({ ...emptyDraft, ...('space' in next ? { bucketName: next.space.bucketName, regionId: getAliyunOssRegionId(next.space.regionId), accessDomain: next.space.accessDomain ?? '' } : {}) })
+    setAccessPermission('public-read')
     setEditor(next)
   }
 
-  const closeEditor = () => { setEditor(null); setFormError('') }
+  // Keep credential values out of the query/mutation cache. Only configured status is cached.
+  const runAction = async (label: string, action: () => Promise<string>, afterSuccess?: () => void) => {
+    if (actionPending.current) return
+    actionPending.current = true
+    setPendingAction(label)
+    setSuccessMessage('')
+    const version = editorVersion.current
+    try {
+      const message = await action()
+      if (mounted.current) {
+        if (version === editorVersion.current) afterSuccess?.()
+        setSuccessMessage(message)
+      }
+      await queryClient.invalidateQueries({ queryKey: STORAGE_SPACES_QUERY_KEY })
+    } catch {
+      // The shared request error Toast owns transport and business errors; retain drafts.
+    } finally {
+      actionPending.current = false
+      if (mounted.current) setPendingAction('')
+    }
+  }
+
+  const submitCredentials = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (busy) return
+    const accessKeyId = credentials.accessKeyId.trim(), accessKeySecret = credentials.accessKeySecret.trim()
+    if (!accessKeyId || !accessKeySecret) { setFormError('请填写完整的访问凭据'); return }
+    setFormError('')
+    void runAction('credentials', async () => {
+      const status = await updateOssCredentials({ accessKeyId, accessKeySecret })
+      queryClient.setQueryData(OSS_CREDENTIALS_QUERY_KEY, status)
+      return '配置信息已保存'
+    }, closeEditor)
+  }
 
   const submitSpace = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!editor || editor.mode === 'config' || editor.mode === 'delete') return
-    const domain = spaceDraft.domain.trim()
+    if (!editor || editor.mode === 'config' || editor.mode === 'delete' || busy) return
+    setFormError('')
     if (editor.mode === 'add') {
-      const name = spaceDraft.name.trim(), region = spaceDraft.region.trim()
-      if (!spaceDraft.accessKey.trim() || !spaceDraft.secretKey.trim()) { setFormError('请输入访问密钥和密钥密码'); return }
-      if (!name || !region) { setFormError('请输入存储空间名称和区域'); return }
-      if (spaces.some((space) => space.name === name)) { setFormError('存储空间名称不能重复'); return }
-      const now = new Date().toISOString()
-      setSpaces((current) => [{ id: crypto.randomUUID(), name, region, domain, ...(provider.key === 'aliyun' ? { permission: spaceDraft.permission } : {}), enabled: false, createdAt: now, updatedAt: now }, ...current])
-      setPage(1)
+      const bucketName = spaceDraft.bucketName.trim(), regionId = spaceDraft.regionId
+      if (!bucketName || !regionId) { setFormError('请输入存储空间名称并选择区域'); return }
+      const accessKeyId = credentials.accessKeyId.trim(), accessKeySecret = credentials.accessKeySecret.trim()
+      const hasCredentials = Boolean(accessKeyId || accessKeySecret)
+      if ((!configured || hasCredentials) && (!accessKeyId || !accessKeySecret)) { setFormError('请填写完整的访问凭据'); return }
+      const version = editorVersion.current
+      void runAction('add', async () => {
+        if (hasCredentials) {
+          const status = await updateOssCredentials({ accessKeyId, accessKeySecret })
+          queryClient.setQueryData(OSS_CREDENTIALS_QUERY_KEY, status)
+          if (mounted.current && version === editorVersion.current) setCredentials(emptyCredentials)
+        }
+        await bindStorageSpace({ bucketName, regionId, accessPermission })
+        return '存储空间已绑定'
+      }, () => { closeEditor(); setPage(1) })
     } else {
-      setSpaces((current) => current.map((space) => space.id === editor.space.id ? { ...space, domain, updatedAt: new Date().toISOString() } : space))
+      const id = editor.space.id
+      const accessDomain = spaceDraft.accessDomain.trim() || null
+      void runAction('domain', async () => {
+        await updateStorageSpaceDomain(id, { accessDomain })
+        return '空间域名已保存'
+      }, closeEditor)
     }
-    closeEditor()
   }
 
   const removeSpace = () => {
-    if (!editor || editor.mode !== 'delete') return
-    setSpaces((current) => current.filter((space) => space.id !== editor.space.id))
-    setPage((current) => Math.min(current, Math.max(1, Math.ceil((spaces.length - 1) / pageSize))))
-    closeEditor()
+    if (!editor || editor.mode !== 'delete' || busy) return
+    const id = editor.space.id
+    void runAction('delete', async () => {
+      await deleteStorageSpace(id)
+      return '存储空间已删除'
+    }, () => {
+      closeEditor()
+      setPage((current) => Math.min(current, Math.max(1, Math.ceil((total - 1) / pageSize))))
+    })
+  }
+
+  const selectDefault = (space: StorageSpace) => {
+    if (busy || space.isDefault) return
+    void runAction('default', async () => {
+      const saved = await setDefaultStorageSpace(space.id)
+      queryClient.setQueriesData<PageResult<StorageSpace>>({ queryKey: STORAGE_SPACES_QUERY_KEY }, (current) => current && ({ ...current, records: current.records.map((item) => item.id === saved.id ? saved : { ...item, isDefault: false }) }))
+      return '默认存储空间已更新'
+    })
   }
 
   const editorTitle = editor?.mode === 'config' ? '配置信息' : editor?.mode === 'domain' ? '修改空间域名' : editor?.mode === 'delete' ? '删除存储空间' : '添加云空间'
 
   return <>
-    <PaginatedListPanel page={page} pageSize={pageSize} pageSizeOptions={[15, 30, 50]} total={spaces.length} loading={false} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} toolbar={<>
-      <div className={styles.toolbarActions}><AppButton variant="primary" onClick={() => openEditor({ mode: 'add' })}>添加存储空间</AppButton>
-      <AppButton className={styles.syncButton} disabled title="同步功能待开放">同步存储空间</AppButton></div>
-      <AppButton className={styles.configureButton} onClick={() => openEditor({ mode: 'config' })}>修改配置信息</AppButton>
+    <PaginatedListPanel page={page} pageSize={pageSize} pageSizeOptions={[15, 30, 50]} total={total} loading={busy} refreshing={spacesQuery.isFetching && Boolean(spacesQuery.data)} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} toolbar={<>
+      <div className={styles.toolbarActions}><AppButton variant="primary" disabled={busy} onClick={() => openEditor({ mode: 'add' })}>添加存储空间</AppButton>
+      <AppButton className={styles.syncButton} disabled={busy || !configured} onClick={() => void runAction('sync', async () => { const result = await syncStorageSpaces(); return `已同步 ${result.syncedCount} 个存储空间` }, () => setPage(1))}>{pendingAction === 'sync' ? '同步中…' : '同步存储空间'}</AppButton></div>
+      <AppButton className={styles.configureButton} disabled={busy} onClick={() => openEditor({ mode: 'config' })}>修改配置信息</AppButton>
     </>}>
-      <DataTable className={styles.table}>
+      <DataTable className={styles.table} aria-busy={spacesQuery.isFetching}>
         <caption className={styles.tableCaption}>{provider.label}存储空间</caption>
         <thead><tr><th>存储空间名称</th><th>区域</th><th>空间域名</th><th>使用状态</th><th>创建时间</th><th>更新时间</th><th>操作</th></tr></thead>
         <tbody>
-          {visibleSpaces.length === 0 && <tr><td colSpan={7} className={styles.empty}>暂无数据</td></tr>}
-          {visibleSpaces.map((space) => <tr key={space.id}>
-            <td>{space.name}</td><td>{space.region}</td><td className={styles.domain}>{space.domain || '—'}</td>
-            <td><button type="button" role="switch" aria-label={`${space.name}使用状态`} aria-checked={space.enabled} className={[styles.statusToggle, space.enabled ? styles.statusToggleOn : ''].join(' ')} onClick={() => setSpaces((current) => current.map((item) => item.id === space.id ? { ...item, enabled: !item.enabled, updatedAt: new Date().toISOString() } : item))}><span /><small>{space.enabled ? '开启' : '关闭'}</small></button></td>
+          {spacesQuery.isError ? <tr><td colSpan={7} className={styles.empty}><AppButton disabled={busy} onClick={() => void spacesQuery.refetch()}>重新加载存储空间</AppButton></td></tr> : spaces.length === 0 && <tr><td colSpan={7} className={styles.empty}>{spacesQuery.isFetching ? '正在加载…' : '暂无数据'}</td></tr>}
+          {!spacesQuery.isError && spaces.map((space) => <tr key={space.id}>
+            <td>{space.bucketName}</td><td>{getAliyunOssRegionLabel(space.regionId)}</td><td className={styles.domain}>{space.accessDomain || getAliyunOssDefaultDomain(space.bucketName, space.regionId)}</td>
+            <td><button type="button" aria-label={space.isDefault ? `${space.bucketName}为默认空间` : `将${space.bucketName}设为默认空间`} disabled={busy || space.isDefault} className={[styles.statusToggle, space.isDefault ? styles.statusToggleOn : ''].join(' ')} onClick={() => selectDefault(space)}><span /><small>{space.isDefault ? '默认' : '设为默认'}</small></button></td>
             <td className={styles.time}>{formatTime(space.createdAt)}</td><td className={styles.time}>{formatTime(space.updatedAt)}</td>
-            <td><div className={styles.rowActions}><button type="button" aria-label={`修改${space.name}空间域名`} onClick={() => openEditor({ mode: 'domain', space })}>修改空间域名</button><button type="button" aria-label={`删除${space.name}`} onClick={() => openEditor({ mode: 'delete', space })}>删除</button></div></td>
+            <td><div className={styles.rowActions}><button type="button" disabled={busy} aria-label={`修改${space.bucketName}空间域名`} onClick={() => openEditor({ mode: 'domain', space })}>修改空间域名</button><AppButton type="button" variant="danger" disabled={busy || space.isDefault} title={space.isDefault ? '请先选择其他默认空间' : undefined} className={styles.deleteButton} icon={<Trash2 size={15} />} aria-label={`删除${space.bucketName}`} onClick={() => openEditor({ mode: 'delete', space })}>删除</AppButton></div></td>
           </tr>)}
         </tbody>
       </DataTable>
     </PaginatedListPanel>
-    <p className={styles.previewNote}>页面预览：添加、状态切换、域名修改和删除仅影响当前页面；同步与保存功能待开放。</p>
+    {(credentialsQuery.isError || credentialsQuery.isFetching || successMessage) && <div className={styles.statusNote}>
+      {credentialsQuery.isError ? <AppButton disabled={busy} onClick={() => void credentialsQuery.refetch()}>重新查询配置状态</AppButton> : credentialsQuery.isFetching && <p role="status">正在查询配置状态…</p>}
+      {successMessage && <p className={styles.successNote} role="status">{successMessage}</p>}
+    </div>}
 
     <Drawer open={editor !== null} title={editorTitle} centered onClose={closeEditor}>
-      {editor?.mode === 'config' ? <form className={styles.form} onSubmit={(event) => event.preventDefault()}>
-        <CredentialFields provider={provider} value={credentials} onChange={(field, value) => setCredentials((current) => ({ ...current, [field]: value }))} />
-        <p className={styles.formNote}>当前为配置预览，填写内容不会保存到服务器。</p>
-        <div className={styles.formActions}><AppButton type="button" onClick={closeEditor}>取消</AppButton><AppButton type="submit" variant="primary" disabled>确定</AppButton></div>
-      </form> : editor?.mode === 'delete' ? <div className={styles.form}>
-        <p>确定从预览中删除存储空间“{editor.space.name}”吗？</p>
-        <div className={styles.formActions}><AppButton onClick={closeEditor}>取消</AppButton><AppButton variant="primary" onClick={removeSpace}>从预览移除</AppButton></div>
-      </div> : editor && <form className={styles.form} onSubmit={submitSpace}>
-        {editor.mode === 'add' && <>
-          <CredentialFields provider={provider} value={spaceDraft} onChange={(field, value) => setSpaceDraft((current) => ({ ...current, [field]: value }))} />
-          <FormField label="空间名称" htmlFor={`storage-${provider.key}-name`} required><input id={`storage-${provider.key}-name`} value={spaceDraft.name} onChange={(event) => setSpaceDraft((current) => ({ ...current, name: event.target.value }))} placeholder="请输入空间名称" required /></FormField>
-          <FormField label="空间区域" htmlFor={`storage-${provider.key}-region`} required>{provider.key === 'aliyun' ? <select id={`storage-${provider.key}-region`} value={spaceDraft.region} onChange={(event) => setSpaceDraft((current) => ({ ...current, region: event.target.value }))} required><option value="" disabled>请选择空间区域</option>{aliyunRegions.map((region) => <option key={region} value={region}>{region}</option>)}</select> : <input id={`storage-${provider.key}-region`} value={spaceDraft.region} onChange={(event) => setSpaceDraft((current) => ({ ...current, region: event.target.value }))} placeholder="请输入存储区域" required />}</FormField>
-          {provider.key === 'aliyun' && <fieldset className={styles.permissionRow}><legend><span className={styles.required} aria-hidden="true">*</span>读写权限<span aria-hidden="true">：</span></legend><div>{([{ value: 'public-read', label: '公共读（推荐）' }, { value: 'public-read-write', label: '公共读写' }] as const).map((option) => <label key={option.value}><input type="radio" name={`storage-${provider.key}-permission`} value={option.value} checked={spaceDraft.permission === option.value} onChange={() => setSpaceDraft((current) => ({ ...current, permission: option.value }))} /><span>{option.label}</span></label>)}</div></fieldset>}
-        </>}
-        {editor.mode === 'domain' && <FormField label="空间域名" htmlFor={`storage-${provider.key}-domain`}><input id={`storage-${provider.key}-domain`} type="url" value={spaceDraft.domain} onChange={(event) => setSpaceDraft((current) => ({ ...current, domain: event.target.value }))} placeholder="例如：https://files.example.com" /></FormField>}
-        <p className={styles.formNote}>修改仅用于页面预览，不会创建或修改真实云存储空间。</p>
+      {editor?.mode === 'config' ? <form className={styles.form} onSubmit={submitCredentials} aria-busy={Boolean(pendingAction)}>
+        <CredentialFields provider={provider} value={credentials} disabled={busy} configured={configured} onChange={(field, value) => { setCredentials((current) => ({ ...current, [field]: value })); setFormError('') }} />
         {formError && <p className={styles.formError} role="alert">{formError}</p>}
-        <div className={styles.formActions}><AppButton type="button" onClick={closeEditor}>取消</AppButton><AppButton type="submit" variant="primary" title="仅应用到当前页面预览">确定</AppButton></div>
+        <div className={styles.formActions}><AppButton type="button" disabled={busy} onClick={closeEditor}>取消</AppButton><AppButton type="submit" variant="primary" disabled={busy}>{pendingAction === 'credentials' ? '保存中…' : '确定'}</AppButton></div>
+      </form> : editor?.mode === 'delete' ? <div className={styles.form}>
+        <p>确定删除存储空间“{editor.space.bucketName}”的绑定吗？</p>
+        <div className={styles.formActions}><AppButton disabled={busy} onClick={closeEditor}>取消</AppButton><AppButton variant="danger" disabled={busy} onClick={removeSpace}>{pendingAction === 'delete' ? '删除中…' : '删除'}</AppButton></div>
+      </div> : editor && <form className={styles.form} onSubmit={submitSpace} aria-busy={Boolean(pendingAction)}>
+        {editor.mode === 'add' && <>
+          <CredentialFields provider={provider} value={credentials} disabled={busy} configured={configured} required={!configured} onChange={(field, value) => { setCredentials((current) => ({ ...current, [field]: value })); setFormError('') }} />
+          <FormField label="空间名称" htmlFor={`storage-${provider.key}-name`} required><input id={`storage-${provider.key}-name`} value={spaceDraft.bucketName} disabled={busy} onChange={(event) => setSpaceDraft((current) => ({ ...current, bucketName: event.target.value }))} placeholder="请输入已有 Bucket 名称" required /></FormField>
+          <FormField label="空间区域" htmlFor={`storage-${provider.key}-region`} required><select id={`storage-${provider.key}-region`} value={spaceDraft.regionId} disabled={busy} onChange={(event) => setSpaceDraft((current) => ({ ...current, regionId: event.target.value }))} required><option value="" disabled>请选择空间区域</option>{aliyunOssRegionGroups.map((group) => <optgroup key={group.label} label={group.label}>{group.regions.map((region) => <option key={region.id} value={region.id}>{region.label} · {region.id}</option>)}</optgroup>)}</select></FormField>
+          <FormField label="读写权限" required><div className={styles.permissionOptions} role="radiogroup" aria-label="读写权限">
+            <label className={styles.permissionOption}><input type="radio" name="storagePermission" value="public-read" checked={accessPermission === 'public-read'} disabled={busy} onChange={() => setAccessPermission('public-read')} />公共读（推荐）</label>
+            <label className={styles.permissionOption}><input type="radio" name="storagePermission" value="public-read-write" checked={accessPermission === 'public-read-write'} disabled={busy} onChange={() => setAccessPermission('public-read-write')} />公共读写</label>
+          </div></FormField>
+        </>}
+        {editor.mode === 'domain' && <>
+          <FormField label="空间域名" htmlFor={`storage-${provider.key}-domain`}><input id={`storage-${provider.key}-domain`} type="url" value={spaceDraft.accessDomain} disabled={busy} onChange={(event) => setSpaceDraft((current) => ({ ...current, accessDomain: event.target.value }))} placeholder="例如：https://files.example.com（可选）" /></FormField>
+        </>}
+        {formError && <p className={styles.formError} role="alert">{formError}</p>}
+        <div className={styles.formActions}><AppButton type="button" disabled={busy} onClick={closeEditor}>取消</AppButton><AppButton type="submit" variant="primary" disabled={busy}>{pendingAction ? '保存中…' : '确定'}</AppButton></div>
       </form>}
     </Drawer>
   </>

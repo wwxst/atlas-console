@@ -299,7 +299,7 @@
   padding: var(--atlas-space-sm);
 }
 
-.accountPanel > button {
+.accountPanel > button:not(.logout) {
   display: flex;
   align-items: center;
   gap: var(--atlas-space-sm);
@@ -316,17 +316,16 @@
   transition: all 0.15s ease;
 }
 
-.accountPanel > button:hover {
+.accountPanel > button:not(.logout):hover {
   color: var(--atlas-color-text-primary);
   background: var(--atlas-color-bg-hover);
 }
 
 .accountPanel > .logout {
-  color: var(--atlas-color-danger);
-}
-
-.accountPanel > .logout:hover {
-  background: var(--atlas-color-danger-soft);
+  justify-content: flex-start;
+  width: 100%;
+  height: 2.375rem;
+  padding: 0 var(--atlas-space-md);
 }
 
 .menuDivider {

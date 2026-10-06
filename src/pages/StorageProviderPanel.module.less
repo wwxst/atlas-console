@@ -18,6 +18,11 @@
   min-width: 860px;
 }
 
+.table th,
+.table td {
+  vertical-align: middle;
+}
+
 .table th {
   background: var(--atlas-color-brand-soft);
 }
@@ -90,17 +95,32 @@
 
 .rowActions {
   display: flex;
+  align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
+  min-height: var(--atlas-control-height-md);
   gap: var(--atlas-space-sm);
 }
 
-.rowActions button {
+.rowActions > button:not(.deleteButton) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--atlas-control-height-md);
+  padding: 0;
   color: var(--atlas-color-brand);
   font-size: var(--atlas-text-xs);
+  line-height: 1;
 }
 
-.rowActions button:hover {
+.rowActions > button:not(.deleteButton):hover {
   text-decoration: underline;
+}
+
+.deleteButton {
+  gap: var(--atlas-space-xs);
+  min-height: 1.875rem;
+  padding: 0 0.375rem;
+  font-size: var(--atlas-text-xs);
 }
 
 .statusToggle:focus-visible,
@@ -109,35 +129,24 @@
   outline-offset: 3px;
 }
 
-.previewNote {
+.statusNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--atlas-space-sm) var(--atlas-space-lg);
   margin-top: var(--atlas-space-sm);
   color: var(--atlas-color-text-tertiary);
   font-size: var(--atlas-text-sm);
+}
+
+.successNote {
+  color: var(--atlas-color-success);
 }
 
 .form {
   display: grid;
   gap: var(--atlas-space-xl);
   padding: var(--atlas-space-xl);
-}
-
-.formRow {
-  display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr);
-  align-items: center;
-  gap: var(--atlas-space-md);
-}
-
-.formRow > label,
-.permissionRow legend {
-  text-align: right;
-  white-space: nowrap;
-  font-size: var(--atlas-text-sm);
-}
-
-.required {
-  margin-right: var(--atlas-space-xs);
-  color: var(--atlas-color-danger);
 }
 
 .form input:not([type='radio']),
@@ -157,43 +166,26 @@
   border-color: var(--atlas-color-border-focus);
 }
 
-.permissionRow {
-  border: 0;
+.permissionOptions {
+  display: flex;
+  align-items: center;
+  gap: var(--atlas-space-xl);
 }
 
-.permissionRow legend {
-  float: left;
-  width: 8.5rem;
-  margin-right: var(--atlas-space-md);
-}
-
-.permissionRow > div,
-.permissionRow label {
+.permissionOption {
   display: flex;
   align-items: center;
   gap: var(--atlas-space-sm);
+  min-height: var(--atlas-control-height-lg);
 }
 
-.permissionRow > div {
-  flex-wrap: wrap;
-  gap: var(--atlas-space-md);
-}
-
-.permissionRow label {
-  cursor: pointer;
-  white-space: nowrap;
-  font-size: var(--atlas-text-sm);
-}
-
-.permissionRow input {
-  width: 14px;
-  height: 14px;
+.permissionOption input {
   accent-color: var(--atlas-color-brand);
 }
 
-.formNote {
-  color: var(--atlas-color-text-tertiary);
-  font-size: var(--atlas-text-sm);
+.savedSecret::placeholder {
+  color: var(--atlas-color-text-primary);
+  opacity: 1;
 }
 
 .formError {
