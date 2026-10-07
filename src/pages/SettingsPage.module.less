@@ -89,7 +89,7 @@
   border: 2px solid var(--atlas-color-border);
   border-radius: var(--atlas-radius-xl);
   background: var(--atlas-color-bg-surface);
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .channelCard:hover {
@@ -265,6 +265,10 @@
 }
 
 /* ===== Warning Banner ===== */
+.messageSlot {
+  min-height: 3.5rem;
+}
+
 .warningBanner {
   display: flex;
   align-items: center;

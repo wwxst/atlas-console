@@ -87,18 +87,20 @@ function ChannelSettings({ channel, saved, otherEnabled, disabled, saving, onSav
         </label>
       </div>
 
-      {blocksAllChannels && (
-        <div className={styles.warningBanner} role="alert" id={warningId}>
-          <AlertCircle size={16} />
-          <span>至少需要保留一个认证渠道开启，请先启用另一个渠道</span>
-        </div>
-      )}
+      <div className={styles.messageSlot}>
+        {blocksAllChannels && (
+          <div className={styles.warningBanner} role="alert" id={warningId}>
+            <AlertCircle size={16} />
+            <span>至少需要保留一个认证渠道开启，请先启用另一个渠道</span>
+          </div>
+        )}
 
-      {dirty && !blocksAllChannels && (
-        <div className={styles.draftBanner}>
-          <span>有未保存的修改</span>
-        </div>
-      )}
+        {dirty && !blocksAllChannels && (
+          <div className={styles.draftBanner}>
+            <span>有未保存的修改</span>
+          </div>
+        )}
+      </div>
     </div>
 
     <div className={styles.cardActions}>

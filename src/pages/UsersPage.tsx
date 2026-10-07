@@ -142,7 +142,7 @@ export default function UsersPage() {
             <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
             <td><div className={styles.rowActions}>
               <button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button>
-              <button type="button" className={styles.statusButton} aria-busy={statusMutation.isPending && statusMutation.variables?.id === user.id} disabled={statusMutation.isPending} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}>
+              <button type="button" className={styles.statusButton} aria-busy={statusMutation.isPending && statusMutation.variables?.id === user.id} disabled={statusMutation.isPending && statusMutation.variables?.id === user.id} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}>
                 <Power size={15} />{user.status === 1 ? '停用' : '启用'}
               </button>
             </div></td>
