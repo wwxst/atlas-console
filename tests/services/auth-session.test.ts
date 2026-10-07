@@ -79,6 +79,10 @@ function unauthorized(): Outcome {
   return { status: 401, data: { code: 40102, msg: '登录状态无效或已过期', data: null } }
 }
 
+function rateLimited(): Outcome {
+  return { status: 429, data: { code: 42901, msg: '登录请求过于频繁，请稍后再试', data: null } }
+}
+
 function serverError(): Outcome {
   return { status: 500, data: { code: 500, msg: '服务器错误', data: null } }
 }
@@ -165,6 +169,64 @@ test('refreshes on 401 and retries the original request once', async () => {
   assert.equal(refreshUrls.length, 1)
   assert.ok(refreshUrls[0].includes('/auth/refresh'))
   assert.deepEqual(resourceAuth, ['Bearer old-access', 'Bearer new-access'])
+  assert.equal(getAccessToken(), 'new-access')
+  clearAuthTokens()
+})
+
+test('does not refresh or clear a valid session when login is rate limited', async () => {
+  clearAuthTokens()
+  saveAuthTokens('existing-access', 'existing-refresh')
+
+  let refreshCount = 0
+  installAdapter(refreshClient, () => {
+    refreshCount += 1
+    return ok({ accessToken: 'unexpected-refresh' })
+  })
+  installAdapter(http, () => rateLimited())
+
+  await assert.rejects(() => http.post('/sys-user/auth/login', {
+    username: 'admin',
+    password: 'password',
+  }))
+
+  assert.equal(refreshCount, 0)
+  assert.equal(getAccessToken(), 'existing-access')
+  assert.equal(getRefreshToken(), 'existing-refresh')
+  clearAuthTokens()
+})
+
+test('merges simultaneous 401 responses into one refresh and retries each request once', async () => {
+  clearAuthTokens()
+  saveAuthTokens('old-access', 'refresh-1')
+
+  let refreshCount = 0
+  installAdapter(refreshClient, () => {
+    refreshCount += 1
+    return ok({ accessToken: 'new-access' })
+  })
+
+  let initial401Count = 0
+  let requestCount = 0
+  installAdapter(http, (config) => {
+    requestCount += 1
+    const authorization = headerOf(config, 'Authorization')
+    if (authorization === 'Bearer old-access' && initial401Count < 3) {
+      initial401Count += 1
+      return unauthorized()
+    }
+    return ok({ url: config.url })
+  })
+
+  const responses = await Promise.all([
+    http.get('/sys-user/sys-users'),
+    http.get('/sys-user/users'),
+    http.get('/sys-user/auth-channels'),
+  ])
+
+  assert.equal(refreshCount, 1)
+  assert.equal(initial401Count, 3)
+  assert.equal(requestCount, 6)
+  assert.deepEqual(responses.map((response) => response.status), [200, 200, 200])
   assert.equal(getAccessToken(), 'new-access')
   clearAuthTokens()
 })

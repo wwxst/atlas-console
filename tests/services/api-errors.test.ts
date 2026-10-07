@@ -29,6 +29,10 @@ test('maps timeout and network failures to Chinese messages', () => {
   assert.equal(getApiErrorMessage(new AxiosError('Network Error', 'ERR_NETWORK'), 'fallback'), '网络异常，请检查连接后重试')
 })
 
+test('maps a 429 response to a retry-later message', () => {
+  assert.equal(getApiErrorMessage(axiosError(429), 'fallback'), '请求过于频繁，请稍后重试')
+})
+
 test('publishes a business-code failure and preserves its Chinese message', () => {
   const messages: string[] = []
   const unsubscribe = subscribeRequestErrors((message) => messages.push(message))
