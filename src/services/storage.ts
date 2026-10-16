@@ -20,7 +20,13 @@ export interface StorageSpace {
   createdAt: string
   updatedAt: string
 }
-export interface BindStorageSpaceInput { bucketName: string; regionId: string; accessPermission: StorageAccessPermission }
+export interface BindStorageSpaceInput {
+  bucketName: string
+  regionId: string
+  accessPermission: StorageAccessPermission
+  accessKeyId?: string
+  accessKeySecret?: string
+}
 export interface StorageSpaceDomainInput { accessDomain: string | null }
 
 const basePath = '/sys-user/storage'

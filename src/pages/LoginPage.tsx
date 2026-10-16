@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, loginSysUser } from '@/features/auth/api'
 import type { LoginInput } from '@/features/auth/api'
 import { clearAuthTokens, saveAuthTokens } from '@/services/http'
+import { clearAuthenticatedQueryCache } from '@/services/authCache'
 import { AppButton, AuthField, IconButton, Toast } from '@ui/index'
 import loginOrbit from '@/assets/login-orbit.svg'
 import styles from './LoginPage.module.less'
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({})
   const [loginSuccess, setLoginSuccess] = useState(false)
   const loginMutation = useMutation({
+    onMutate: () => clearAuthenticatedQueryCache(queryClient),
     mutationFn: async (input: LoginInput) => {
       // 登录返回双 Token；系统用户资料随后由 /me 获取
       const tokenPair = await loginSysUser(input)

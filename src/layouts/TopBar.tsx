@@ -6,6 +6,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getNotifications } from '@/features/notifications/api'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser, logoutSysUser } from '@/features/auth/api'
 import { clearAuthTokens } from '@/services/http'
+import { clearAuthenticatedQueryCache } from '@/services/authCache'
+import { withListKeyword } from '@/services/listSearch'
 import { AppButton, Avatar, IconButton, SearchInput } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
 import styles from './TopBar.module.less'
@@ -35,7 +37,7 @@ export default function TopBar() {
   const setTheme = useAppStore((state) => state.setTheme)
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null)
   const isRefreshing = useIsFetching({ type: 'active' }) > 0
-  const [searchValue, setSearchValue] = useState(() => new URLSearchParams(location.search).get('q') ?? '')
+  const [searchValue, setSearchValue] = useState(() => new URLSearchParams(location.search).get('keyword') ?? '')
   const controlsRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const hoverCloseTimerRef = useRef<number | null>(null)
@@ -66,10 +68,7 @@ export default function TopBar() {
   }, [])
 
   const submitSearch = () => {
-    const params = new URLSearchParams(location.search)
-    if (searchValue.trim()) params.set('q', searchValue.trim())
-    else params.delete('q')
-    navigate({ pathname: location.pathname, search: params.toString() }, { replace: true })
+    navigate({ pathname: location.pathname, search: withListKeyword(location.search, searchValue) }, { replace: true })
   }
 
   const clearScheduledClose = () => {
@@ -98,6 +97,7 @@ export default function TopBar() {
   }
 
   const handleLogout = async () => {
+    await clearAuthenticatedQueryCache(queryClient)
     try {
       // 退出登录调用后端接口删除当前 Session
       await logoutSysUser()
@@ -105,7 +105,7 @@ export default function TopBar() {
       // 后端失败、Session 已不存在或网络异常时，仍然清理本地登录状态
     } finally {
       clearAuthTokens()
-      queryClient.clear()
+      await clearAuthenticatedQueryCache(queryClient)
       setOpenPanel(null)
       navigate('/login', { replace: true })
     }

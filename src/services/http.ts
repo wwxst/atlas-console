@@ -17,6 +17,17 @@ export const refreshClient = axios.create({ baseURL, timeout: 10_000 })
 
 const authTokenEvents = new EventTarget()
 
+function handleAuthTokenStorage(event: Event): void {
+  const storageEvent = event as StorageEvent
+  if (storageEvent.key === null || storageEvent.key === ACCESS_TOKEN_KEY || storageEvent.key === REFRESH_TOKEN_KEY) {
+    authTokenEvents.dispatchEvent(new Event('change'))
+  }
+}
+
+if (typeof globalThis.addEventListener === 'function') {
+  globalThis.addEventListener('storage', handleAuthTokenStorage)
+}
+
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }

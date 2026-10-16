@@ -44,6 +44,34 @@ test('storage operations send selected Bucket permission without repeating crede
   assert.deepEqual(calls[8].body, { accessDomain: 'https://files.example.com' })
 })
 
+test('binding can submit candidate credentials atomically with the Bucket binding', async () => {
+  const calls: { method: string | undefined; url: string | undefined; body: unknown }[] = []
+  http.defaults.adapter = async (config) => {
+    calls.push({ method: config.method, url: config.url, body: config.data ? JSON.parse(config.data) : undefined })
+    return { config, status: 200, statusText: 'OK', headers: {}, data: { code: 200, msg: null, data: { id: 18 } } }
+  }
+
+  await storage.bindStorageSpace({
+    bucketName: 'atlas-images',
+    regionId: 'oss-cn-hangzhou',
+    accessPermission: 'public-read',
+    accessKeyId: 'new-id',
+    accessKeySecret: 'new-secret',
+  })
+
+  assert.deepEqual(calls, [{
+    method: 'post',
+    url: '/sys-user/storage/spaces',
+    body: {
+      bucketName: 'atlas-images',
+      regionId: 'oss-cn-hangzhou',
+      accessPermission: 'public-read',
+      accessKeyId: 'new-id',
+      accessKeySecret: 'new-secret',
+    },
+  }])
+})
+
 test('server OSS region IDs keep Chinese labels and select the corresponding grouped option', () => {
   assert.equal(ossRegions.getAliyunOssRegionLabel('oss-cn-hangzhou'), '华东1（杭州）')
   assert.equal(ossRegions.getAliyunOssRegionLabel('cn-hangzhou'), '华东1（杭州）')

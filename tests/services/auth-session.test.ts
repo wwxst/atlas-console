@@ -20,6 +20,11 @@ class MemoryStorage {
 
 // http.ts 使用 localStorage，Node 环境先注入内存实现，再动态导入被测模块
 ;(globalThis as unknown as { localStorage: MemoryStorage }).localStorage = new MemoryStorage()
+const browserEvents = new EventTarget()
+Object.defineProperties(globalThis, {
+  addEventListener: { value: browserEvents.addEventListener.bind(browserEvents), configurable: true },
+  dispatchEvent: { value: browserEvents.dispatchEvent.bind(browserEvents), configurable: true },
+})
 
 const {
   http,
@@ -33,6 +38,7 @@ const {
   getAuthTokenSnapshot,
   subscribeAuthTokens,
 } = await import('../../src/services/http.ts')
+const { logoutSysUser } = await import('../../src/features/auth/api.ts')
 
 interface Outcome {
   status: number
@@ -170,6 +176,24 @@ test('refreshes on 401 and retries the original request once', async () => {
   assert.ok(refreshUrls[0].includes('/auth/refresh'))
   assert.deepEqual(resourceAuth, ['Bearer old-access', 'Bearer new-access'])
   assert.equal(getAccessToken(), 'new-access')
+  clearAuthTokens()
+})
+
+test('notifies subscribers when another tab changes auth tokens', () => {
+  clearAuthTokens()
+  let changes = 0
+  const unsubscribe = subscribeAuthTokens(() => changes += 1)
+  const storageChange = (key: string | null) => {
+    const event = new Event('storage')
+    Object.defineProperty(event, 'key', { value: key })
+    globalThis.dispatchEvent(event)
+  }
+  localStorage.setItem(ACCESS_TOKEN_KEY, 'other-tab-access')
+  storageChange(ACCESS_TOKEN_KEY)
+  localStorage.setItem('unrelated-setting', 'value')
+  storageChange('unrelated-setting')
+  assert.equal(changes, 1)
+  unsubscribe()
   clearAuthTokens()
 })
 
@@ -326,4 +350,9 @@ test('does not attempt refresh when no refresh token is stored', async () => {
 
   assert.equal(refreshCount, 0)
   assert.equal(getAccessToken(), null)
+})
+
+test('logout rejects a failed business response instead of treating HTTP 200 as success', async () => {
+  installAdapter(http, () => ({ status: 200, data: { code: 40102, msg: '登录状态无效或已过期', data: null } }))
+  await assert.rejects(logoutSysUser, /登录状态无效或已过期/)
 })

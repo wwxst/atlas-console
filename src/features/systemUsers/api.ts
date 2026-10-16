@@ -1,6 +1,6 @@
-import { requireApiData, requireApiSuccess } from '@/services/api'
-import type { ApiResult, PageResult } from '@/services/api'
-import { http } from '@/services/http'
+import { requireApiData, requireApiSuccess } from '../../services/api.ts'
+import type { ApiResult, PageResult } from '../../services/api.ts'
+import { http } from '../../services/http.ts'
 
 export type SysUserStatus = 0 | 1
 
@@ -34,6 +34,16 @@ export interface UpdateSysUserInput {
   nickname: string
 }
 
+export class PartialSysUserUpdateError extends Error {
+  readonly savedUser: SysUser
+
+  constructor(savedUser: SysUser, cause: unknown) {
+    super('系统用户资料已保存，但头像上传失败，请重试头像上传。', { cause })
+    this.name = 'PartialSysUserUpdateError'
+    this.savedUser = savedUser
+  }
+}
+
 export async function getSysUsers(query: SysUserQuery): Promise<PageResult<SysUser>> {
   const response = await http.get<ApiResult<PageResult<SysUser>>>('/sys-user/sys-users', {
     params: query,
@@ -55,6 +65,16 @@ export async function createSysUser(input: CreateSysUserInput): Promise<SysUser>
 export async function updateSysUser(id: number, input: UpdateSysUserInput): Promise<SysUser> {
   const response = await http.put<ApiResult<SysUser>>(`/sys-user/sys-users/${id}`, input)
   return requireApiData(response.data)
+}
+
+export async function updateSysUserWithAvatar(id: number, input: UpdateSysUserInput, avatarFile?: File): Promise<SysUser> {
+  const savedUser = await updateSysUser(id, input)
+  if (!avatarFile) return savedUser
+  try {
+    return await uploadSysUserAvatar(savedUser.id, avatarFile)
+  } catch (error) {
+    throw new PartialSysUserUpdateError(savedUser, error)
+  }
 }
 
 export async function resetSysUserPassword(id: number, password: string): Promise<void> {

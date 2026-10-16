@@ -1,6 +1,6 @@
-import { requireApiData } from '@/services/api'
-import type { ApiResult } from '@/services/api'
-import { http } from '@/services/http'
+import { requireApiData, requireApiSuccess } from '../../services/api.ts'
+import type { ApiResult } from '../../services/api.ts'
+import { http } from '../../services/http.ts'
 
 export const CURRENT_SYS_USER_QUERY_KEY = ['current-sys-user'] as const
 
@@ -31,5 +31,6 @@ export async function getCurrentSysUser(): Promise<SysUserInfo> {
 }
 
 export async function logoutSysUser(): Promise<void> {
-  await http.post<ApiResult<null>>('/sys-user/auth/logout')
+  const response = await http.post<ApiResult<null>>('/sys-user/auth/logout')
+  requireApiSuccess(response.data)
 }

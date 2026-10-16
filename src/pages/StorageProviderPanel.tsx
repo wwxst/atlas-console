@@ -121,14 +121,9 @@ export function StorageProviderPanel({ provider, active }: { provider: StoragePr
       const accessKeyId = credentials.accessKeyId.trim(), accessKeySecret = credentials.accessKeySecret.trim()
       const hasCredentials = Boolean(accessKeyId || accessKeySecret)
       if ((!configured || hasCredentials) && (!accessKeyId || !accessKeySecret)) { setFormError('请填写完整的访问凭据'); return }
-      const version = editorVersion.current
       void runAction('add', async () => {
-        if (hasCredentials) {
-          const status = await updateOssCredentials({ accessKeyId, accessKeySecret })
-          queryClient.setQueryData(OSS_CREDENTIALS_QUERY_KEY, status)
-          if (mounted.current && version === editorVersion.current) setCredentials(emptyCredentials)
-        }
-        await bindStorageSpace({ bucketName, regionId, accessPermission })
+        await bindStorageSpace({ bucketName, regionId, accessPermission, ...(hasCredentials ? { accessKeyId, accessKeySecret } : {}) })
+        if (hasCredentials) queryClient.setQueryData(OSS_CREDENTIALS_QUERY_KEY, { configured: true })
         return '存储空间已绑定'
       }, () => { closeEditor(); setPage(1) })
     } else {

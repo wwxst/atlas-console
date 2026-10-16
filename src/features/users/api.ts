@@ -5,7 +5,7 @@ import { http } from '../../services/http.ts'
 export type UserStatus = 0 | 1
 
 export interface User {
-  id: number
+  id: string
   userNo: string
   phone?: string | null
   email?: string | null
@@ -30,12 +30,12 @@ export interface UpdateUserInput {
   email: string | null
 }
 
-export async function updateUser(id: number, input: UpdateUserInput): Promise<User> {
+export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
   const response = await http.put<ApiResult<User>>(`/sys-user/users/${id}`, input)
   return requireApiData(response.data)
 }
 
-export async function updateUserStatus(id: number, status: UserStatus): Promise<void> {
+export async function updateUserStatus(id: string, status: UserStatus): Promise<void> {
   const response = await http.patch<ApiResult<null>>(`/sys-user/users/${id}/status`, { status })
   requireApiSuccess(response.data)
 }

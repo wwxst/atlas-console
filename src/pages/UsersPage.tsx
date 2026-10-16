@@ -63,7 +63,7 @@ export default function UsersPage() {
   })
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: UserStatus }) => updateUserStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: UserStatus }) => updateUserStatus(id, status),
     onSuccess: async (_, { id, status }) => {
       setSelectedUser((current) => current?.id === id ? { ...current, status } : current)
       await queryClient.invalidateQueries({ queryKey: ['users'] })

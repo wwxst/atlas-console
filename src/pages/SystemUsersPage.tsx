@@ -3,7 +3,7 @@ import { Eye, KeyRound, Pencil, Plus, Power, RotateCcw, Trash2 } from 'lucide-re
 import { useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { createSysUser, deleteSysUser, getSysUsers, resetSysUserPassword, updateSysUser, updateSysUserStatus, uploadSysUserAvatar } from '@/features/systemUsers/api'
+import { createSysUser, deleteSysUser, getSysUsers, PartialSysUserUpdateError, resetSysUserPassword, updateSysUserStatus, updateSysUserWithAvatar, uploadSysUserAvatar } from '@/features/systemUsers/api'
 import type { CreateSysUserInput, SysUser, SysUserStatus, UpdateSysUserInput } from '@/features/systemUsers/api'
 import { getApiErrorMessage } from '@/services/api'
 import { AppButton, Avatar, DataTable, Drawer, EmptyState, ListFilters, PaginatedListPanel, SortableDateHeader, StatusIndicator, UserDetailsLayout, UserDetailsField, UserDetailsSection } from '@ui/index'
@@ -135,11 +135,18 @@ export default function SystemUsersPage() {
     onError: (error) => setFormError(getApiErrorMessage(error, '新增系统用户失败，请检查输入后重试。')),
   })
   const updateMutation = useMutation({
-    mutationFn: async ({ id, input, avatarFile }: { id: number; input: UpdateSysUserInput; avatarFile?: File }) => {
-      const user = await updateSysUser(id, input)
-      return avatarFile ? uploadSysUserAvatar(user.id, avatarFile) : user
-    },
+    mutationFn: ({ id, input, avatarFile }: { id: number; input: UpdateSysUserInput; avatarFile?: File }) => updateSysUserWithAvatar(id, input, avatarFile),
     onSuccess: (saved) => { setFormError(null); setAvatarPreview(null); setEditor(null); setSelectedUser((current) => current?.id === saved.id ? saved : current); void queryClient.invalidateQueries({ queryKey: ['system-users'] }) },
+    onError: (error) => {
+      if (error instanceof PartialSysUserUpdateError) {
+        setSelectedUser((current) => current?.id === error.savedUser.id ? error.savedUser : current)
+        setEditor((current) => current?.mode === 'edit' ? { ...current, user: error.savedUser } : current)
+        setFormError(error.message)
+        void queryClient.invalidateQueries({ queryKey: ['system-users'] })
+        return
+      }
+      setFormError(getApiErrorMessage(error, '编辑系统用户失败，请检查输入后重试。'))
+    },
   })
   const passwordMutation = useMutation({
     mutationFn: ({ id, password }: { id: number; password: string }) => resetSysUserPassword(id, password),
@@ -291,8 +298,8 @@ export default function SystemUsersPage() {
             <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
             <td><div className={styles.rowActions}>
               <button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button>
-              <button type="button" className={styles.statusButton} aria-busy={statusMutation.isPending && statusMutation.variables?.id === user.id} disabled={statusMutation.isPending && statusMutation.variables?.id === user.id} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}><Power size={15} />{user.status === 1 ? '停用' : '启用'}</button>
-              <button type="button" className={styles.deleteButton} disabled={deleteMutation.isPending} onClick={() => { if (window.confirm(`确定删除系统用户“${user.username}”吗？`)) deleteMutation.mutate(user.id) }}><Trash2 size={15} />{deleteMutation.isPending && deleteMutation.variables === user.id ? '删除中...' : '删除'}</button>
+              <button type="button" className={styles.statusButton} aria-busy={statusMutation.isPending && statusMutation.variables?.id === user.id} disabled={user.id === 1 || (statusMutation.isPending && statusMutation.variables?.id === user.id)} title={user.id === 1 ? '超级管理员不允许停用' : undefined} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}><Power size={15} />{user.id === 1 ? '超级管理员' : user.status === 1 ? '停用' : '启用'}</button>
+              <button type="button" className={styles.deleteButton} disabled={user.id === 1 || deleteMutation.isPending} title={user.id === 1 ? '超级管理员不允许删除' : undefined} onClick={() => { if (window.confirm(`确定删除系统用户“${user.username}”吗？`)) deleteMutation.mutate(user.id) }}><Trash2 size={15} />{deleteMutation.isPending && deleteMutation.variables === user.id ? '删除中...' : '删除'}</button>
             </div></td>
           </tr>)}
         </tbody>

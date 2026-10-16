@@ -22,9 +22,14 @@ Lucide is the standard icon source. Do not draw replacement SVG icons when Lucid
 Run after implementation:
 
 ```bash
+npm test
 npm run lint
 npm run build
 ```
+
+`npm test` first checks the ordinary-user ID type contracts with the existing TypeScript compiler (`npm run test:types`), then runs the Node service tests. The Snowflake regression parses a list response containing string ID `9007199254740993` and verifies that editing and both status changes preserve it in request URLs. Type contracts live in `tests/types` and use `tsconfig.test.json`; runtime tests continue to use Node's built-in test runner.
+
+Session regressions use the real TanStack `QueryObserver` and React server rendering through the existing Vite loader. They verify account-observer reconstruction and the initial protected-route gate without additional test dependencies. Browser verification covers effect-driven account changes, rapid session replacements, access-token renewal, and navigation.
 
 For a visible UI change, also run the development server and inspect the affected workflow in a browser:
 

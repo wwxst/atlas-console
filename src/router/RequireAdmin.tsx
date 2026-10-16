@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { LogOut, RotateCcw } from 'lucide-react'
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
 import {
@@ -11,29 +11,50 @@ import {
   getRefreshToken,
   subscribeAuthTokens,
 } from '@/services/http'
+import { clearAuthenticatedQueryCache } from '@/services/authCache'
 import { AppButton } from '@ui/index'
 import styles from './RequireAdmin.module.less'
 
 export default function RequireAdmin() {
   const location = useLocation()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   useSyncExternalStore(subscribeAuthTokens, getAuthTokenSnapshot, getAuthTokenSnapshot)
-  const hasSession = Boolean(getAccessToken() || getRefreshToken())
-  const currentUserQuery = useQuery({
-    queryKey: CURRENT_SYS_USER_QUERY_KEY,
-    queryFn: getCurrentSysUser,
-    enabled: hasSession,
-    retry: false,
-  })
+  const refreshToken = getRefreshToken()
+  const hasSession = Boolean(getAccessToken() || refreshToken)
+  const [readySession, setReadySession] = useState<{ refreshToken: string | null } | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void clearAuthenticatedQueryCache(queryClient).then(() => {
+      if (active) setReadySession({ refreshToken })
+    })
+    return () => { active = false }
+  }, [queryClient, refreshToken])
 
   if (!hasSession) {
     return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
   }
 
-  if (currentUserQuery.isPending) {
-    return <main className={styles.page}><div className={styles.state}>正在验证登录状态...</div></main>
-  }
+  if (readySession?.refreshToken !== refreshToken) return <SessionPending />
+
+  return <ValidatedAdmin key={refreshToken} />
+}
+
+function SessionPending() {
+  return <main className={styles.page}><div className={styles.state}>正在验证登录状态...</div></main>
+}
+
+function ValidatedAdmin() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const currentUserQuery = useQuery({
+    queryKey: CURRENT_SYS_USER_QUERY_KEY,
+    queryFn: getCurrentSysUser,
+    retry: false,
+  })
+
+  if (currentUserQuery.isPending) return <SessionPending />
 
   if (currentUserQuery.isError) {
     if (axios.isAxiosError(currentUserQuery.error) && currentUserQuery.error.response?.status === 401) {
@@ -42,7 +63,7 @@ export default function RequireAdmin() {
 
     const signOut = () => {
       clearAuthTokens()
-      queryClient.clear()
+      void clearAuthenticatedQueryCache(queryClient)
       navigate('/login', { replace: true })
     }
 
