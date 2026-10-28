@@ -6,7 +6,7 @@
 
 - 后台超级管理员（系统用户 ID=1）在「版本与更新」点击一键更新。
 - 后端调用 GitHub Actions API，只允许触发 `wwxst/atlas-console` 中固定的 `deploy-production.yml`，引用 `main`。
-- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行，获取 `atlas-console` 和 `backend` 两个仓库的 `main` 分支，Docker Compose 构建并更新 Nginx、Spring Boot、MySQL 和 Redis。
+- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端始终使用本次触发工作流的 `github.sha`；后端测试任务通过 `git rev-parse HEAD` 固定实际通过测试的提交，再将该 SHA 传给生产部署任务。Runner 只检出这两个已确认的 SHA，Docker Compose 构建并更新 Nginx、Spring Boot、MySQL 和 Redis。
 - 前端查看 Actions 的最近执行状态，**不会直接执行 Shell、传递自定义分支或把 GitHub Token 暴露到浏览器**。
 - 默认禁用自动更新。没有服务器、Runner 和凭据时，按钮保持禁用。
 - **业务数据持久化**：MySQL、Redis、上传目录使用 Docker 命名卷；重启容器不会清空数据。但**更新不等于备份**，操作前必须另行备份这些卷。
@@ -25,12 +25,12 @@
 
 1. 将前端、后端代码经 PR 和 CI 合并到各自 `main`。
 2. 使用 ID=1 的超级管理员登录 Atlas Console，打开「版本与更新」。
-3. 点击「一键自动更新」并确认。后台固定触发 GitHub Actions。工作流在生产 Runner 上获取最新 `main`，重新构建/启动服务。
+3. 点击「一键自动更新」并确认。后台固定触发 GitHub Actions。工作流在验证任务开始时确定前端和后端的 Git SHA。前端使用该工作流的固定 SHA，后端使用测试任务实际检出的 SHA；生产 Runner 在构建前再次校验两者是否一致，若 SHA 缺失或不匹配则拒绝部署。
 4. 在弹窗或 GitHub Actions 页查看排队、运行、成功、失败状态。显示成功后自行刷新页面以加载前端资源。**刷新页面本身不部署代码**。
 
 ## 部署失败、自动回滚与手动回滚
 
-- 每次部署从 GitHub 获取前后端已合并的 `main`，分别构建 `atlas-console:git-<40位SHA>` 和 `atlas-backend:git-<40位SHA>` 镜像，**不会覆盖上一版应用镜像标签**。
+- 每次部署使用本次工作流固定的前端 SHA 与已经通过测试的后端 SHA，分别构建 `atlas-console:git-<40位SHA>` 和 `atlas-backend:git-<40位SHA>` 镜像，**不会覆盖上一版应用镜像标签**。
 - 专用 Runner 在服务器 `/opt/atlas/releases/` 保存 `current.env` 和 `previous.env` 两份版本清单（只包含镜像标签，不包含密钥）。首次成功部署只有 current；第二次成功部署开始才有 previous。
 - 更新中 Docker Compose 的健康检查或前端 HTTP 检查失败时，发布脚本自动尝试用 current 清单恢复上一套前后端镜像。**即使自动恢复成功，本次 GitHub Actions 仍标记失败**，便于管理员排查。恢复失败会在日志中明确告警。
 - 超级管理员在「版本与更新」点击「回滚上一版本」并确认，后端使用固定的 `operation=rollback` 触发同一生产工作流，Runner **不再构建当前代码**，而是验证 previous 清单和镜像存在，恢复该版本并执行健康检查。成功后互换 current/previous，因此还可以再次切换回来。
