@@ -135,7 +135,7 @@ export default function UsersPage() {
           {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={8}><EmptyState description="没有符合当前条件的用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
             <td className={styles.userId}>{user.userNo}</td>
-            <td className={styles.avatarCell}><Avatar size={40} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
+            <td className={styles.avatarCell}><Avatar size={32} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
             <td className={styles.userName}><strong>{getDisplayName(user)}</strong></td>
             <td><span className={styles.contact}>{user.phone || '未绑定'}</span></td>
             <td><span className={styles.contact}>{user.email || '未绑定'}</span></td>
