@@ -121,6 +121,7 @@ export default function SystemUsersPage() {
       createdAtOrder,
     }),
     placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
   })
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: SysUserStatus }) => updateSysUserStatus(id, status),
@@ -286,17 +287,18 @@ export default function SystemUsersPage() {
           <th aria-sort={createdAtOrder === 'asc' ? 'ascending' : createdAtOrder === 'desc' ? 'descending' : 'none'}>
             <SortableDateHeader order={createdAtOrder} onClick={changeCreatedAtOrder} />
           </th>
-          <th>状态</th><th>操作</th></tr></thead>
+          <th>在线状态</th><th>账号状态</th><th>操作</th></tr></thead>
         <tbody>
-          {usersQuery.isPending && <tr><td colSpan={7}><div className={styles.state}>正在加载系统用户...</div></td></tr>}
-          {usersQuery.isError && <tr><td colSpan={7}><div className={styles.state}><p role="alert">系统用户加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
-          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={7}><EmptyState description="没有符合当前条件的系统用户" /></td></tr>}
+          {usersQuery.isPending && <tr><td colSpan={8}><div className={styles.state}>正在加载系统用户...</div></td></tr>}
+          {usersQuery.isError && <tr><td colSpan={8}><div className={styles.state}><p role="alert">系统用户加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
+          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={8}><EmptyState description="没有符合当前条件的系统用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
             <td className={styles.userNumber}>{user.id}</td>
             <td className={styles.avatarCell}><Avatar size={32} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
             <td className={styles.userName}><strong>{user.nickname}</strong></td>
             <td><span className={styles.username}>{user.username}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
+            <td><StatusIndicator tone={user.online ? 'success' : 'offline'}>{user.online ? '在线' : '离线'}</StatusIndicator></td>
             <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
             <td><div className={styles.rowActions}>
               <button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button>
