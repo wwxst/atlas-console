@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 const userId = '9007199254740993'
 const now = '2026-10-01T12:00:00'
 
-async function installMockApi(page: Page, deploymentReady = false, previousRelease = false) {
+async function installMockApi(page: Page, deploymentReady = false, previousRelease = false, releaseHistory = false) {
   let deploymentRequested = false
   let nickname = '测试用户'
   let status = 1
@@ -33,6 +33,27 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
         state: !deploymentReady ? 'not_configured' : deploymentRequested ? 'queued' : 'not_started',
         conclusion: null, runUrl: deploymentRequested ? 'https://github.com/wwxst/atlas-console/actions/runs/123' : null,
         title: deploymentRequested ? 'Atlas rollback mock-request' : null, requestId: null, rollbackAvailable: previousRelease })
+    }
+    if (path === '/api/sys-user/deployment/history' && method === 'GET') {
+      const a = 'a'.repeat(40)
+      const b = 'b'.repeat(40)
+      const c = 'c'.repeat(40)
+      const d = 'd'.repeat(40)
+      const e = 'e'.repeat(40)
+      const f = 'f'.repeat(40)
+      return reply(releaseHistory ? [
+        { releaseId: c + '_' + d, frontendSha: c, backendSha: d, deployedAt: '2026-10-28T10:00:00Z', current: true },
+        { releaseId: a + '_' + b, frontendSha: a, backendSha: b, deployedAt: '2026-10-27T10:00:00Z', current: false },
+        { releaseId: e + '_' + f, frontendSha: e, backendSha: f, deployedAt: '2026-10-26T10:00:00Z', current: false },
+      ] : [])
+    }
+    if (path === '/api/sys-user/deployment/rollback/history' && method === 'POST') {
+      const data = route.request().postDataJSON() as { releaseId: string }
+      deploymentRequested = true
+      requests.push('historical-rollback:' + data.releaseId)
+      return reply({ configured: true, state: 'requested', conclusion: null,
+        runUrl: 'https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml',
+        title: 'Atlas rollback-history mock-request', requestId: 'mock-request', rollbackAvailable: true })
     }
     if (path === '/api/sys-user/deployment/rollback' && method === 'POST') {
       deploymentRequested = true
@@ -201,4 +222,28 @@ test('super-admin can request rollback to the previous recorded release', async 
   await page.getByRole('button', { name: '回滚上一版本' }).click()
   await expect(page.getByRole('button', { name: '更新执行中' })).toBeDisabled()
   expect(requests).toContain('rollback-requested')
+})
+
+test('super-admin sees historical version pairs and can select a non-previous release', async ({ page }) => {
+  const requests = await installMockApi(page, true, true, true)
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await expect(page.getByRole('region', { name: '历史版本' })).toBeVisible()
+  await expect(page.getByText('前端 cccccccc · 后端 dddddddd')).toBeVisible()
+  await expect(page.getByText('前端 eeeeeeee · 后端 ffffffff')).toBeVisible()
+  const region = page.getByRole('region', { name: '历史版本' })
+  await expect(region.getByRole('button', { name: '当前' })).toBeDisabled()
+  const choices = region.getByRole('button', { name: '回滚到此版本' })
+  await expect(choices).toHaveCount(2)
+  page.once('dialog', async dialog => { await dialog.accept() })
+  await choices.nth(1).click()
+  await expect(page.getByRole('button', { name: '更新执行中' })).toBeDisabled()
+  expect(requests).toContain('historical-rollback:' + 'e'.repeat(40) + '_' + 'f'.repeat(40))
+})
+
+test('history shows an empty state until the first production deployment', async ({ page }) => {
+  await installMockApi(page, true, false, false)
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await expect(page.getByText('暂无部署记录，首次上线后将开始记录历史版本。')).toBeVisible()
 })
