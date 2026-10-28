@@ -37,6 +37,7 @@ jobs:
       - run: npm ci
       - run: npm audit --audit-level=high
       - run: npm test
+      - run: node --test deploy/test-workflow-pinning.mjs
       - run: npm run lint
       - run: npm run build
 
