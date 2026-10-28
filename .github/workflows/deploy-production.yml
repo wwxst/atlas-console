@@ -28,6 +28,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -70,6 +72,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: wwxst/backend
+      - name: Capture tested backend commit
+        id: revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="$(git rev-parse HEAD)"
+          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
+          printf 'sha=%s\n' "$commit" >> "$GITHUB_OUTPUT"
+          echo "Verifying backend commit: $commit"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -95,17 +106,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           path: atlas-console
           persist-credentials: false
       - uses: actions/checkout@v4
+        if: inputs.operation == 'deploy'
         with:
           repository: wwxst/backend
-          ref: main
+          ref: ${{ needs.verify-backend.outputs.backend_sha }}
           path: backend
           persist-credentials: false
+      - name: Assert production checkouts match verified revisions
+        if: inputs.operation == 'deploy'
+        shell: bash
+        env:
+          VERIFIED_FRONTEND_SHA: ${{ github.sha }}
+          VERIFIED_BACKEND_SHA: ${{ needs.verify-backend.outputs.backend_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$VERIFIED_FRONTEND_SHA" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$VERIFIED_BACKEND_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git -C atlas-console rev-parse HEAD)" = "$VERIFIED_FRONTEND_SHA"
+          test "$(git -C backend rev-parse HEAD)" = "$VERIFIED_BACKEND_SHA"
+          echo "Deploying verified revision pair: frontend=$VERIFIED_FRONTEND_SHA backend=$VERIFIED_BACKEND_SHA"
       - name: Apply release workflow
         env:
           RELEASE_OPERATION: ${{ inputs.operation }}
           TARGET_RELEASE: ${{ inputs.target_release }}
+          VERIFIED_FRONTEND_SHA: ${{ github.sha }}
+          VERIFIED_BACKEND_SHA: ${{ needs.verify-backend.outputs.backend_sha }}
         run: |
           bash atlas-console/deploy/release.sh "$RELEASE_OPERATION" "$TARGET_RELEASE"
