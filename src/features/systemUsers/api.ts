@@ -10,6 +10,7 @@ export interface SysUser {
   nickname: string
   avatar?: string | null
   status: SysUserStatus
+  online: boolean
   createdAt: string
   updatedAt: string
 }
