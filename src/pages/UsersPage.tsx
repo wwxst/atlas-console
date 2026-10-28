@@ -124,18 +124,19 @@ export default function UsersPage() {
       />}
     >
       <DataTable className={styles.table}>
-        <thead><tr><th>编号</th><th>用户</th><th>手机</th><th>邮箱</th>
+        <thead><tr><th>编号</th><th>头像</th><th>昵称</th><th>手机</th><th>邮箱</th>
           <th aria-sort={createdAtOrder === 'asc' ? 'ascending' : createdAtOrder === 'desc' ? 'descending' : 'none'}>
             <SortableDateHeader order={createdAtOrder} onClick={changeCreatedAtOrder} />
           </th>
           <th>状态</th><th>操作</th></tr></thead>
         <tbody>
-          {usersQuery.isPending && <tr><td colSpan={7}><div className={styles.state}>正在加载用户列表...</div></td></tr>}
-          {usersQuery.isError && <tr><td colSpan={7}><div className={styles.state}><p role="alert">用户列表加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
-          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={7}><EmptyState description="没有符合当前条件的用户" /></td></tr>}
+          {usersQuery.isPending && <tr><td colSpan={8}><div className={styles.state}>正在加载用户列表...</div></td></tr>}
+          {usersQuery.isError && <tr><td colSpan={8}><div className={styles.state}><p role="alert">用户列表加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
+          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={8}><EmptyState description="没有符合当前条件的用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
             <td className={styles.userId}>{user.userNo}</td>
-            <td><div className={styles.userCell}><Avatar size={40} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar><span><strong>{getDisplayName(user)}</strong></span></div></td>
+            <td className={styles.avatarCell}><Avatar size={40} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
+            <td className={styles.userName}><strong>{getDisplayName(user)}</strong></td>
             <td><span className={styles.contact}>{user.phone || '未绑定'}</span></td>
             <td><span className={styles.contact}>{user.email || '未绑定'}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
