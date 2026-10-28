@@ -18,8 +18,9 @@ class MemoryStorage {
   }
 }
 
-// http.ts 使用 localStorage，Node 环境先注入内存实现，再动态导入被测模块
+// http.ts 使用 sessionStorage，Node 环境先注入内存实现，再动态导入被测模块
 ;(globalThis as unknown as { localStorage: MemoryStorage }).localStorage = new MemoryStorage()
+;(globalThis as unknown as { sessionStorage: MemoryStorage }).sessionStorage = new MemoryStorage()
 const browserEvents = new EventTarget()
 Object.defineProperties(globalThis, {
   addEventListener: { value: browserEvents.addEventListener.bind(browserEvents), configurable: true },
@@ -99,8 +100,8 @@ test('stores and clears both tokens', () => {
   saveAuthTokens('access-a', 'refresh-a')
   assert.equal(getAccessToken(), 'access-a')
   assert.equal(getRefreshToken(), 'refresh-a')
-  assert.equal(localStorage.getItem(ACCESS_TOKEN_KEY), 'access-a')
-  assert.equal(localStorage.getItem(REFRESH_TOKEN_KEY), 'refresh-a')
+  assert.equal(sessionStorage.getItem(ACCESS_TOKEN_KEY), 'access-a')
+  assert.equal(sessionStorage.getItem(REFRESH_TOKEN_KEY), 'refresh-a')
 
   clearAuthTokens()
   assert.equal(getAccessToken(), null)
@@ -108,6 +109,15 @@ test('stores and clears both tokens', () => {
   assert.equal(getAuthTokenSnapshot(), '\n')
   assert.equal(changes, 2)
   unsubscribe()
+})
+
+test('does not persist authentication tokens in localStorage', () => {
+  clearAuthTokens()
+  saveAuthTokens('tab-access', 'tab-refresh')
+  assert.equal(localStorage.getItem(ACCESS_TOKEN_KEY), null)
+  assert.equal(localStorage.getItem(REFRESH_TOKEN_KEY), null)
+  assert.equal(sessionStorage.getItem(ACCESS_TOKEN_KEY), 'tab-access')
+  clearAuthTokens()
 })
 
 test('attaches the access token to outgoing requests', async () => {
@@ -179,7 +189,7 @@ test('refreshes on 401 and retries the original request once', async () => {
   clearAuthTokens()
 })
 
-test('notifies subscribers when another tab changes auth tokens', () => {
+test('notifies subscribers about auth storage events', () => {
   clearAuthTokens()
   let changes = 0
   const unsubscribe = subscribeAuthTokens(() => changes += 1)
@@ -188,7 +198,7 @@ test('notifies subscribers when another tab changes auth tokens', () => {
     Object.defineProperty(event, 'key', { value: key })
     globalThis.dispatchEvent(event)
   }
-  localStorage.setItem(ACCESS_TOKEN_KEY, 'other-tab-access')
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, 'other-tab-access')
   storageChange(ACCESS_TOKEN_KEY)
   localStorage.setItem('unrelated-setting', 'value')
   storageChange('unrelated-setting')
@@ -337,7 +347,7 @@ test('clears local tokens when refresh fails', async () => {
 
 test('does not attempt refresh when no refresh token is stored', async () => {
   clearAuthTokens()
-  localStorage.setItem(ACCESS_TOKEN_KEY, 'old-access')
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, 'old-access')
 
   let refreshCount = 0
   installAdapter(refreshClient, () => {
