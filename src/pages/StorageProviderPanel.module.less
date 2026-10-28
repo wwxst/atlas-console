@@ -168,8 +168,14 @@
 
 .permissionOptions {
   display: flex;
-  align-items: center;
-  gap: var(--atlas-space-xl);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--atlas-space-xs);
+}
+
+.permissionHint {
+  color: var(--atlas-color-text-secondary);
+  font-size: var(--atlas-text-xs);
 }
 
 .permissionOption {
