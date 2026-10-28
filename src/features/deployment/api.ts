@@ -25,3 +25,21 @@ export async function rollbackDeployment(): Promise<DeploymentStatus> {
   const response = await http.post<ApiResult<DeploymentStatus>>('/sys-user/deployment/rollback')
   return requireApiData(response.data)
 }
+
+export interface ReleaseHistoryItem {
+  releaseId: string
+  frontendSha: string
+  backendSha: string
+  deployedAt: string
+  current: boolean
+}
+
+export async function getReleaseHistory(): Promise<ReleaseHistoryItem[]> {
+  const response = await http.get<ApiResult<ReleaseHistoryItem[]>>('/sys-user/deployment/history')
+  return requireApiData(response.data)
+}
+
+export async function rollbackToHistory(releaseId: string): Promise<DeploymentStatus> {
+  const response = await http.post<ApiResult<DeploymentStatus>>('/sys-user/deployment/rollback/history', { releaseId })
+  return requireApiData(response.data)
+}

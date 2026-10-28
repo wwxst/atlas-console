@@ -1,8 +1,9 @@
 import { useId, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { ArrowUpRight, FileText, Package, RefreshCw, RotateCcw, Rocket, X } from 'lucide-react'
+import { ArrowUpRight, Clock3, FileText, Package, RefreshCw, RotateCcw, Rocket, X } from 'lucide-react'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
-import { getDeploymentStatus, rollbackDeployment, startDeployment } from '@/features/deployment/api'
+import { getDeploymentStatus, getReleaseHistory, rollbackDeployment, rollbackToHistory, startDeployment } from '@/features/deployment/api'
+import type { ReleaseHistoryItem } from '@/features/deployment/api'
 import { getApiErrorMessage } from '@/services/api'
 import { IconButton } from '@ui/index'
 import { version } from '../../package.json'
@@ -39,11 +40,19 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
     refetchInterval: open && isSuperAdmin ? 10_000 : false,
     retry: false,
   })
+  const history = useQuery({
+    queryKey: ['deployment-history'],
+    queryFn: getReleaseHistory,
+    enabled: open && isSuperAdmin && deployment.data?.configured === true,
+    refetchInterval: open && isSuperAdmin ? 30_000 : false,
+    retry: false,
+  })
   const update = useMutation({
     mutationFn: startDeployment,
     onSuccess: (result) => {
       setRequestedId(result.requestId)
       void deployment.refetch()
+      void history.refetch()
     },
   })
   const rollback = useMutation({
@@ -54,15 +63,32 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
     },
   })
 
+  const restore = useMutation({
+    mutationFn: rollbackToHistory,
+    onSuccess: (result) => {
+      setRequestedId(result.requestId)
+      void deployment.refetch()
+      void history.refetch()
+    },
+  })
+
   const status = deployment.data
   const awaitingRun = Boolean(requestedId && !status?.title?.includes(requestedId))
-  const busy = awaitingRun || Boolean(status && activeStates.has(status.state)) || update.isPending || rollback.isPending
+  const busy = awaitingRun || Boolean(status && activeStates.has(status.state)) || update.isPending || rollback.isPending || restore.isPending
   const runLink = status?.runUrl?.startsWith('https://github.com/wwxst/atlas-console/actions/')
     ? status.runUrl : null
 
   const runRollback = () => {
     if (!window.confirm('确定回滚到上一版本吗？这将恢复上一套前后端镜像，但不会恢复数据库或上传文件。')) return
     rollback.mutate()
+  }
+
+  const runRestore = (release: ReleaseHistoryItem) => {
+    if (release.current || busy) return
+    const front = release.frontendSha.slice(0, 8)
+    const back = release.backendSha.slice(0, 8)
+    if (!window.confirm(`确认回滚到历史版本？前端 ${front}，后端 ${back}。这只会恢复应用镜像，不会恢复数据库或上传文件。`)) return
+    restore.mutate(release.releaseId)
   }
 
   const runUpdate = () => {
@@ -132,6 +158,33 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
               </button>
               {!status.rollbackAvailable && <p className={styles.explanation}>没有可回滚的上一版本。至少成功部署两次后才可使用。</p>}
             </>}
+            {status?.configured && <section className={styles.history} aria-label="历史版本">
+              <div className={styles.historyHeading}>
+                <span><Clock3 size={15} aria-hidden="true" />历史版本</span>
+                <button type="button" className={styles.historyRefresh} onClick={() => void history.refetch()}
+                  disabled={history.isFetching || busy}>刷新</button>
+              </div>
+              {history.isPending && <p className={styles.explanation}>正在加载历史版本…</p>}
+              {history.isError && <p role="alert" className={styles.error}>读取历史版本失败，请重试。</p>}
+              {history.isSuccess && history.data.length === 0 &&
+                <p className={styles.explanation}>暂无部署记录，首次上线后将开始记录历史版本。</p>}
+              {history.data?.length ? <div className={styles.historyList}>
+                {history.data.map((release) => <div key={release.releaseId} className={styles.historyItem}>
+                  <div className={styles.historyInfo}>
+                    <strong>{release.current ? '当前版本' : '历史版本'}</strong>
+                    <small>前端 {release.frontendSha.slice(0, 8)} · 后端 {release.backendSha.slice(0, 8)}</small>
+                    <small>{new Date(release.deployedAt).toLocaleString('zh-CN')}</small>
+                  </div>
+                  <button type="button" className={styles.historyRestore}
+                    disabled={release.current || busy} onClick={() => runRestore(release)}
+                    title={release.current ? '当前正在运行' : `回滚到版本 ${release.releaseId}`}>
+                    {release.current ? '当前' : '回滚到此版本'}
+                  </button>
+                </div>)}
+              </div> : null}
+              <p className={styles.explanation}>仅显示最近 50 条已记录的应用版本。恢复需要服务器仍保留对应镜像。</p>
+            </section>}
+            {restore.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(restore.error, '历史版本回滚提交失败')}</p>}
             {update.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(update.error, '提交更新失败')}</p>}
             {rollback.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(rollback.error, '回滚提交失败')}</p>}
             {status?.conclusion === 'success' && !busy &&

@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
-# Transactional application-image deployment and one-step rollback.
+# Transactional application-image deployment, one-step and historical rollback.
 # This does NOT reverse database migrations or restore persistent data.
 set -Eeuo pipefail
 umask 077
 
 operation="${1:-}"
-if [[ "$operation" != deploy && "$operation" != rollback ]]; then
-  echo "Usage: release.sh deploy|rollback" >&2
+target_release="${2:-}"
+if [[ "$operation" != deploy && "$operation" != rollback && "$operation" != rollback-history ]]; then
+  echo "Usage: release.sh deploy|rollback|rollback-history [release-id]" >&2
+  exit 2
+fi
+if [[ "$operation" == rollback-history && ! "$target_release" =~ ^[a-f0-9]{40}_[a-f0-9]{40}$ ]]; then
+  echo "Invalid historical release ID" >&2
   exit 2
 fi
 
@@ -17,8 +22,9 @@ env_file="${ATLAS_ENV_FILE:-/opt/atlas/.env}"
 state_dir="${ATLAS_RELEASE_DIR:-/opt/atlas/releases}"
 current="$state_dir/current.env"
 previous="$state_dir/previous.env"
-mkdir -p "$state_dir"
-chmod 700 "$state_dir"
+history_dir="$state_dir/history"
+mkdir -p "$history_dir"
+chmod 700 "$state_dir" "$history_dir"
 test -r "$env_file" || { echo "Production .env not available" >&2; exit 1; }
 test -d "$workspace/backend/.git" || { echo "Backend checkout missing" >&2; exit 1; }
 
@@ -66,9 +72,21 @@ save_manifest() {
   mv -f "$temp" "$destination"
 }
 
+archive_release() {
+  local front="$1" back="$2" id record
+  validate_tag "$front"
+  validate_tag "$back"
+  id="${front#git-}_${back#git-}"
+  record="$history_dir/$id.env"
+  # Don't overwrite original deployment timestamp when returning to an older version.
+  if [[ ! -e "$record" ]]; then
+    save_manifest "$record" "$front" "$back"
+  fi
+}
+
 assert_images() {
-  docker image inspect "atlas-console:$ATLAS_FRONTEND_TAG" >/dev/null
-  docker image inspect "atlas-backend:$ATLAS_BACKEND_TAG" >/dev/null
+  docker image inspect "atlas-console:$ATLAS_FRONTEND_TAG" >/dev/null || return 1
+  docker image inspect "atlas-backend:$ATLAS_BACKEND_TAG" >/dev/null || return 1
 }
 
 check_site() {
@@ -85,6 +103,43 @@ activate() {
   compose up --detach --no-build --wait --wait-timeout 240 || return 1
   check_site || return 1
 }
+
+if [[ "$operation" == rollback-history ]]; then
+  test -f "$current" || { echo "No active version to restore" >&2; exit 1; }
+  archive_file="$history_dir/$target_release.env"
+  test -f "$archive_file" && ! test -L "$archive_file" || {
+    echo "Selected historical release is not present" >&2
+    exit 1
+  }
+  load_manifest "$current"
+  old_front="$ATLAS_FRONTEND_TAG"
+  old_back="$ATLAS_BACKEND_TAG"
+  load_manifest "$archive_file"
+  next_front="$ATLAS_FRONTEND_TAG"
+  next_back="$ATLAS_BACKEND_TAG"
+  [[ "${next_front#git-}_${next_back#git-}" == "$target_release" ]] || {
+    echo "Historical release manifest mismatch" >&2
+    exit 1
+  }
+  [[ "$old_front" != "$next_front" || "$old_back" != "$next_back" ]] || {
+    echo "Selected release is already running" >&2
+    exit 1
+  }
+  echo "Restoring selected archived application release"
+  if ! activate; then
+    echo "Historical release health check failed; restoring current release" >&2
+    ATLAS_FRONTEND_TAG="$old_front"
+    ATLAS_BACKEND_TAG="$old_back"
+    export ATLAS_FRONTEND_TAG ATLAS_BACKEND_TAG
+    activate || echo "ALERT: recovery of the current release also failed" >&2
+    exit 1
+  fi
+  archive_release "$old_front" "$old_back"
+  save_manifest "$previous" "$old_front" "$old_back"
+  save_manifest "$current" "$next_front" "$next_back"
+  echo "Historical release restored successfully"
+  exit 0
+fi
 
 if [[ "$operation" == rollback ]]; then
   test -f "$current" || { echo "No deployed release to roll back" >&2; exit 1; }
@@ -104,6 +159,8 @@ if [[ "$operation" == rollback ]]; then
     activate || echo "ALERT: current release recovery failed" >&2
     exit 1
   fi
+  archive_release "$old_front" "$old_back"
+  archive_release "$next_front" "$next_back"
   save_manifest "$current" "$next_front" "$next_back"
   save_manifest "$previous" "$old_front" "$old_back"
   echo "Rollback completed and previous/current versions swapped"
@@ -154,7 +211,9 @@ if ! activate; then
 fi
 
 if [[ -n "$stable_front" && ("$stable_front" != "git-$front_sha" || "$stable_back" != "git-$back_sha") ]]; then
+  archive_release "$stable_front" "$stable_back"
   save_manifest "$previous" "$stable_front" "$stable_back"
 fi
+archive_release "git-$front_sha" "git-$back_sha"
 save_manifest "$current" "git-$front_sha" "git-$back_sha"
 echo "Production application image release recorded successfully"
