@@ -20,8 +20,12 @@ const authTokenEvents = new EventTarget()
 // Never migrate long-lived tokens from the legacy localStorage keys.
 // Existing sessions will log in again after this security upgrade.
 if (typeof localStorage !== 'undefined') {
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  try {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+  } catch {
+    // Legacy storage might be unavailable; authentication never reads from it.
+  }
 }
 
 
