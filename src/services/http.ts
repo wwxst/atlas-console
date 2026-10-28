@@ -41,11 +41,11 @@ if (typeof globalThis.addEventListener === 'function') {
 }
 
 export function getAccessToken(): string | null {
-  return sessionStorage.getItem(ACCESS_TOKEN_KEY)
+  return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
 export function getRefreshToken(): string | null {
-  return sessionStorage.getItem(REFRESH_TOKEN_KEY)
+  return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(REFRESH_TOKEN_KEY)
 }
 
 export function saveAuthTokens(accessToken: string, refreshToken: string): void {
