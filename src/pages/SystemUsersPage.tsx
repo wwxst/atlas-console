@@ -282,16 +282,17 @@ export default function SystemUsersPage() {
         /><AppButton variant="primary" icon={<Plus size={15} />} onClick={() => openEditor({ mode: 'create' })}>新增用户</AppButton></>}
     >
       <DataTable className={styles.table}>
-        <thead><tr><th>用户</th><th>账号</th>
+        <thead><tr><th>编号</th><th>用户</th><th>账号</th>
           <th aria-sort={createdAtOrder === 'asc' ? 'ascending' : createdAtOrder === 'desc' ? 'descending' : 'none'}>
             <SortableDateHeader order={createdAtOrder} onClick={changeCreatedAtOrder} />
           </th>
           <th>状态</th><th>操作</th></tr></thead>
         <tbody>
-          {usersQuery.isPending && <tr><td colSpan={5}><div className={styles.state}>正在加载系统用户...</div></td></tr>}
-          {usersQuery.isError && <tr><td colSpan={5}><div className={styles.state}><p role="alert">系统用户加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
-          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={5}><EmptyState description="没有符合当前条件的系统用户" /></td></tr>}
+          {usersQuery.isPending && <tr><td colSpan={6}><div className={styles.state}>正在加载系统用户...</div></td></tr>}
+          {usersQuery.isError && <tr><td colSpan={6}><div className={styles.state}><p role="alert">系统用户加载失败，请重试。</p><AppButton icon={<RotateCcw size={15} />} onClick={() => void usersQuery.refetch()}>重试</AppButton></div></td></tr>}
+          {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={6}><EmptyState description="没有符合当前条件的系统用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
+            <td className={styles.userNumber}>{user.id}</td>
             <td><div className={styles.userCell}><Avatar size={40} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar><span><strong>{user.nickname}</strong></span></div></td>
             <td><span className={styles.username}>{user.username}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
