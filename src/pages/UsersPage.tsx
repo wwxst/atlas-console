@@ -116,7 +116,7 @@ export default function UsersPage() {
       toolbar={<ListFilters
         keyword={keyword}
         status={status === undefined ? 'all' : status === 1 ? '1' : '0'}
-        searchPlaceholder="搜索用户ID、手机号、邮箱或昵称"
+        searchPlaceholder="搜索编号、手机号、邮箱或昵称"
         searchLabel="搜索用户"
         onSearch={(value) => updateParams({ keyword: value || undefined, page: undefined })}
         onStatusChange={(value) => updateParams({ status: value === 'all' ? undefined : value, page: undefined })}
@@ -124,7 +124,7 @@ export default function UsersPage() {
       />}
     >
       <DataTable className={styles.table}>
-        <thead><tr><th>用户ID</th><th>用户</th><th>手机</th><th>邮箱</th>
+        <thead><tr><th>编号</th><th>用户</th><th>手机</th><th>邮箱</th>
           <th aria-sort={createdAtOrder === 'asc' ? 'ascending' : createdAtOrder === 'desc' ? 'descending' : 'none'}>
             <SortableDateHeader order={createdAtOrder} onClick={changeCreatedAtOrder} />
           </th>

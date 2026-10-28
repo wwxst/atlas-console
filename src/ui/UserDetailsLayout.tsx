@@ -15,7 +15,7 @@ export function UserDetailsLayout({ id, name, avatar, initials, actions, childre
   return <>
     <div className={styles.identity}>
       <Avatar size={50} src={avatar ?? undefined}>{initials}</Avatar>
-      <div className={styles.person}><strong>{name}</strong><span>用户ID：{id}</span></div>
+      <div className={styles.person}><strong>{name}</strong><span>编号：{id}</span></div>
       <div className={styles.actions}>{actions}</div>
     </div>
     <div className={styles.strip}>用户信息</div>
