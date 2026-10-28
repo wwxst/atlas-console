@@ -12,6 +12,7 @@ export interface User {
   nickname?: string | null
   avatar?: string | null
   status: UserStatus
+  online: boolean
   createdAt: string
   updatedAt: string
 }
