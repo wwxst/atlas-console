@@ -78,6 +78,7 @@ test('admin logs in, edits a user, and changes account status with an exact stri
   await page.getByRole('button', { name: '保存', exact: true }).click()
   await expect(page.getByText('修改后的昵称').first()).toBeVisible()
   expect(requests).toContain('edit:' + userId)
+  await page.getByRole('button', { name: '关闭', exact: true }).click()
 
   await page.getByRole('button', { name: '停用', exact: true }).click()
   await expect(page.getByRole('button', { name: '启用', exact: true })).toBeVisible()
