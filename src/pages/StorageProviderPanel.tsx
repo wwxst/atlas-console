@@ -199,7 +199,7 @@ export function StorageProviderPanel({ provider, active }: { provider: StoragePr
           <FormField label="空间区域" htmlFor={`storage-${provider.key}-region`} required><select id={`storage-${provider.key}-region`} value={spaceDraft.regionId} disabled={busy} onChange={(event) => setSpaceDraft((current) => ({ ...current, regionId: event.target.value }))} required><option value="" disabled>请选择空间区域</option>{aliyunOssRegionGroups.map((group) => <optgroup key={group.label} label={group.label}>{group.regions.map((region) => <option key={region.id} value={region.id}>{region.label} · {region.id}</option>)}</optgroup>)}</select></FormField>
           <FormField label="读写权限" required><div className={styles.permissionOptions} role="radiogroup" aria-label="读写权限">
             <label className={styles.permissionOption}><input type="radio" name="storagePermission" value="public-read" checked={accessPermission === 'public-read'} disabled={busy} onChange={() => setAccessPermission('public-read')} />公共读（推荐）</label>
-            <label className={styles.permissionOption}><input type="radio" name="storagePermission" value="public-read-write" checked={accessPermission === 'public-read-write'} disabled={busy} onChange={() => setAccessPermission('public-read-write')} />公共读写</label>
+            <span className={styles.permissionHint}>仅支持公共读：访客可查看图片，上传和删除必须通过后台授权。禁止公共读写。</span>
           </div></FormField>
         </>}
         {editor.mode === 'domain' && <>
