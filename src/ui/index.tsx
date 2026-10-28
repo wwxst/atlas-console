@@ -147,7 +147,7 @@ export function PaginatedListPanel({ toolbar, children, page, pageSize, pageSize
   </Panel>
 }
 
-type StatusTone = 'success' | 'processing' | 'warning' | 'danger'
+type StatusTone = 'success' | 'processing' | 'warning' | 'danger' | 'offline'
 export function StatusBadge({ tone, children }: { tone: StatusTone; children: ReactNode }) {
   return <span className={[styles.badge, styles[`badge_${tone}`]].join(' ')}>{children}</span>
 }

@@ -30,15 +30,15 @@ async function installMockApi(page: Page) {
     if (path === '/api/sys-user/sys-users' && method === 'GET') {
       return reply({ page: 1, pageSize: 20, total: 2, records: [
         { id: 1, username: 'admin', nickname: '测试管理员', avatar: null,
-          status: 1, createdAt: now, updatedAt: now },
+          online: true, status: 1, createdAt: now, updatedAt: now },
         { id: 7, username: 'operator', nickname: '测试操作员', avatar: null,
-          status: 1, createdAt: now, updatedAt: now },
+          online: false, status: 1, createdAt: now, updatedAt: now },
       ] })
     }
     if (path === '/api/sys-user/users' && method === 'GET') {
       return reply({ page: 1, pageSize: 20, total: 1, records: [{
         id: userId, userNo: '123456', nickname, phone: '13800138000',
-        email: 'user@example.com', avatar: null, status, createdAt: now, updatedAt: now,
+        email: 'user@example.com', avatar: null, online: true, status, createdAt: now, updatedAt: now,
       }] })
     }
     if (path === `/api/sys-user/users/${userId}` && method === 'PUT') {
@@ -46,7 +46,7 @@ async function installMockApi(page: Page) {
       nickname = data.nickname
       requests.push('edit:' + userId)
       return reply({ id: userId, userNo: '123456', nickname, phone: data.phone,
-        email: data.email, avatar: null, status, createdAt: now, updatedAt: now })
+        email: data.email, avatar: null, online: true, status, createdAt: now, updatedAt: now })
     }
     if (path === `/api/sys-user/users/${userId}/status` && method === 'PATCH') {
       status = (route.request().postDataJSON() as { status: number }).status
@@ -81,11 +81,15 @@ test('admin logs in, edits a user, and changes account status with an exact stri
   await expect(page.locator('thead th').first()).toHaveText('编号')
   await expect(page.locator('thead th').nth(1)).toHaveText('头像')
   await expect(page.locator('thead th').nth(2)).toHaveText('昵称')
+  await expect(page.locator('thead th').nth(6)).toHaveText('在线状态')
+  await expect(page.locator('thead th').nth(7)).toHaveText('账号状态')
   await expect(page.locator('thead th').last()).toHaveCSS('text-align', 'right')
   const userRow = page.getByRole('row', { name: /测试用户/ })
   await expect(userRow.locator('td').nth(1).locator('span').first()).toBeVisible()
   await expect(userRow.locator('td').nth(1).locator('span').first()).toHaveCSS('width', '32px')
   await expect(userRow.locator('td').nth(2)).toHaveText('测试用户')
+  await expect(userRow.locator('td').nth(6)).toHaveText('在线')
+  await expect(userRow.locator('td').nth(7)).toHaveText('正常')
   await expect(userRow.locator('td').last()).toHaveCSS('text-align', 'right')
   await expect(page.getByRole('cell', { name: '123456' })).toBeVisible()
   await page.getByRole('button', { name: '查看', exact: true }).click()
@@ -109,12 +113,17 @@ test('system administrators show their existing ID as 编号 in the list and det
   await expect(page.locator('thead th').first()).toHaveText('编号')
   await expect(page.locator('thead th').nth(1)).toHaveText('头像')
   await expect(page.locator('thead th').nth(2)).toHaveText('昵称')
+  await expect(page.locator('thead th').nth(5)).toHaveText('在线状态')
+  await expect(page.locator('thead th').nth(6)).toHaveText('账号状态')
   await expect(page.locator('thead th').last()).toHaveCSS('text-align', 'right')
   const adminRow = page.getByRole('row', { name: /测试管理员/ })
   await expect(adminRow.locator('td').first()).toHaveText('1')
   await expect(adminRow.locator('td').nth(1).locator('span').first()).toBeVisible()
   await expect(adminRow.locator('td').nth(1).locator('span').first()).toHaveCSS('width', '32px')
   await expect(adminRow.locator('td').nth(2)).toHaveText('测试管理员')
+  await expect(adminRow.locator('td').nth(5)).toHaveText('在线')
+  await expect(adminRow.locator('td').nth(6)).toHaveText('正常')
+  await expect(page.getByRole('row', { name: /测试操作员/ }).locator('td').nth(5)).toHaveText('离线')
   await expect(adminRow.locator('td').last()).toHaveCSS('text-align', 'right')
   await expect(page.getByRole('row', { name: /测试操作员/ }).locator('td').first()).toHaveText('7')
   await adminRow.getByRole('button', { name: '查看' }).click()
