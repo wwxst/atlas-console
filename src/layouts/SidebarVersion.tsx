@@ -1,8 +1,8 @@
-import { useId, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useId } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowUpRight, Clock3, FileText, Package, RefreshCw, RotateCcw, Rocket, X } from 'lucide-react'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
-import { getDeploymentStatus, getReleaseHistory, rollbackDeployment, rollbackToHistory, startDeployment } from '@/features/deployment/api'
+import { getDeploymentStatus, getReleaseHistory, recoverDeployment, rollbackDeployment, rollbackToHistory, startDeployment } from '@/features/deployment/api'
 import type { ReleaseHistoryItem } from '@/features/deployment/api'
 import { getApiErrorMessage } from '@/services/api'
 import { IconButton } from '@ui/index'
@@ -14,6 +14,10 @@ const activeStates = new Set(['requested', 'queued', 'in_progress', 'waiting', '
 function description(state: string, conclusion: string | null): string {
   if (state === 'not_configured') return '尚未配置生产服务器，暂不能执行更新'
   if (state === 'not_started') return '尚无部署记录'
+  if (state === 'requested') return 'GitHub 已接受请求，正在等待生成执行记录（最多 5 分钟）'
+  if (state === 'timed_out') return '等待超过 5 分钟，仍未找到本次执行记录，请核实后恢复'
+  if (state === 'run_missing') return '本次 GitHub 任务记录不可访问，请核实后恢复'
+  if (state === 'stalled') return '任务超过 1 小时仍未结束，请检查 GitHub Runner 或取消后恢复'
   if (activeStates.has(state)) return '正在等待或执行 GitHub Actions 部署'
   if (conclusion === 'success') return '最近一次部署已成功'
   if (conclusion === 'failure') return '最近一次部署失败，请查看日志'
@@ -22,10 +26,10 @@ function description(state: string, conclusion: string | null): string {
 }
 
 export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
+  const queryClient = useQueryClient()
   const panelId = useId()
   const titleId = useId()
   const [open, setOpen] = useState(false)
-  const [requestedId, setRequestedId] = useState<string | null>(null)
 
   const currentUser = useQuery({
     queryKey: CURRENT_SYS_USER_QUERY_KEY,
@@ -50,7 +54,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
   const update = useMutation({
     mutationFn: startDeployment,
     onSuccess: (result) => {
-      setRequestedId(result.requestId)
+      queryClient.setQueryData(['deployment-status'], result)
       void deployment.refetch()
       void history.refetch()
     },
@@ -58,7 +62,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
   const rollback = useMutation({
     mutationFn: rollbackDeployment,
     onSuccess: (result) => {
-      setRequestedId(result.requestId)
+      queryClient.setQueryData(['deployment-status'], result)
       void deployment.refetch()
     },
   })
@@ -66,15 +70,25 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
   const restore = useMutation({
     mutationFn: rollbackToHistory,
     onSuccess: (result) => {
-      setRequestedId(result.requestId)
+      queryClient.setQueryData(['deployment-status'], result)
       void deployment.refetch()
       void history.refetch()
     },
   })
 
+  const recover = useMutation({
+    mutationFn: recoverDeployment,
+    onSuccess: (result) => {
+      queryClient.setQueryData(['deployment-status'], result)
+      void deployment.refetch()
+    },
+  })
+
   const status = deployment.data
-  const awaitingRun = Boolean(requestedId && !status?.title?.includes(requestedId))
-  const busy = awaitingRun || Boolean(status && activeStates.has(status.state)) || update.isPending || rollback.isPending || restore.isPending
+  const needsRecovery = Boolean(status?.recoveryAvailable)
+  const busy = Boolean(status && activeStates.has(status.state)) ||
+    update.isPending || rollback.isPending || restore.isPending || recover.isPending
+  const controlsBlocked = busy || needsRecovery || deployment.isError
   const runLink = status?.runUrl?.startsWith('https://github.com/wwxst/atlas-console/actions/')
     ? status.runUrl : null
 
@@ -84,7 +98,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
   }
 
   const runRestore = (release: ReleaseHistoryItem) => {
-    if (release.current || busy) return
+    if (release.current || controlsBlocked) return
     const front = release.frontendSha.slice(0, 8)
     const back = release.backendSha.slice(0, 8)
     if (!window.confirm(`确认回滚到历史版本？前端 ${front}，后端 ${back}。这只会恢复应用镜像，不会恢复数据库或上传文件。`)) return
@@ -137,23 +151,29 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
             <p className={styles.notice} role="status">
               {deployment.isPending ? '正在查询部署状态…'
                 : deployment.isError ? '暂时无法连接到更新服务'
-                  : awaitingRun ? '更新请求已发出，等待 GitHub 创建任务…'
-                    : description(status?.state ?? 'unknown', status?.conclusion ?? null)}
+                  : description(status?.state ?? 'unknown', status?.conclusion ?? null)}
             </p>
             {status?.configured && <>
               <p className={styles.explanation}>从 GitHub 获取前后端 main 分支，经过验证后由服务器上的专用部署执行器更新容器。</p>
-              {runLink && <a className={styles.runLink} href={runLink} target="_blank" rel="noopener noreferrer">查看执行记录 <ArrowUpRight size={13} /></a>}
+              {status?.requestId && <p className={styles.explanation}>请求 ID：{status.requestId}{status.runId ? ` · 运行 #${status.runId}` : ''}</p>}
+              {runLink && <a className={styles.runLink} href={runLink} target="_blank" rel="noopener noreferrer">查看 GitHub 执行记录 <ArrowUpRight size={13} /></a>}
+              {needsRecovery && <>
+                <p className={styles.explanation}>请先检查 GitHub Actions 是否仍在排队或执行。如果任务仍在运行，应在 GitHub 中取消，确认结束后再恢复后台状态。恢复操作不会取消 GitHub 任务。</p>
+                <button type="button" className={styles.actionSecondary} disabled={busy} onClick={() => {
+                  if (window.confirm('已在 GitHub 核实任务状态？仅在没有任务运行或排队时，才会清除本地过期等待记录。')) recover.mutate()
+                }}><RefreshCw size={15} />{recover.isPending ? '正在核实…' : '核实并恢复更新状态'}</button>
+              </>}
             </>}
             {!status?.configured && !deployment.isPending && !deployment.isError
               && <p className={styles.explanation}>首次使用需先准备服务器、Docker 和 GitHub 自托管 Runner，再由管理员配置后端密钥。</p>}
             {deployment.isError && <button type="button" className={styles.action} onClick={() => void deployment.refetch()}><RefreshCw size={15} />重试查询</button>}
-            <button type="button" className={styles.action} disabled={!status?.configured || busy || update.isPending}
+            <button type="button" className={styles.action} disabled={!status?.configured || controlsBlocked}
               aria-busy={update.isPending} onClick={runUpdate}>
-              <Rocket size={16} />{update.isPending ? '正在提交…' : busy ? '更新执行中' : '一键自动更新'}
+              <Rocket size={16} />{update.isPending ? '正在提交…' : needsRecovery ? '需先恢复状态' : busy ? '更新执行中' : '一键自动更新'}
             </button>
             {status?.configured && <>
               <button type="button" className={styles.actionSecondary}
-                disabled={!status.rollbackAvailable || busy} onClick={runRollback}>
+                disabled={!status.rollbackAvailable || controlsBlocked} onClick={runRollback}>
                 <RotateCcw size={15} />{rollback.isPending ? '正在提交回滚…' : '回滚上一版本'}
               </button>
               {!status.rollbackAvailable && <p className={styles.explanation}>没有可回滚的上一版本。至少成功部署两次后才可使用。</p>}
@@ -176,7 +196,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
                     <small>{new Date(release.deployedAt).toLocaleString('zh-CN')}</small>
                   </div>
                   <button type="button" className={styles.historyRestore}
-                    disabled={release.current || busy} onClick={() => runRestore(release)}
+                    disabled={release.current || controlsBlocked} onClick={() => runRestore(release)}
                     title={release.current ? '当前正在运行' : `回滚到版本 ${release.releaseId}`}>
                     {release.current ? '当前' : '回滚到此版本'}
                   </button>
@@ -184,6 +204,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
               </div> : null}
               <p className={styles.explanation}>仅显示最近 50 条已记录的应用版本。恢复需要服务器仍保留对应镜像。</p>
             </section>}
+            {recover.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(recover.error, '恢复更新状态失败')}</p>}
             {restore.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(restore.error, '历史版本回滚提交失败')}</p>}
             {update.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(update.error, '提交更新失败')}</p>}
             {rollback.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(rollback.error, '回滚提交失败')}</p>}
