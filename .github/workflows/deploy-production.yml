@@ -99,4 +99,4 @@ jobs:
           persist-credentials: false
       - name: Apply release workflow
         run: |
-          ./atlas-console/deploy/release.sh deploy
+          bash atlas-console/deploy/release.sh "${{ inputs.operation }}"
