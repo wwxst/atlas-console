@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 const userId = '9007199254740993'
 const now = '2026-10-01T12:00:00'
 
-async function installMockApi(page: Page, deploymentReady = false) {
+async function installMockApi(page: Page, deploymentReady = false, previousRelease = false) {
   let deploymentRequested = false
   let nickname = '测试用户'
   let status = 1
@@ -32,7 +32,14 @@ async function installMockApi(page: Page, deploymentReady = false) {
       return reply({ configured: deploymentReady,
         state: !deploymentReady ? 'not_configured' : deploymentRequested ? 'queued' : 'not_started',
         conclusion: null, runUrl: deploymentRequested ? 'https://github.com/wwxst/atlas-console/actions/runs/123' : null,
-        title: deploymentRequested ? 'Atlas Deploy mock-request' : null, requestId: null })
+        title: deploymentRequested ? 'Atlas rollback mock-request' : null, requestId: null, rollbackAvailable: previousRelease })
+    }
+    if (path === '/api/sys-user/deployment/rollback' && method === 'POST') {
+      deploymentRequested = true
+      requests.push('rollback-requested')
+      return reply({ configured: true, state: 'requested', conclusion: null,
+        runUrl: 'https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml',
+        title: 'Atlas rollback mock-request', requestId: 'mock-request', rollbackAvailable: true })
     }
     if (path === '/api/sys-user/deployment' && method === 'POST') {
       deploymentRequested = true
@@ -175,4 +182,23 @@ test('root administrator may request a verified GitHub deployment', async ({ pag
   await expect(page.getByText('正在等待或执行 GitHub Actions 部署')).toBeVisible()
   await expect(page.getByRole('button', { name: '更新执行中' })).toBeDisabled()
   expect(requests).toContain('deployment-requested')
+})
+
+test('rollback stays disabled without a previous release', async ({ page }) => {
+  await installMockApi(page, true)
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await expect(page.getByRole('button', { name: '回滚上一版本' })).toBeDisabled()
+  await expect(page.getByText('没有可回滚的上一版本')).toBeVisible()
+})
+
+test('super-admin can request rollback to the previous recorded release', async ({ page }) => {
+  const requests = await installMockApi(page, true, true)
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await expect(page.getByRole('button', { name: '回滚上一版本' })).toBeEnabled()
+  page.once('dialog', async dialog => { await dialog.accept() })
+  await page.getByRole('button', { name: '回滚上一版本' }).click()
+  await expect(page.getByRole('button', { name: '更新执行中' })).toBeDisabled()
+  expect(requests).toContain('rollback-requested')
 })
