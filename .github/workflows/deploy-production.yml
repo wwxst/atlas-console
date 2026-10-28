@@ -97,7 +97,7 @@ jobs:
           ref: main
           path: backend
           persist-credentials: false
-      - name: Apply Docker Compose stack
+      - name: Apply release workflow
         run: |
           docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml build
           docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml up --detach --wait
