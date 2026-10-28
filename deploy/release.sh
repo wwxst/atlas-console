@@ -81,9 +81,9 @@ check_site() {
 }
 
 activate() {
-  assert_images
-  compose up --detach --no-build --wait --wait-timeout 240
-  check_site
+  assert_images || return 1
+  compose up --detach --no-build --wait --wait-timeout 240 || return 1
+  check_site || return 1
 }
 
 if [[ "$operation" == rollback ]]; then
