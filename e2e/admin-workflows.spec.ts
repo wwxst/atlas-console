@@ -182,6 +182,9 @@ test('storage settings render real API state and open OSS binding form', async (
   await page.getByRole('button', { name: '添加存储空间' }).click()
   await expect(page.getByPlaceholder('请输入AccessKeyId')).toBeVisible()
   await expect(page.getByPlaceholder('请输入AccessKeySecret')).toHaveAttribute('type', 'password')
+  await expect(page.getByRole('radio', { name: '公共读（推荐）' })).toBeChecked()
+  await expect(page.getByRole('radio', { name: '公共读写' })).toHaveCount(0)
+  await expect(page.getByText('仅支持公共读：访客可查看图片，上传和删除必须通过后台授权。禁止公共读写。')).toBeVisible()
 })
 
 test('version panel keeps one-click update disabled until production is configured', async ({ page }) => {
