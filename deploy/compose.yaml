@@ -3,7 +3,10 @@
 name: atlas
 services:
   mysql:
-    image: mysql:8.4
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.mysql
+    image: atlas-mysql:local
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: web_project
@@ -12,7 +15,6 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ../../backend/web_project.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 10s
