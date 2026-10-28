@@ -1,0 +1,92 @@
+name: Deploy production
+run-name: Atlas Deploy ${{ inputs.request_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Request identifier
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: atlas-production
+  cancel-in-progress: false
+jobs:
+  verify-frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+
+  verify-backend:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci_only_password
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_only_password"
+          --health-interval=10s --health-timeout=5s --health-retries=15
+      redis:
+        image: redis:7.4
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=10
+    env:
+      DB_URL: jdbc:mysql://127.0.0.1:3306/web_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      DB_USERNAME: root
+      DB_PASSWORD: ci_only_password
+      ATLAS_MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/web_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: wwxst/backend
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Initialize temporary database
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq default-mysql-client
+          MYSQL_PWD="$DB_PASSWORD" mysql -h 127.0.0.1 -u root < web_project.sql
+      - run: |
+          chmod +x ./mvnw
+          ./mvnw -B -ntp clean verify
+
+  deploy:
+    needs: [verify-frontend, verify-backend]
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64, atlas-production]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: atlas-console
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: wwxst/backend
+          ref: main
+          path: backend
+          persist-credentials: false
+      - name: Apply Docker Compose stack
+        run: |
+          docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml build
+          docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml up --detach --wait

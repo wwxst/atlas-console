@@ -3,7 +3,8 @@ import { expect, test, type Page } from '@playwright/test'
 const userId = '9007199254740993'
 const now = '2026-10-01T12:00:00'
 
-async function installMockApi(page: Page) {
+async function installMockApi(page: Page, deploymentReady = false) {
+  let deploymentRequested = false
   let nickname = '测试用户'
   let status = 1
   const requests: string[] = []
@@ -26,6 +27,19 @@ async function installMockApi(page: Page) {
     }
     if (path === '/api/sys-user/auth/me') {
       return reply({ id: 1, username: 'admin', nickname: '测试管理员' })
+    }
+    if (path === '/api/sys-user/deployment' && method === 'GET') {
+      return reply({ configured: deploymentReady,
+        state: !deploymentReady ? 'not_configured' : deploymentRequested ? 'queued' : 'not_started',
+        conclusion: null, runUrl: deploymentRequested ? 'https://github.com/wwxst/atlas-console/actions/runs/123' : null,
+        title: deploymentRequested ? 'Atlas Deploy mock-request' : null, requestId: null })
+    }
+    if (path === '/api/sys-user/deployment' && method === 'POST') {
+      deploymentRequested = true
+      requests.push('deployment-requested')
+      return reply({ configured: true, state: 'requested', conclusion: null,
+        runUrl: 'https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml',
+        title: 'Atlas Deploy mock-request', requestId: 'mock-request' })
     }
     if (path === '/api/sys-user/sys-users' && method === 'GET') {
       return reply({ page: 1, pageSize: 20, total: 2, records: [
@@ -140,4 +154,25 @@ test('storage settings render real API state and open OSS binding form', async (
   await page.getByRole('button', { name: '添加存储空间' }).click()
   await expect(page.getByPlaceholder('请输入AccessKeyId')).toBeVisible()
   await expect(page.getByPlaceholder('请输入AccessKeySecret')).toHaveAttribute('type', 'password')
+})
+
+test('version panel keeps one-click update disabled until production is configured', async ({ page }) => {
+  const requests = await installMockApi(page)
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await expect(page.getByText('尚未配置生产服务器，暂不能执行更新')).toBeVisible()
+  await expect(page.getByRole('button', { name: '一键自动更新' })).toBeDisabled()
+  expect(requests).not.toContain('deployment-requested')
+})
+
+test('root administrator may request a verified GitHub deployment', async ({ page }) => {
+  const requests = await installMockApi(page, true)
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await expect(page.getByText('尚无部署记录')).toBeVisible()
+  page.once('dialog', async (dialog) => { await dialog.accept() })
+  await page.getByRole('button', { name: '一键自动更新' }).click()
+  await expect(page.getByText('正在等待或执行 GitHub Actions 部署')).toBeVisible()
+  await expect(page.getByRole('button', { name: '更新执行中' })).toBeDisabled()
+  expect(requests).toContain('deployment-requested')
 })

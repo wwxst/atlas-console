@@ -33,7 +33,7 @@
   inset: auto;
   bottom: calc(var(--atlas-control-height-md) + 2 * var(--atlas-space-md) + var(--atlas-space-sm) + 1px);
   left: var(--atlas-space-md);
-  width: 17.5rem;
+  width: 21rem;
   max-height: calc(100vh - var(--atlas-header-height) - 7rem);
   margin: 0;
   overflow-y: auto;
@@ -118,4 +118,75 @@
 .releaseLink:focus-visible {
   outline: 2px solid var(--atlas-color-brand);
   outline-offset: 2px;
+}
+
+/* Deployment controls are visible only to the authenticated super-admin. */
+.deployment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--atlas-space-sm);
+  padding: 0 var(--atlas-space-lg) var(--atlas-space-lg);
+}
+
+.notice {
+  margin: 0;
+  color: var(--atlas-color-text-primary);
+  font-size: var(--atlas-text-sm);
+  line-height: 1.5;
+}
+
+.explanation {
+  margin: 0;
+  color: var(--atlas-color-text-tertiary);
+  font-size: var(--atlas-text-xs);
+  line-height: 1.6;
+}
+
+.action,
+.actionSecondary {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--atlas-space-sm);
+  width: 100%;
+  border: 1px solid var(--atlas-color-border);
+  border-radius: var(--atlas-radius-sm);
+  color: var(--atlas-color-brand);
+  background: var(--atlas-color-bg-subtle);
+  font: inherit;
+  font-size: var(--atlas-text-sm);
+  cursor: pointer;
+}
+
+.action:hover:not(:disabled),
+.actionSecondary:hover:not(:disabled) {
+  background: var(--atlas-color-bg-hover);
+}
+
+.action:disabled,
+.actionSecondary:disabled {
+  color: var(--atlas-color-text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.action:focus-visible,
+.actionSecondary:focus-visible {
+  outline: 2px solid var(--atlas-color-brand);
+  outline-offset: 2px;
+}
+
+.runLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--atlas-space-xs);
+  font-size: var(--atlas-text-sm);
+  color: var(--atlas-color-brand);
+}
+
+.error {
+  margin: 0;
+  color: var(--atlas-color-danger);
+  font-size: var(--atlas-text-xs);
 }
