@@ -27,6 +27,14 @@ async function installMockApi(page: Page) {
     if (path === '/api/sys-user/auth/me') {
       return reply({ id: 1, username: 'admin', nickname: '测试管理员' })
     }
+    if (path === '/api/sys-user/sys-users' && method === 'GET') {
+      return reply({ page: 1, pageSize: 20, total: 2, records: [
+        { id: 1, username: 'admin', nickname: '测试管理员', avatar: null,
+          status: 1, createdAt: now, updatedAt: now },
+        { id: 7, username: 'operator', nickname: '测试操作员', avatar: null,
+          status: 1, createdAt: now, updatedAt: now },
+      ] })
+    }
     if (path === '/api/sys-user/users' && method === 'GET') {
       return reply({ page: 1, pageSize: 20, total: 1, records: [{
         id: userId, userNo: '123456', nickname, phone: '13800138000',
@@ -70,9 +78,11 @@ test('admin logs in, edits a user, and changes account status with an exact stri
   const requests = await installMockApi(page)
   await login(page)
   await page.goto('/users')
+  await expect(page.getByRole('columnheader', { name: '编号' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: '123456' })).toBeVisible()
   await expect(page.getByText('测试用户').first()).toBeVisible()
   await page.getByRole('button', { name: '查看', exact: true }).click()
-  await expect(page.getByText('用户ID：123456')).toBeVisible()
+  await expect(page.getByText('编号：123456')).toBeVisible()
   await page.getByRole('button', { name: '编辑', exact: true }).click()
   await page.locator('input[name="nickname"]').fill('修改后的昵称')
   await page.getByRole('button', { name: '保存', exact: true }).click()
@@ -83,6 +93,18 @@ test('admin logs in, edits a user, and changes account status with an exact stri
   await page.getByRole('button', { name: '停用', exact: true }).click()
   await expect(page.getByRole('button', { name: '启用', exact: true })).toBeVisible()
   expect(requests).toContain('status:' + userId)
+})
+
+test('system administrators show their existing ID as 编号 in the list and detail view', async ({ page }) => {
+  await installMockApi(page)
+  await login(page)
+  await page.goto('/system-users')
+  await expect(page.getByRole('columnheader', { name: '编号' })).toBeVisible()
+  const adminRow = page.getByRole('row', { name: /测试管理员/ })
+  await expect(adminRow.getByRole('cell', { name: '1' })).toBeVisible()
+  await expect(page.getByRole('row', { name: /测试操作员/ }).getByRole('cell', { name: '7' })).toBeVisible()
+  await adminRow.getByRole('button', { name: '查看' }).click()
+  await expect(page.getByText('编号：1')).toBeVisible()
 })
 
 test('storage settings render real API state and open OSS binding form', async ({ page }) => {
