@@ -7,7 +7,7 @@ export const OSS_CREDENTIALS_QUERY_KEY = ['oss-credentials'] as const
 export const STORAGE_SPACES_QUERY_KEY = ['storage-spaces'] as const
 
 export type StorageType = 'local' | 'aliyun'
-export type StorageAccessPermission = 'public-read' | 'public-read-write'
+export type StorageAccessPermission = 'public-read'
 export interface StorageSettings { storageType: StorageType }
 export interface OssCredentialStatus { configured: boolean }
 export interface OssCredentials { accessKeyId: string; accessKeySecret: string }
