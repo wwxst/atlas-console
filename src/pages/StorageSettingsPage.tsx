@@ -78,7 +78,8 @@ export default function StorageSettingsPage() {
         <div>
           <p>{provider.label}开通方法：<a href={providerWebsites[provider.key]} target="_blank" rel="noreferrer">查看官网</a></p>
           <p>第一步：点击“添加存储空间”，在同一表单填写访问凭据、空间名称和区域；也可先修改配置信息，再同步已有空间。</p>
-          <p>第二步：设为默认空间，再到存储配置中选择阿里云存储并保存。</p>
+          <p>第二步：Bucket ACL 必须为公共读（不允许公共读写）。请先审计 Bucket Policy 和 RAM 权限，确保匿名用户没有写入或删除权限。</p>
+          <p>第三步：设为默认空间，再到存储配置中选择阿里云存储并保存。</p>
           <p>第三步（可选）：修改空间域名，并在域名服务商完成解析配置。</p>
         </div>
         <IconButton label="关闭存储提示" className={styles.closeNotice} onClick={() => setHiddenNotices((hidden) => ({ ...hidden, [activeTab]: true }))}><X size={15} /></IconButton>
