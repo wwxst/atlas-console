@@ -1,8 +1,8 @@
 import { useId, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { ArrowUpRight, FileText, Package, RefreshCw, Rocket, X } from 'lucide-react'
+import { ArrowUpRight, FileText, Package, RefreshCw, RotateCcw, Rocket, X } from 'lucide-react'
 import { CURRENT_SYS_USER_QUERY_KEY, getCurrentSysUser } from '@/features/auth/api'
-import { getDeploymentStatus, startDeployment } from '@/features/deployment/api'
+import { getDeploymentStatus, rollbackDeployment, startDeployment } from '@/features/deployment/api'
 import { getApiErrorMessage } from '@/services/api'
 import { IconButton } from '@ui/index'
 import { version } from '../../package.json'
@@ -46,12 +46,24 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
       void deployment.refetch()
     },
   })
+  const rollback = useMutation({
+    mutationFn: rollbackDeployment,
+    onSuccess: (result) => {
+      setRequestedId(result.requestId)
+      void deployment.refetch()
+    },
+  })
 
   const status = deployment.data
   const awaitingRun = Boolean(requestedId && !status?.title?.includes(requestedId))
-  const busy = awaitingRun || Boolean(status && activeStates.has(status.state))
+  const busy = awaitingRun || Boolean(status && activeStates.has(status.state)) || update.isPending || rollback.isPending
   const runLink = status?.runUrl?.startsWith('https://github.com/wwxst/atlas-console/actions/')
     ? status.runUrl : null
+
+  const runRollback = () => {
+    if (!window.confirm('确定回滚到上一版本吗？这将恢复上一套前后端镜像，但不会恢复数据库或上传文件。')) return
+    rollback.mutate()
+  }
 
   const runUpdate = () => {
     if (!window.confirm('将从 GitHub main 分支拉取前后端代码，并部署到正式服务器。更新期间服务可能短暂中断，确定开始吗？')) return
@@ -113,7 +125,15 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
               aria-busy={update.isPending} onClick={runUpdate}>
               <Rocket size={16} />{update.isPending ? '正在提交…' : busy ? '更新执行中' : '一键自动更新'}
             </button>
+            {status?.configured && <>
+              <button type="button" className={styles.actionSecondary}
+                disabled={!status.rollbackAvailable || busy} onClick={runRollback}>
+                <RotateCcw size={15} />{rollback.isPending ? '正在提交回滚…' : '回滚上一版本'}
+              </button>
+              {!status.rollbackAvailable && <p className={styles.explanation}>没有可回滚的上一版本。至少成功部署两次后才可使用。</p>}
+            </>}
             {update.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(update.error, '提交更新失败')}</p>}
+            {rollback.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(rollback.error, '回滚提交失败')}</p>}
             {status?.conclusion === 'success' && !busy &&
               <button type="button" className={styles.actionSecondary} onClick={() => window.location.reload()}>
                 <RefreshCw size={15} />刷新以加载部署后的前端

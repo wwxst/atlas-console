@@ -1,8 +1,14 @@
 name: Deploy production
-run-name: Atlas Deploy ${{ inputs.request_id }}
+run-name: Atlas ${{ inputs.operation }} ${{ inputs.request_id }}
 on:
   workflow_dispatch:
     inputs:
+      operation:
+        description: Deployment or rollback of the previous app release
+        required: true
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
       request_id:
         description: Request identifier
         required: true
@@ -14,6 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify-frontend:
+    if: inputs.operation == 'deploy'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +35,10 @@ jobs:
       - run: npm run build
 
   verify-backend:
+    if: inputs.operation == 'deploy'
     runs-on: ubuntu-24.04
+    outputs:
+      backend_sha: ${{ steps.revision.outputs.sha }}
     services:
       mysql:
         image: mysql:8.4
@@ -72,7 +82,10 @@ jobs:
 
   deploy:
     needs: [verify-frontend, verify-backend]
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      always() && github.ref == 'refs/heads/main' &&
+      (inputs.operation == 'rollback' ||
+       (needs.verify-frontend.result == 'success' && needs.verify-backend.result == 'success'))
     runs-on: [self-hosted, linux, x64, atlas-production]
     environment: production
     steps:
@@ -86,7 +99,6 @@ jobs:
           ref: main
           path: backend
           persist-credentials: false
-      - name: Apply Docker Compose stack
+      - name: Apply release workflow
         run: |
-          docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml build
-          docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml up --detach --wait
+          bash atlas-console/deploy/release.sh "${{ inputs.operation }}"
