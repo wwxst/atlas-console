@@ -26,7 +26,6 @@ history_dir="$state_dir/history"
 mkdir -p "$history_dir"
 chmod 700 "$state_dir" "$history_dir"
 test -r "$env_file" || { echo "Production .env not available" >&2; exit 1; }
-test -d "$workspace/backend/.git" || { echo "Backend checkout missing" >&2; exit 1; }
 
 # Fail before doing anything if another deploy process is already executing.
 exec 9>"$state_dir/deploy.lock"
@@ -167,8 +166,18 @@ if [[ "$operation" == rollback ]]; then
   exit 0
 fi
 
+# Production deployments must use the exact pair the workflow already tested.
+# Rollbacks do not build new source and intentionally bypass this check.
+test -d "$workspace/backend/.git" || { echo "Backend checkout missing" >&2; exit 1; }
 front_sha="$(git -C "$project_root" rev-parse HEAD)"
 back_sha="$(git -C "$workspace/backend" rev-parse HEAD)"
+if [[ ! "${VERIFIED_FRONTEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||
+      ! "${VERIFIED_BACKEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||
+      "$front_sha" != "$VERIFIED_FRONTEND_SHA" ||
+      "$back_sha" != "$VERIFIED_BACKEND_SHA" ]]; then
+  echo "Refusing deployment: checked-out source does not match verified SHA pair" >&2
+  exit 1
+fi
 ATLAS_FRONTEND_TAG="git-$front_sha"
 ATLAS_BACKEND_TAG="git-$back_sha"
 export ATLAS_FRONTEND_TAG ATLAS_BACKEND_TAG
