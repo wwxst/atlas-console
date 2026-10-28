@@ -13,7 +13,22 @@ concurrency:
   group: atlas-production
   cancel-in-progress: false
 jobs:
+  verify-frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+
   deploy:
+    needs: verify-frontend
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, atlas-production]
     environment: production
