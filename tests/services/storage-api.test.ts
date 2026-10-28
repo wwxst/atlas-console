@@ -25,7 +25,7 @@ test('storage operations send selected Bucket permission without repeating crede
   assert.deepEqual(await storage.getOssCredentials(), { configured: false })
   assert.deepEqual(await storage.updateOssCredentials({ accessKeyId: 'test-id', accessKeySecret: 'test-secret' }), { configured: true })
   assert.equal((await storage.getStorageSpaces({ page: 2, pageSize: 15 })).total, 20)
-  assert.equal((await storage.bindStorageSpace({ bucketName: space.bucketName, regionId: space.regionId, accessPermission: 'public-read-write' })).id, 17)
+  assert.equal((await storage.bindStorageSpace({ bucketName: space.bucketName, regionId: space.regionId, accessPermission: 'public-read' })).id, 17)
   assert.deepEqual(await storage.syncStorageSpaces(), { syncedCount: 3 })
   assert.equal((await storage.setDefaultStorageSpace(17)).isDefault, true)
   assert.equal((await storage.updateStorageSpaceDomain(17, { accessDomain: 'https://files.example.com' })).accessDomain, 'https://files.example.com')
@@ -40,7 +40,7 @@ test('storage operations send selected Bucket permission without repeating crede
   assert.deepEqual(calls[1].body, { storageType: 'aliyun' })
   assert.deepEqual(calls[3].body, { accessKeyId: 'test-id', accessKeySecret: 'test-secret' })
   assert.deepEqual(calls[4].params, { page: 2, pageSize: 15 })
-  assert.deepEqual(calls[5].body, { bucketName: space.bucketName, regionId: space.regionId, accessPermission: 'public-read-write' })
+  assert.deepEqual(calls[5].body, { bucketName: space.bucketName, regionId: space.regionId, accessPermission: 'public-read' })
   assert.deepEqual(calls[8].body, { accessDomain: 'https://files.example.com' })
 })
 
