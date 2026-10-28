@@ -14,18 +14,19 @@
 }
 
 .table th:nth-child(2) {
-  width: 25%;
-}
-
-.table th:nth-child(3) {
-  width: 17%;
+  width: 5rem;
+  text-align: center;
 }
 
 .table th:nth-child(4) {
-  width: 16%;
+  width: 18%;
 }
 
 .table th:nth-child(5) {
+  width: 16%;
+}
+
+.table th:nth-child(6) {
   width: 10%;
 }
 
@@ -38,28 +39,18 @@
   white-space: nowrap;
 }
 
-/* ===== User Cell ===== */
-.userCell {
-  display: flex;
-  align-items: center;
-  gap: var(--atlas-space-md);
-  min-width: 0;
+.avatarCell {
+  text-align: center;
 }
 
-.userCell > span:last-child {
-  min-width: 0;
-}
-
-.userCell strong {
+.userName strong {
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.4;
-}
-
-.userCell strong {
   color: var(--atlas-color-text-primary);
   font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .username {
