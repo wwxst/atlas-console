@@ -36,7 +36,7 @@ services:
   backend:
     build:
       context: ../../backend
-    image: atlas-backend:local
+    image: atlas-backend:${ATLAS_BACKEND_TAG:-local}
     restart: unless-stopped
     environment:
       DB_URL: jdbc:mysql://mysql:3306/web_project?useSSL=false&allowPublicKeyRetrieval=true
@@ -51,6 +51,7 @@ services:
       ATLAS_DEPLOYMENT_GITHUB_TOKEN: ${ATLAS_DEPLOYMENT_GITHUB_TOKEN:-}
     volumes:
       - uploads_data:/data/uploads
+      - /opt/atlas/releases:/var/lib/atlas/releases:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -66,7 +67,7 @@ services:
   frontend:
     build:
       context: ..
-    image: atlas-console:local
+    image: atlas-console:${ATLAS_FRONTEND_TAG:-local}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${ATLAS_HTTP_PORT:-8088}:8080"
