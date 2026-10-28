@@ -101,4 +101,34 @@ grep -q 'frontend=git-aaaaaaaa' "$ATLAS_RELEASE_DIR/current.env"
 grep -q 'frontend=git-cccccccc' "$ATLAS_RELEASE_DIR/previous.env"
 grep -q 'git-aaaaaaaa' "$workdir/running"
 
-echo "Release rollback regression checks passed"
+# The archive keeps all successfully deployed version pairs, not just current/previous.
+history_count="$(find "$ATLAS_RELEASE_DIR/history" -type f -name '*.env' | wc -l)"
+[[ "$history_count" -eq 2 ]] || { echo "Expected two archived releases" >&2; exit 1; }
+
+# Deploy a third healthy release, then restore v2 (which is not the immediate previous v1).
+export TEST_FRONT_SHA="$(printf 'e%.0s' {1..40})"
+export TEST_BACK_SHA="$(printf 'f%.0s' {1..40})"
+bash "$root/deploy/release.sh" deploy
+grep -q 'frontend=git-aaaaaaaa' "$ATLAS_RELEASE_DIR/previous.env"
+target="$(printf 'c%.0s' {1..40})_$(printf 'd%.0s' {1..40})"
+bash "$root/deploy/release.sh" rollback-history "$target"
+grep -q 'frontend=git-cccccccc' "$ATLAS_RELEASE_DIR/current.env"
+grep -q 'frontend=git-eeeeeeee' "$ATLAS_RELEASE_DIR/previous.env"
+grep -q 'git-cccccccc' "$workdir/running"
+[[ "$(find "$ATLAS_RELEASE_DIR/history" -type f -name '*.env' | wc -l)" -eq 3 ]]
+
+# Unknown, malformed and missing-image releases must not change the active version.
+if bash "$root/deploy/release.sh" rollback-history '../current.env'; then
+  echo "Invalid historical release ID unexpectedly accepted" >&2; exit 1
+fi
+if bash "$root/deploy/release.sh" rollback-history "$(printf '9%.0s' {1..40})_$(printf '8%.0s' {1..40})"; then
+  echo "Unknown historical release unexpectedly accepted" >&2; exit 1
+fi
+rm -f "$workdir/images/atlas-console_git-$(printf 'a%.0s' {1..40})"
+first="$(printf 'a%.0s' {1..40})_$(printf 'b%.0s' {1..40})"
+if bash "$root/deploy/release.sh" rollback-history "$first"; then
+  echo "Missing archived image unexpectedly activated" >&2; exit 1
+fi
+grep -q 'frontend=git-cccccccc' "$ATLAS_RELEASE_DIR/current.env"
+
+echo "Release rollback and history regression checks passed"
