@@ -1,0 +1,34 @@
+name: Deploy production
+run-name: Atlas Deploy ${{ inputs.request_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Request identifier
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: atlas-production
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64, atlas-production]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: atlas-console
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: wwxst/backend
+          ref: main
+          path: backend
+          persist-credentials: false
+      - name: Apply Docker Compose stack
+        run: |
+          docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml build
+          docker compose --env-file /opt/atlas/.env -f atlas-console/deploy/compose.yaml up --detach --wait
