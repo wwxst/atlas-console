@@ -36,11 +36,15 @@ npm install
 npm run dev
 ```
 
-生产构建：
+生产构建与质量检查：
 
 ```bash
 npm run build
+npm test
+npm run lint
 ```
+
+CI 另外执行 Playwright 浏览器流程测试（模拟 HTTP API）。本地启动方式与安全说明见 [会话与浏览器安全](docs/security.md)；生产静态站点的 CSP/同源代理示例见 `deploy/nginx.conf`。
 
 ## 项目文档
 

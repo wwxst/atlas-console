@@ -11,7 +11,8 @@ test('protected routes wait for session cleanup even when a previous account is 
     ['atlas-access-token', 'account-b-access'],
     ['atlas-refresh-token', 'account-b-refresh'],
   ])
-  Object.defineProperty(globalThis, 'localStorage', { value: { getItem: (key: string) => tokens.get(key) ?? null }, configurable: true })
+  Object.defineProperty(globalThis, 'sessionStorage', { value: { getItem: (key: string) => tokens.get(key) ?? null }, configurable: true })
+  Object.defineProperty(globalThis, 'localStorage', { value: { removeItem: () => {} }, configurable: true })
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' })
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
   try {

@@ -17,6 +17,18 @@ export const refreshClient = axios.create({ baseURL, timeout: 10_000 })
 
 const authTokenEvents = new EventTarget()
 
+// Never migrate long-lived tokens from the legacy localStorage keys.
+// Existing sessions will log in again after this security upgrade.
+if (typeof localStorage !== 'undefined') {
+  try {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+  } catch {
+    // Legacy storage might be unavailable; authentication never reads from it.
+  }
+}
+
+
 function handleAuthTokenStorage(event: Event): void {
   const storageEvent = event as StorageEvent
   if (storageEvent.key === null || storageEvent.key === ACCESS_TOKEN_KEY || storageEvent.key === REFRESH_TOKEN_KEY) {
@@ -29,22 +41,22 @@ if (typeof globalThis.addEventListener === 'function') {
 }
 
 export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY)
+  return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
 export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
+  return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(REFRESH_TOKEN_KEY)
 }
 
 export function saveAuthTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
+  sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
   authTokenEvents.dispatchEvent(new Event('change'))
 }
 
 export function clearAuthTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY)
   authTokenEvents.dispatchEvent(new Event('change'))
 }
 
@@ -89,7 +101,7 @@ async function requestNewAccessToken(refreshToken: string): Promise<string> {
     throw new Error('登录状态已变更')
   }
 
-  localStorage.setItem(ACCESS_TOKEN_KEY, data.data.accessToken)
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, data.data.accessToken)
   authTokenEvents.dispatchEvent(new Event('change'))
   return data.data.accessToken
 }
