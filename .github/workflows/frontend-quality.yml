@@ -66,3 +66,7 @@ jobs:
           bash -n atlas-console/deploy/release.sh
           bash -n atlas-console/deploy/test-release.sh
           bash atlas-console/deploy/test-release.sh
+      - name: Verify real Nginx forwarded IPs and spoofing isolation
+        run: |
+          bash -n atlas-console/deploy/test-nginx-forwarded-ip.sh
+          bash atlas-console/deploy/test-nginx-forwarded-ip.sh

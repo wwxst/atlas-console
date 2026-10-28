@@ -44,6 +44,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # Only the statically addressed Nginx container may set X-Forwarded-For.
+      TRUSTED_PROXY_ADDRESSES: "172.30.80.10"
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       STORAGE_ENCRYPTION_KEY: ${STORAGE_ENCRYPTION_KEY:?Set STORAGE_ENCRYPTION_KEY}
       UPLOAD_DIR: /data/uploads
@@ -71,9 +73,19 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:${ATLAS_HTTP_PORT:-8088}:8080"
+    networks:
+      default:
+        ipv4_address: 172.30.80.10
     depends_on:
       backend:
         condition: service_healthy
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.80.0/24
+          gateway: 172.30.80.1
 
 volumes:
   mysql_data:
