@@ -37,6 +37,8 @@ jobs:
   verify-backend:
     if: inputs.operation == 'deploy'
     runs-on: ubuntu-24.04
+    outputs:
+      backend_sha: ${{ steps.revision.outputs.sha }}
     services:
       mysql:
         image: mysql:8.4
