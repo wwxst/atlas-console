@@ -3,8 +3,10 @@ import { expect, test, type Page } from '@playwright/test'
 const userId = '9007199254740993'
 const now = '2026-10-01T12:00:00'
 
-async function installMockApi(page: Page, deploymentReady = false, previousRelease = false, releaseHistory = false) {
+async function installMockApi(page: Page, deploymentReady = false, previousRelease = false,
+  releaseHistory = false, scenario: 'normal' | 'missing' | 'stalled' = 'normal') {
   let deploymentRequested = false
+  let recoveryCompleted = false
   let nickname = '测试用户'
   let status = 1
   const requests: string[] = []
@@ -29,10 +31,28 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
       return reply({ id: 1, username: 'admin', nickname: '测试管理员' })
     }
     if (path === '/api/sys-user/deployment' && method === 'GET') {
+      const needsRecovery = deploymentRequested && !recoveryCompleted && scenario !== 'normal'
       return reply({ configured: deploymentReady,
-        state: !deploymentReady ? 'not_configured' : deploymentRequested ? 'queued' : 'not_started',
-        conclusion: null, runUrl: deploymentRequested ? 'https://github.com/wwxst/atlas-console/actions/runs/123' : null,
-        title: deploymentRequested ? 'Atlas rollback mock-request' : null, requestId: null, rollbackAvailable: previousRelease })
+        state: !deploymentReady ? 'not_configured' : recoveryCompleted ? 'not_started'
+          : needsRecovery ? scenario === 'missing' ? 'timed_out' : 'stalled'
+          : deploymentRequested ? 'queued' : 'not_started',
+        conclusion: null,
+        runUrl: deploymentRequested ? 'https://github.com/wwxst/atlas-console/actions/runs/123' : null,
+        title: deploymentRequested ? 'Atlas deploy mock-request' : null,
+        requestId: deploymentRequested && !recoveryCompleted ? 'mock-request' : null,
+        runId: deploymentRequested && scenario === 'stalled' ? 123 : null,
+        recoveryAvailable: needsRecovery, rollbackAvailable: previousRelease })
+    }
+    if (path === '/api/sys-user/deployment/recover' && method === 'POST') {
+      requests.push('recovery-requested')
+      if (scenario === 'stalled') {
+        return route.fulfill({ status: 200, contentType: 'application/json',
+          body: JSON.stringify({ code: 400, msg: 'GitHub 仍有排队或运行中的任务', data: null }) })
+      }
+      recoveryCompleted = true
+      return reply({ configured: true, state: 'not_started', conclusion: null,
+        runUrl: null, title: null, requestId: null, runId: null,
+        recoveryAvailable: false, rollbackAvailable: previousRelease })
     }
     if (path === '/api/sys-user/deployment/history' && method === 'GET') {
       const a = 'a'.repeat(40)
@@ -249,4 +269,33 @@ test('history shows an empty state until the first production deployment', async
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
   await expect(page.getByText('暂无部署记录，首次上线后将开始记录历史版本。')).toBeVisible()
+})
+
+test('missing GitHub execution terminates waiting and can be recovered manually', async ({ page }) => {
+  const requests = await installMockApi(page, true, true, false, 'missing')
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  page.once('dialog', async dialog => { await dialog.accept() })
+  await page.getByRole('button', { name: '一键自动更新' }).click()
+  await expect(page.getByText('等待超过 5 分钟，仍未找到本次执行记录，请核实后恢复')).toBeVisible()
+  await expect(page.getByRole('button', { name: '需先恢复状态' })).toBeDisabled()
+  page.once('dialog', async dialog => { await dialog.accept() })
+  await page.getByRole('button', { name: '核实并恢复更新状态' }).click()
+  await expect(page.getByText('尚无部署记录')).toBeVisible()
+  await expect(page.getByRole('button', { name: '一键自动更新' })).toBeEnabled()
+  expect(requests).toContain('recovery-requested')
+})
+
+test('stalled GitHub execution remains protected from unsafe recovery', async ({ page }) => {
+  const requests = await installMockApi(page, true, true, false, 'stalled')
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  page.once('dialog', async dialog => { await dialog.accept() })
+  await page.getByRole('button', { name: '一键自动更新' }).click()
+  await expect(page.getByText('任务超过 1 小时仍未结束，请检查 GitHub Runner 或取消后恢复')).toBeVisible()
+  page.once('dialog', async dialog => { await dialog.accept() })
+  await page.getByRole('button', { name: '核实并恢复更新状态' }).click()
+  await expect(page.getByText('GitHub 仍有排队或运行中的任务')).toBeVisible()
+  await expect(page.getByRole('button', { name: '需先恢复状态' })).toBeDisabled()
+  expect(requests).toContain('recovery-requested')
 })
