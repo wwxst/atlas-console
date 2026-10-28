@@ -295,7 +295,7 @@ test('stalled GitHub execution remains protected from unsafe recovery', async ({
   await expect(page.getByText('任务超过 1 小时仍未结束，请检查 GitHub Runner 或取消后恢复')).toBeVisible()
   page.once('dialog', async dialog => { await dialog.accept() })
   await page.getByRole('button', { name: '核实并恢复更新状态' }).click()
-  await expect(page.getByText('GitHub 仍有排队或运行中的任务')).toBeVisible()
+  await expect(page.getByText('GitHub 仍有排队或运行中的任务').first()).toBeVisible()
   await expect(page.getByRole('button', { name: '需先恢复状态' })).toBeDisabled()
   expect(requests).toContain('recovery-requested')
 })
