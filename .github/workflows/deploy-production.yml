@@ -4,11 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: Deployment or rollback of the previous app release
+        description: Deploy, previous-release rollback, or selected historical restore
         required: true
         type: choice
-        options: [deploy, rollback]
+        options: [deploy, rollback, rollback-history]
         default: deploy
+      target_release:
+        description: Exact 40-hex frontend SHA plus underscore and 40-hex backend SHA for rollback-history
+        required: false
+        type: string
       request_id:
         description: Request identifier
         required: true
@@ -84,7 +88,7 @@ jobs:
     needs: [verify-frontend, verify-backend]
     if: >-
       always() && github.ref == 'refs/heads/main' &&
-      (inputs.operation == 'rollback' ||
+      (inputs.operation == 'rollback' || inputs.operation == 'rollback-history' ||
        (needs.verify-frontend.result == 'success' && needs.verify-backend.result == 'success'))
     runs-on: [self-hosted, linux, x64, atlas-production]
     environment: production
@@ -100,5 +104,8 @@ jobs:
           path: backend
           persist-credentials: false
       - name: Apply release workflow
+        env:
+          RELEASE_OPERATION: ${{ inputs.operation }}
+          TARGET_RELEASE: ${{ inputs.target_release }}
         run: |
-          bash atlas-console/deploy/release.sh "${{ inputs.operation }}"
+          bash atlas-console/deploy/release.sh "$RELEASE_OPERATION" "$TARGET_RELEASE"
