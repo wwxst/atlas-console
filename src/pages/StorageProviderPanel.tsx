@@ -37,7 +37,7 @@ export function StorageProviderPanel({ provider, active }: { provider: StoragePr
   const [pageSize, setPageSize] = useState(15)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [spaceDraft, setSpaceDraft] = useState(emptyDraft)
-  const [accessPermission, setAccessPermission] = useState<StorageAccessPermission>('public-read')
+  const accessPermission: StorageAccessPermission = 'public-read'
   const [credentials, setCredentials] = useState(emptyCredentials)
   const [formError, setFormError] = useState('')
   const [pendingAction, setPendingAction] = useState('')
@@ -63,7 +63,6 @@ export function StorageProviderPanel({ provider, active }: { provider: StoragePr
     setFormError('')
     setCredentials(emptyCredentials)
     setSpaceDraft(emptyDraft)
-    setAccessPermission('public-read')
   }
   const openEditor = (next: Editor) => {
     if (busy) return
@@ -72,7 +71,6 @@ export function StorageProviderPanel({ provider, active }: { provider: StoragePr
     setSuccessMessage('')
     setCredentials(emptyCredentials)
     setSpaceDraft({ ...emptyDraft, ...('space' in next ? { bucketName: next.space.bucketName, regionId: getAliyunOssRegionId(next.space.regionId), accessDomain: next.space.accessDomain ?? '' } : {}) })
-    setAccessPermission('public-read')
     setEditor(next)
   }
 
