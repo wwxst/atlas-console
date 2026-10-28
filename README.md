@@ -46,6 +46,11 @@ npm run lint
 
 CI 另外执行 Playwright 浏览器流程测试（模拟 HTTP API）。本地启动方式与安全说明见 [会话与浏览器安全](docs/security.md)；生产静态站点的 CSP/同源代理示例见 `deploy/nginx.conf`。
 
+
+## 首次部署与一键更新
+
+后台「版本与更新」支持超级管理员触发固定的 GitHub Actions 生产部署流程。不过**在准备服务器与 Runner 前此功能默认禁用**，不会自动创建云服务器。首次上线、安全配置、Docker Compose、GitHub Runner、备份及后续更新操作见 [部署与一键更新指南](deploy/README.md)。
+
 ## 项目文档
 
 - [前端架构](docs/architecture.md)
