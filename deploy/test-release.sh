@@ -69,9 +69,18 @@ test -d "$(dirname "$root")/backend/.git"
 
 export TEST_FRONT_SHA="$(printf 'a%.0s' {1..40})"
 export TEST_BACK_SHA="$(printf 'b%.0s' {1..40})"
+export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
+export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
 bash "$root/deploy/release.sh" deploy
 grep -q "frontend=git-$TEST_FRONT_SHA" "$ATLAS_RELEASE_DIR/current.env"
 test ! -e "$ATLAS_RELEASE_DIR/previous.env"
+
+# Even with valid source checkouts, a mismatched tested pair must never deploy.
+if VERIFIED_BACKEND_SHA="$(printf '0%.0s' {1..40})" bash "$root/deploy/release.sh" deploy; then
+  echo "Unverified backend commit unexpectedly deployed" >&2
+  exit 1
+fi
+grep -q "frontend=git-$TEST_FRONT_SHA" "$ATLAS_RELEASE_DIR/current.env"
 
 if bash "$root/deploy/release.sh" rollback; then
   echo "Rollback must fail when no previous release exists" >&2
@@ -80,6 +89,8 @@ fi
 
 export TEST_FRONT_SHA="$(printf 'c%.0s' {1..40})"
 export TEST_BACK_SHA="$(printf 'd%.0s' {1..40})"
+export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
+export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
 bash "$root/deploy/release.sh" deploy
 grep -q 'frontend=git-aaaaaaaa' "$ATLAS_RELEASE_DIR/previous.env"
 grep -q 'frontend=git-cccccccc' "$ATLAS_RELEASE_DIR/current.env"
@@ -88,7 +99,9 @@ grep -q 'frontend=git-cccccccc' "$ATLAS_RELEASE_DIR/current.env"
 touch "$workdir/fail-next-up"
 export TEST_FRONT_SHA="$(printf 'e%.0s' {1..40})"
 export TEST_BACK_SHA="$(printf 'f%.0s' {1..40})"
-if bash "$root/deploy/release.sh" deploy; then
+if export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
+export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
+bash "$root/deploy/release.sh" deploy; then
   echo "Unhealthy deployment must fail" >&2
   exit 1
 fi
@@ -108,6 +121,8 @@ history_count="$(find "$ATLAS_RELEASE_DIR/history" -type f -name '*.env' | wc -l
 # Deploy a third healthy release, then restore v2 (which is not the immediate previous v1).
 export TEST_FRONT_SHA="$(printf 'e%.0s' {1..40})"
 export TEST_BACK_SHA="$(printf 'f%.0s' {1..40})"
+export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
+export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
 bash "$root/deploy/release.sh" deploy
 grep -q 'frontend=git-aaaaaaaa' "$ATLAS_RELEASE_DIR/previous.env"
 target="$(printf 'c%.0s' {1..40})_$(printf 'd%.0s' {1..40})"
