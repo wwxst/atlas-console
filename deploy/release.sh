@@ -85,8 +85,8 @@ archive_release() {
 }
 
 assert_images() {
-  docker image inspect "atlas-console:$ATLAS_FRONTEND_TAG" >/dev/null
-  docker image inspect "atlas-backend:$ATLAS_BACKEND_TAG" >/dev/null
+  docker image inspect "atlas-console:$ATLAS_FRONTEND_TAG" >/dev/null || return 1
+  docker image inspect "atlas-backend:$ATLAS_BACKEND_TAG" >/dev/null || return 1
 }
 
 check_site() {
