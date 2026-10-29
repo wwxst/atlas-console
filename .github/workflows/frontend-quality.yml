@@ -56,11 +56,14 @@ jobs:
           STORAGE_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
         run: |
           printf 'DB_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\nJWT_SECRET=%s\nSTORAGE_ENCRYPTION_KEY=%s\n' "$DB_PASSWORD" "$MYSQL_ROOT_PASSWORD" "$JWT_SECRET" "$STORAGE_ENCRYPTION_KEY" > /tmp/atlas-ci.env
-          docker compose --env-file /tmp/atlas-ci.env -f atlas-console/deploy/compose.yaml config --quiet
+          docker compose --env-file /tmp/atlas-ci.env -f atlas-console/deploy/compose.yaml -f atlas-console/deploy/compose.mysql.yaml config --quiet
       - name: Simulate failed deployment and previous-version rollback
         run: |
+          bash -n atlas-console/install.sh
           bash -n atlas-console/deploy/release.sh
           bash -n atlas-console/deploy/test-release.sh
+          bash -n atlas-console/deploy/test-installer.sh
+          bash atlas-console/deploy/test-installer.sh
           bash atlas-console/deploy/test-release.sh
       - name: Verify real Nginx forwarded IPs and spoofing isolation
         run: |
