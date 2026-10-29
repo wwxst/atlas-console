@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-root="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bash -n "$root/install.sh"
 help="$(bash "$root/install.sh" --help)"
 grep -q 'curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh' <<<"$help"
