@@ -9,7 +9,7 @@
 - GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端和后端测试都检出本次工作流的同一个 `github.sha`；后端位于 `backend/` 子目录。生产 Runner 只检出这一份已验证的仓库提交，Docker Compose 从根目录前端和 `backend/` 构建镜像，并更新 Nginx、Spring Boot、Redis，以及可选的 Docker MySQL。`ATLAS_DB_MODE=docker` 使用 `compose.mysql.yaml`；`ATLAS_DB_MODE=external` 使用宝塔/外部 MySQL，不启动 MySQL 容器。
 - 前端查看 Actions 的最近执行状态，**不会直接执行 Shell、传递自定义分支或把 GitHub Token 暴露到浏览器**。
 - 默认禁用自动更新。没有服务器、Runner 和凭据时，按钮保持禁用。
-- **业务数据持久化**：MySQL、Redis、上传目录使用 Docker 命名卷；重启容器不会清空数据。但**更新不等于备份**，操作前必须另行备份这些卷。
+- **业务数据持久化**：Docker MySQL 模式下 MySQL、Redis、上传目录使用 Docker 命名卷；外部/宝塔 MySQL 的数据由宿主机数据库管理，Redis 和上传目录仍使用命名卷。重启容器不会清空这些数据。但**更新不等于备份**，操作前必须另行备份数据库和上传目录。
 
 ## 真实客户端 IP 与登录限流（生产必读）
 
