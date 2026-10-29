@@ -32,7 +32,7 @@ while (($#)); do
   case "$1" in
     build)
       if [[ "${2:-}" == mysql ]]; then
-        touch "$TEST_DOCKER_DIR/images/atlas-mysql_local"
+        touch "$TEST_DOCKER_DIR/images/atlas-mysql_flyway"
       else
         touch "$TEST_DOCKER_DIR/images/$(key "atlas-console:$ATLAS_FRONTEND_TAG")"
         touch "$TEST_DOCKER_DIR/images/$(key "atlas-backend:$ATLAS_BACKEND_TAG")"
