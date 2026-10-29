@@ -36,7 +36,7 @@ sudo bash install.sh --help
 sudo bash install.sh --db-mode docker
 \`\`\`
 
-当前自动安装支持 Ubuntu 和 Debian。其他发行版需要手动准备 Docker Engine 与 Docker Compose v2 后，再使用后续部署流程；安装器不会尝试猜测未知发行版的包管理方式。
+安装器自动安装 Docker 的路径支持 Ubuntu 和 Debian；其他发行版如果已经安装并启动 Docker Engine 与 Compose v2，也可以运行安装器。安装器不会尝试猜测未知发行版的包管理方式。
 
 ## 安装完成后：在宝塔添加网站
 
