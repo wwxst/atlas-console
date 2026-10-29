@@ -57,6 +57,16 @@ jobs:
         run: |
           printf 'DB_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\nJWT_SECRET=%s\nSTORAGE_ENCRYPTION_KEY=%s\n' "$DB_PASSWORD" "$MYSQL_ROOT_PASSWORD" "$JWT_SECRET" "$STORAGE_ENCRYPTION_KEY" > /tmp/atlas-ci.env
           docker compose --env-file /tmp/atlas-ci.env -f atlas-console/deploy/compose.yaml -f atlas-console/deploy/compose.mysql.yaml config --quiet
+      - name: Validate external MySQL Compose mode
+        run: |
+          cat > /tmp/atlas-external.env <<'ENV'
+          ATLAS_DB_URL=jdbc:mysql://host.docker.internal:3306/web_project?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          ATLAS_DB_USERNAME=atlas
+          ATLAS_DB_PASSWORD=ci_external_only
+          JWT_SECRET=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          STORAGE_ENCRYPTION_KEY=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+          ENV
+          docker compose --env-file /tmp/atlas-external.env -f atlas-console/deploy/compose.yaml config --quiet
       - name: Simulate failed deployment and previous-version rollback
         run: |
           bash -n atlas-console/install.sh
