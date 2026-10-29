@@ -16,11 +16,10 @@ Atlas Console installer
 
 Usage:
   curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh | sudo bash
-  sudo bash install.sh [--ref main] [--dir /opt/atlas] [--db-mode docker|external] [--port 8088]
+  sudo bash install.sh [--ref main] [--db-mode docker|external] [--port 8088]
 
 Options:
   --ref REF          Git branch or tag to install (default: main)
-  --dir PATH         Installation root (default: /opt/atlas)
   --db-mode MODE     docker = private MySQL container; external = existing MySQL
   --port PORT        Loopback HTTP port for the frontend (default: 8088)
   --non-interactive  Unattended Docker-managed MySQL install
@@ -44,7 +43,6 @@ valid_port() { [[ "$1" =~ ^[0-9]+$ ]] && (( 10#$1 >= 1024 && 10#$1 <= 65535 )); 
 while (($#)); do
   case "$1" in
     --ref) [[ $# -ge 2 ]] || fail "--ref requires a value"; REF="$2"; shift 2 ;;
-    --dir) [[ $# -ge 2 ]] || fail "--dir requires a value"; INSTALL_ROOT="$2"; shift 2 ;;
     --db-mode) [[ $# -ge 2 ]] || fail "--db-mode requires a value"; DB_MODE="$2"; shift 2 ;;
     --port) [[ $# -ge 2 ]] || fail "--port requires a value"; HTTP_PORT="$2"; shift 2 ;;
     --non-interactive) NON_INTERACTIVE=true; shift ;;
@@ -55,7 +53,6 @@ done
 
 [[ "$EUID" -eq 0 ]] || fail "Run as root, for example: curl ... | sudo bash"
 [[ "$REF" =~ ^[A-Za-z0-9._/-]+$ && "$REF" != *".."* && "$REF" != /* ]] || fail "Invalid Git ref."
-[[ "$INSTALL_ROOT" == /* && "$INSTALL_ROOT" != "/" ]] || fail "--dir must be an absolute non-root path."
 valid_port "$HTTP_PORT" || fail "Port must be an integer from 1024 to 65535."
 
 if [[ -z "$DB_MODE" ]]; then
