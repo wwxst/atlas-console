@@ -81,6 +81,7 @@ if [[ "$DB_MODE" == external ]]; then
   prompt db_name "Existing empty database name" "web_project"
   prompt db_user "MySQL username" "atlas"
   [[ "$db_host" =~ ^[A-Za-z0-9.-]+$ ]] || fail "MySQL host must be a hostname or IPv4 address."
+  [[ "$db_host" != localhost && "$db_host" != 127.0.0.1 ]] || fail "Inside Docker, localhost is the container itself. Use host.docker.internal for same-server Baota MySQL, after configuring a restricted MySQL listener."
   valid_port "$db_port" || fail "MySQL port must be from 1024 to 65535."
   [[ "$db_name" =~ ^[A-Za-z0-9_]+$ ]] || fail "Database name may contain only letters, digits, and underscores."
   [[ "$db_user" =~ ^[A-Za-z0-9_.@-]+$ ]] || fail "Database username contains unsupported characters."
