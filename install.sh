@@ -83,6 +83,9 @@ fi
 if [[ "$NON_INTERACTIVE" == true && "$DB_MODE" == external ]]; then
   fail "External database mode needs interactive credentials; use the interactive installer."
 fi
+if [[ "$DB_MODE" == external ]]; then
+  [[ -r /dev/tty ]] || fail "External database mode requires a terminal for secure credential entry."
+fi
 
 ENV_FILE="$INSTALL_ROOT/.env"
 SOURCE_DIR="$INSTALL_ROOT/atlas-console"
