@@ -6,7 +6,7 @@
 curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh | sudo bash
 ```
 
-脚本会检测 Linux 发行版和架构、安装官方 Docker Engine 与 Compose v2（仅自动安装 Ubuntu/Debian）、下载 Atlas 单仓库、生成独立随机密钥、创建权限为 `0600` 的 `/opt/atlas/.env`，并构建启动前后端及依赖。首次构建可能需要数分钟。
+脚本会检测 Linux 发行版和架构、安装官方 Docker Engine 与 Compose v2（仅自动安装 Ubuntu/Debian）、下载 Atlas 单仓库、生成独立随机密钥、创建权限为 `0640`、仅 root 和专用部署账号组可读的 `/opt/atlas/.env`，并构建启动前后端及依赖。首次构建可能需要数分钟。
 
 安装器不会安装宝塔、修改公网防火墙、申请 TLS 证书或注册 GitHub Actions Runner。请在公网开放服务前完成域名、HTTPS 和默认管理员密码配置。
 
@@ -52,7 +52,7 @@ Atlas 前端只绑定到宿主机回环地址 `127.0.0.1:8088`。在宝塔网站
 ## 安装目录和首次启动
 
 - 应用代码：`/opt/atlas/atlas-console`
-- 私密环境配置：`/opt/atlas/.env`（权限 `0600`）
+- 私密环境配置：`/opt/atlas/.env`（root:atlas-deploy，权限 `0640`）
 - 发布记录：`/opt/atlas/releases/`
 - 前端本机监听：`127.0.0.1:8088`（可通过 `--port` 修改）
 
@@ -72,6 +72,6 @@ ATLAS_ENV_FILE=/opt/atlas/.env ATLAS_RELEASE_DIR=/opt/atlas/releases \
 
 ## 后续 GitHub 自动更新
 
-一条命令安装与后续 GitHub Actions 自动更新是两个阶段。后续自动更新仍需要在生产服务器注册专用 GitHub Actions Runner，标签必须包含 `self-hosted`、`linux`、`x64`、`atlas-production`。Runner 的 Docker 权限接近 root；不要在生产 Runner 上执行未经审查的 PR 代码。安装器不会自动创建或泄露 Runner 注册令牌。
+一条命令安装与后续 GitHub Actions 自动更新是两个阶段。后续自动更新仍需要在生产服务器注册专用 GitHub Actions Runner，标签必须包含 `self-hosted`、`linux`、`x64`、`atlas-production`。安装器创建的 `atlas-deploy` 是专用非 root 账号，并加入 Docker 组以执行部署；Docker 组权限接近 root，所以不要给该账号日常登录使用，也不要在生产 Runner 上执行未经审查的 PR 代码。安装器不会自动创建或泄露 Runner 注册令牌。
 
 当前安装器提供命令行首次安装。网页安装向导、安装状态页面和宝塔面板内的专用状态展示属于后续功能；安装后可以通过宝塔已有的网站、反向代理和 Docker 管理功能查看/管理相应服务。
