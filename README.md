@@ -47,9 +47,17 @@ npm run lint
 CI 另外执行 Playwright 浏览器流程测试（模拟 HTTP API）。本地启动方式与安全说明见 [会话与浏览器安全](docs/security.md)；生产静态站点的 CSP/同源代理示例见 `deploy/nginx.conf`。
 
 
-## 首次部署与一键更新
+## 一条命令安装与一键更新
 
-后台「版本与更新」支持超级管理员触发固定的 GitHub Actions 生产部署流程。不过**在准备服务器与 Runner 前此功能默认禁用**，不会自动创建云服务器。首次上线、安全配置、Docker Compose、GitHub Runner、备份及后续更新操作见 [部署与一键更新指南](deploy/README.md)。
+全新 Ubuntu/Debian 服务器可以执行下面的命令，自动安装 Docker Engine/Compose、下载 Atlas、生成私密配置并启动前后端：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh | sudo bash
+```
+
+安装时可选择 Docker 私有 MySQL（推荐），或使用已在宝塔创建的空数据库。安装完成后，在宝塔配置域名反向代理与 HTTPS。安装器不会自动注册高权限 GitHub Runner；后续 GitHub Actions 自动更新需要单独配置 Runner。
+
+后台「版本与更新」支持超级管理员触发固定的 GitHub Actions 生产部署流程。首次安装、宝塔代理、数据库模式、安全配置、GitHub Runner、备份及后续更新操作见 [一条命令安装指南](deploy/installer.md) 和 [部署与一键更新指南](deploy/README.md)。
 
 ## 单仓库结构
 

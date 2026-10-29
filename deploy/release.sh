@@ -17,6 +17,7 @@ fi
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 compose_file="$project_root/deploy/compose.yaml"
+mysql_compose_file="$project_root/deploy/compose.mysql.yaml"
 env_file="${ATLAS_ENV_FILE:-/opt/atlas/.env}"
 state_dir="${ATLAS_RELEASE_DIR:-/opt/atlas/releases}"
 current="$state_dir/current.env"
@@ -26,12 +27,24 @@ mkdir -p "$history_dir"
 chmod 700 "$state_dir" "$history_dir"
 test -r "$env_file" || { echo "Production .env not available" >&2; exit 1; }
 
+# Read only this fixed enum from the private env file; never source secrets as shell code.
+db_mode="${ATLAS_DB_MODE:-}"
+if [[ -z "$db_mode" ]]; then
+  db_mode="$(sed -n 's/^ATLAS_DB_MODE=//p' "$env_file" | tail -n 1 | tr -d "'\"")"
+fi
+db_mode="${db_mode:-docker}"
+case "$db_mode" in
+  docker) compose_args=(-f "$compose_file" -f "$mysql_compose_file") ;;
+  external) compose_args=(-f "$compose_file") ;;
+  *) echo "Invalid ATLAS_DB_MODE in production .env (expected docker or external)" >&2; exit 1 ;;
+esac
+
 # Fail before doing anything if another deploy process is already executing.
 exec 9>"$state_dir/deploy.lock"
 flock -n 9 || { echo "Another release operation is running" >&2; exit 1; }
 
 compose() {
-  docker compose --env-file "$env_file" -f "$compose_file" "$@"
+  docker compose --env-file "$env_file" "${compose_args[@]}" "$@"
 }
 
 validate_tag() {
@@ -196,8 +209,9 @@ else
   stable_back=""
 fi
 
-# The Flyway-only MySQL image has a new tag so hosts cannot reuse the legacy SQL-init image.
-if ! docker image inspect atlas-mysql:flyway >/dev/null 2>&1; then
+# The bundled MySQL image is only built when Atlas owns the database container.
+# External/Baota database mode leaves the host-managed database untouched.
+if [[ "$db_mode" == docker ]] && ! docker image inspect atlas-mysql:flyway >/dev/null 2>&1; then
   compose build mysql
 fi
 compose build frontend backend

@@ -87,14 +87,24 @@ test('rollback operations do not require verification jobs to run', () => {
 })
 
 const compose = readFileSync(new URL('./compose.yaml', import.meta.url), 'utf8')
+const mysqlCompose = readFileSync(new URL('./compose.mysql.yaml', import.meta.url), 'utf8')
 const release = readFileSync(new URL('./release.sh', import.meta.url), 'utf8')
 
 test('deployment uses Flyway for a fresh schema and keeps legacy baseline opt-in', () => {
   assert.ok(compose.includes('context: ../backend'))
-  assert.ok(compose.includes('dockerfile: Dockerfile.mysql'))
+  assert.ok(mysqlCompose.includes('dockerfile: Dockerfile.mysql'))
   assert.ok(compose.includes('ATLAS_FLYWAY_BASELINE_ON_MIGRATE: ${ATLAS_FLYWAY_BASELINE_ON_MIGRATE:-false}'))
-  assert.ok(!compose.includes('docker-entrypoint-initdb.d'))
+  assert.ok(!mysqlCompose.includes('docker-entrypoint-initdb.d'))
   assert.ok(!backend.includes('web_project.sql'))
+})
+
+test('deployment supports bundled MySQL and an existing external database', () => {
+  assert.ok(compose.includes('ATLAS_DB_URL'))
+  assert.ok(compose.includes('host.docker.internal:host-gateway'))
+  assert.ok(mysqlCompose.includes('mysql:3306/web_project'))
+  assert.ok(release.includes('db_mode'))
+  assert.ok(release.includes('external) compose_args=(-f "$compose_file")'))
+  assert.ok(release.includes('docker) compose_args=(-f "$compose_file" -f "$mysql_compose_file")'))
 })
 
 const ci = readFileSync(new URL('../.github/workflows/frontend-quality.yml', import.meta.url), 'utf8')
