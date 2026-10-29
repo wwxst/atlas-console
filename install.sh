@@ -96,8 +96,6 @@ if [[ -e "$ENV_FILE" || -e "$SOURCE_DIR" ]]; then
 fi
 
 command -v curl >/dev/null 2>&1 || fail "curl is required. Install it and rerun the installer."
-command -v openssl >/dev/null 2>&1 || fail "openssl is required. Install it and rerun the installer."
-
 install_docker() {
   if command -v docker >/dev/null 2>&1; then
     if docker compose version >/dev/null 2>&1; then
@@ -138,6 +136,10 @@ install_docker() {
 }
 
 install_docker
+command -v openssl >/dev/null 2>&1 || {
+  command -v apt-get >/dev/null 2>&1 || fail "openssl is required; install it and rerun the installer."
+  apt-get install -y openssl
+}
 command -v git >/dev/null 2>&1 || {
   command -v apt-get >/dev/null 2>&1 || fail "git is required to fetch Atlas."
   apt-get install -y git
