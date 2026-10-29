@@ -12,11 +12,7 @@ export TEST_DOCKER_DIR="$workdir"
 
 cat > "$workdir/bin/git" <<'FAKE_GIT'
 #!/usr/bin/env bash
-if [[ "$2" == */backend ]]; then
-  echo "$TEST_BACK_SHA"
-else
-  echo "$TEST_FRONT_SHA"
-fi
+echo "$TEST_FRONT_SHA"
 FAKE_GIT
 
 cat > "$workdir/bin/docker" <<'FAKE_DOCKER'
@@ -64,18 +60,18 @@ FAKE_CURL
 chmod +x "$workdir/bin/"*
 export PATH="$workdir/bin:$PATH"
 
-# This test runs with sibling checkout atlas-console + backend in GitHub Actions.
-test -d "$(dirname "$root")/backend/.git"
+# This test runs from a single monorepo checkout.
+test -f "$root/backend/pom.xml"
 
 export TEST_FRONT_SHA="$(printf 'a%.0s' {1..40})"
-export TEST_BACK_SHA="$(printf 'b%.0s' {1..40})"
+export TEST_BACK_SHA="$TEST_FRONT_SHA"
 export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
 export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
 bash "$root/deploy/release.sh" deploy
 grep -q "frontend=git-$TEST_FRONT_SHA" "$ATLAS_RELEASE_DIR/current.env"
 test ! -e "$ATLAS_RELEASE_DIR/previous.env"
 
-# Even with valid source checkouts, a mismatched tested pair must never deploy.
+# Even with a valid monorepo checkout, a mismatched verified SHA must never deploy.
 if VERIFIED_BACKEND_SHA="$(printf '0%.0s' {1..40})" bash "$root/deploy/release.sh" deploy; then
   echo "Unverified backend commit unexpectedly deployed" >&2
   exit 1
@@ -88,7 +84,7 @@ if bash "$root/deploy/release.sh" rollback; then
 fi
 
 export TEST_FRONT_SHA="$(printf 'c%.0s' {1..40})"
-export TEST_BACK_SHA="$(printf 'd%.0s' {1..40})"
+export TEST_BACK_SHA="$TEST_FRONT_SHA"
 export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
 export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
 bash "$root/deploy/release.sh" deploy
@@ -98,7 +94,7 @@ grep -q 'frontend=git-cccccccc' "$ATLAS_RELEASE_DIR/current.env"
 # Simulate unhealthy v3. v2 must be reactivated and manifests stay unchanged.
 touch "$workdir/fail-next-up"
 export TEST_FRONT_SHA="$(printf 'e%.0s' {1..40})"
-export TEST_BACK_SHA="$(printf 'f%.0s' {1..40})"
+export TEST_BACK_SHA="$TEST_FRONT_SHA"
 if export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
 export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
 bash "$root/deploy/release.sh" deploy; then
@@ -120,12 +116,12 @@ history_count="$(find "$ATLAS_RELEASE_DIR/history" -type f -name '*.env' | wc -l
 
 # Deploy a third healthy release, then restore v2 (which is not the immediate previous v1).
 export TEST_FRONT_SHA="$(printf 'e%.0s' {1..40})"
-export TEST_BACK_SHA="$(printf 'f%.0s' {1..40})"
+export TEST_BACK_SHA="$TEST_FRONT_SHA"
 export VERIFIED_FRONTEND_SHA="$TEST_FRONT_SHA"
 export VERIFIED_BACKEND_SHA="$TEST_BACK_SHA"
 bash "$root/deploy/release.sh" deploy
 grep -q 'frontend=git-aaaaaaaa' "$ATLAS_RELEASE_DIR/previous.env"
-target="$(printf 'c%.0s' {1..40})_$(printf 'd%.0s' {1..40})"
+target="$(printf 'c%.0s' {1..40})_$(printf 'c%.0s' {1..40})"
 bash "$root/deploy/release.sh" rollback-history "$target"
 grep -q 'frontend=git-cccccccc' "$ATLAS_RELEASE_DIR/current.env"
 grep -q 'frontend=git-eeeeeeee' "$ATLAS_RELEASE_DIR/previous.env"
@@ -140,7 +136,7 @@ if bash "$root/deploy/release.sh" rollback-history "$(printf '9%.0s' {1..40})_$(
   echo "Unknown historical release unexpectedly accepted" >&2; exit 1
 fi
 rm -f "$workdir/images/atlas-console_git-$(printf 'a%.0s' {1..40})"
-first="$(printf 'a%.0s' {1..40})_$(printf 'b%.0s' {1..40})"
+first="$(printf 'a%.0s' {1..40})_$(printf 'a%.0s' {1..40})"
 if bash "$root/deploy/release.sh" rollback-history "$first"; then
   echo "Missing archived image unexpectedly activated" >&2; exit 1
 fi

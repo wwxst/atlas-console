@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.web.project.admin.mapper.SysUserMapper">
+
+    <!-- 凭据查询需要密码密文；列表查询使用下方的安全字段集。 -->
+    <sql id="SysUserColumns">
+        id,
+        username,
+        password,
+        nickname,
+        avatar_file_id,
+        status,
+        auth_version,
+        created_at,
+        updated_at
+    </sql>
+
+    <!-- 系统用户列表不读取密码密文。 -->
+    <sql id="SysUserSafeColumns">
+        id,
+        username,
+        nickname,
+        avatar_file_id,
+        status,
+        created_at,
+        updated_at
+    </sql>
+
+    <!-- 账号或昵称模糊搜索；未提供状态时查询全部状态。 -->
+    <sql id="SysUserConditions">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                username LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 根据登录账号查询系统用户 -->
+    <select id="selectByUsername"
+            resultType="com.web.project.admin.entity.SysUser">
+        SELECT
+        <include refid="SysUserColumns"/>
+        FROM sys_user
+        WHERE username = #{username}
+        LIMIT 1
+    </select>
+
+    <!-- 根据 ID 查询系统用户 -->
+    <select id="selectById"
+            resultType="com.web.project.admin.entity.SysUser">
+        SELECT
+        <include refid="SysUserColumns"/>
+        FROM sys_user
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <select id="selectByIdForUpdate" resultType="com.web.project.admin.entity.SysUser">
+        SELECT
+        <include refid="SysUserSafeColumns"/>
+        FROM sys_user
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <!-- 查询符合条件的数据总数 -->
+    <select id="countByCondition"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM sys_user
+        <include refid="SysUserConditions"/>
+    </select>
+
+    <!-- 分页查询系统用户列表 -->
+    <select id="selectPageByCondition"
+            resultType="com.web.project.admin.entity.SysUser">
+        SELECT
+        <include refid="SysUserSafeColumns"/>
+        FROM sys_user
+        <include refid="SysUserConditions"/>
+        <choose>
+            <when test="createdAtOrder == 'asc'">ORDER BY created_at ASC, id ASC</when>
+            <when test="createdAtOrder == 'desc'">ORDER BY created_at DESC, id DESC</when>
+            <otherwise>ORDER BY id DESC</otherwise>
+        </choose>
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 修改系统用户状态。 -->
+    <update id="updateStatus">
+        UPDATE sys_user
+        SET status = #{status},
+            auth_version = auth_version + 1
+        WHERE id = #{id}
+    </update>
+
+    <!-- 新增系统用户。 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO sys_user (username, password, nickname, status)
+        VALUES (#{username}, #{password}, #{nickname}, #{status})
+    </insert>
+
+    <!-- 编辑系统用户基本资料；状态由独立接口维护。 -->
+    <update id="update">
+        UPDATE sys_user
+        SET username = #{username},
+            nickname = #{nickname}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 管理员重置系统用户密码。 -->
+    <update id="updatePassword">
+        UPDATE sys_user
+        SET password = #{password},
+            auth_version = auth_version + 1
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新系统用户头像。 -->
+    <update id="updateAvatar">
+        UPDATE sys_user
+        SET avatar_file_id = #{avatarFileId}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 删除系统用户。 -->
+    <delete id="deleteById">
+        DELETE FROM sys_user
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

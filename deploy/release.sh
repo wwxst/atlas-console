@@ -16,7 +16,6 @@ if [[ "$operation" == rollback-history && ! "$target_release" =~ ^[a-f0-9]{40}_[
 fi
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-workspace="$(dirname "$project_root")"
 compose_file="$project_root/deploy/compose.yaml"
 env_file="${ATLAS_ENV_FILE:-/opt/atlas/.env}"
 state_dir="${ATLAS_RELEASE_DIR:-/opt/atlas/releases}"
@@ -168,14 +167,15 @@ fi
 
 # Production deployments must use the exact pair the workflow already tested.
 # Rollbacks do not build new source and intentionally bypass this check.
-test -d "$workspace/backend/.git" || { echo "Backend checkout missing" >&2; exit 1; }
+test -f "$project_root/backend/pom.xml" || { echo "Monorepo backend directory missing" >&2; exit 1; }
 front_sha="$(git -C "$project_root" rev-parse HEAD)"
-back_sha="$(git -C "$workspace/backend" rev-parse HEAD)"
+back_sha="$front_sha"
 if [[ ! "${VERIFIED_FRONTEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||
       ! "${VERIFIED_BACKEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||
       "$front_sha" != "$VERIFIED_FRONTEND_SHA" ||
-      "$back_sha" != "$VERIFIED_BACKEND_SHA" ]]; then
-  echo "Refusing deployment: checked-out source does not match verified SHA pair" >&2
+      "$back_sha" != "$VERIFIED_BACKEND_SHA" ||
+      "$VERIFIED_FRONTEND_SHA" != "$VERIFIED_BACKEND_SHA" ]]; then
+  echo "Refusing deployment: frontend and backend must match the single verified monorepo SHA" >&2
   exit 1
 fi
 ATLAS_FRONTEND_TAG="git-$front_sha"

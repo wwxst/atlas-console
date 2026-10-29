@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.web.project.storage.mapper.StorageSpaceMapper">
+    <select id="selectById" resultType="com.web.project.storage.entity.StorageSpace">SELECT id, bucket_name, region_id, access_domain, created_at, updated_at FROM storage_space WHERE id = #{id}</select>
+    <select id="selectByBucketName" resultType="com.web.project.storage.entity.StorageSpace">SELECT id, bucket_name, region_id, access_domain, created_at, updated_at FROM storage_space WHERE bucket_name = #{bucketName}</select>
+    <select id="selectPage" resultType="com.web.project.storage.entity.StorageSpace">SELECT id, bucket_name, region_id, access_domain, created_at, updated_at FROM storage_space ORDER BY id DESC LIMIT #{limit} OFFSET #{offset}</select>
+    <select id="count" resultType="long">SELECT COUNT(*) FROM storage_space</select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO storage_space (bucket_name, region_id, access_domain) VALUES (#{bucketName}, #{regionId}, #{accessDomain})
+    </insert>
+    <update id="updateDomain">UPDATE storage_space SET access_domain = #{accessDomain} WHERE id = #{id}</update>
+    <update id="updateRegion">UPDATE storage_space SET region_id = #{regionId} WHERE id = #{id}</update>
+    <delete id="delete">DELETE FROM storage_space WHERE id = #{id}</delete>
+</mapper>

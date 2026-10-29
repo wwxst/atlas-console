@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.web.project.storage.mapper.StorageConfigMapper">
+    <sql id="keys">config_key IN ('storage.type', 'storage.aliyun.access-key-id', 'storage.aliyun.access-key-secret', 'storage.aliyun.default-space-id')</sql>
+    <select id="selectStorageConfig" resultType="com.web.project.channel.entity.SysConfig">SELECT config_key, config_value, description, created_at, updated_at FROM sys_config WHERE <include refid="keys"/> ORDER BY config_key</select>
+    <select id="selectStorageConfigForUpdate" resultType="com.web.project.channel.entity.SysConfig">SELECT config_key, config_value, description, created_at, updated_at FROM sys_config WHERE <include refid="keys"/> ORDER BY config_key FOR UPDATE</select>
+    <update id="updateValue">UPDATE sys_config SET config_value = #{value} WHERE config_key = #{key}</update>
+</mapper>

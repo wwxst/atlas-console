@@ -6,7 +6,7 @@
 
 - 后台超级管理员（系统用户 ID=1）在「版本与更新」点击一键更新。
 - 后端调用 GitHub Actions API，只允许触发 `wwxst/atlas-console` 中固定的 `deploy-production.yml`，引用 `main`。
-- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端始终使用本次触发工作流的 `github.sha`；后端测试任务通过 `git rev-parse HEAD` 固定实际通过测试的提交，再将该 SHA 传给生产部署任务。Runner 只检出这两个已确认的 SHA，Docker Compose 构建并更新 Nginx、Spring Boot、MySQL 和 Redis。
+- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端和后端测试都检出本次工作流的同一个 `github.sha`；后端位于 `backend/` 子目录。生产 Runner 只检出这一份已验证的仓库提交，Docker Compose 从根目录前端和 `backend/` 构建镜像，并更新 Nginx、Spring Boot、MySQL 和 Redis。
 - 前端查看 Actions 的最近执行状态，**不会直接执行 Shell、传递自定义分支或把 GitHub Token 暴露到浏览器**。
 - 默认禁用自动更新。没有服务器、Runner 和凭据时，按钮保持禁用。
 - **业务数据持久化**：MySQL、Redis、上传目录使用 Docker 命名卷；重启容器不会清空数据。但**更新不等于备份**，操作前必须另行备份这些卷。
@@ -27,10 +27,10 @@
 2. 在服务器建立专用非 root 部署账号，安装 Docker 和 GitHub Actions Runner。Runner 必须注册到 `wwxst/atlas-console`，并添加 `atlas-production` 标签。按照 GitHub 自托管 Runner 官方步骤将 Runner 作为受控服务运行。**Runner 的 Docker 权限具有接近 root 的风险，生产 Runner 不得执行不受信任的 PR 代码。请设置分支保护、审查工作流变更，并限制仓库写入权限。**
 3. 创建 `/opt/atlas/.env`（参考本目录 `env.example`），设置 **独立的** MySQL root 密码和业务密码；用 `openssl rand -base64 48` 生成 JWT_SECRET，用 `openssl rand -base64 32` 生成 STORAGE_ENCRYPTION_KEY。只允许 Runner 的部署账号读取此文件，权限设为 `0600`，**不要提交到 GitHub**。
 4. 在 GitHub 仓库的 Actions 设置中允许执行工作流，创建名为 `production` 的 Environment，可选配置 required reviewers。工作流只允许从 `main` 引用执行。仓库 `main` 必须受代码审查和 CI 约束。
-5. 首次部署：通过 GitHub Actions 页面手动运行 `Deploy production`，输入任意非空的请求标识（例如 `bootstrap-1`）。工作流会在 Runner 上拉取两个仓库、构建并启动容器，验证可启动后再确认外部域名和 HTTPS。**没有 Runner 时会一直排队，不能视为部署成功。**
+5. 首次部署：通过 GitHub Actions 页面手动运行 `Deploy production`，输入任意非空的请求标识（例如 `bootstrap-1`）。工作流会在 Runner 上检出一个仓库，分别构建前端和 `backend/` 后端镜像，启动容器并验证健康状态；之后再确认外部域名和 HTTPS。**没有 Runner 时会一直排队，不能视为部署成功。**
 6. **数据库 schema 由 Flyway 版本迁移管理**：全新数据库会在后端首次启动时执行 V1 创建表和默认配置，不再通过 MySQL 容器导入 `web_project.sql`。首次公网开放前必须修改默认系统管理员密码。
-7. 如果复用由旧版 `web_project.sql` 初始化的非空数据库，必须先备份并核对 schema，然后按 [后端数据库迁移指南](https://github.com/wwxst/backend/blob/main/docs/database-migrations.md) 临时设置 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=true` 完成一次 baseline，确认健康后恢复为 `false`。**不要对未核实的数据库启用 baseline。**
-8. 首次访问成功后，创建一个只访问 `wwxst/atlas-console` 的 **GitHub fine-grained PAT**，仅授予仓库 Actions 的读写权限，不授予代码写入、Secrets 或 Administration 权限。把它写入服务器 `/opt/atlas/.env` 的 `ATLAS_DEPLOYMENT_GITHUB_TOKEN`，设置 `ATLAS_DEPLOYMENT_ENABLED=true`，再通过受控部署流程重启 backend。这样后台的一键更新按钮才会启用。
+7. 如果复用由旧版 `web_project.sql` 初始化的非空数据库，必须先备份并核对 schema，然后按 [后端数据库迁移指南](https://github.com/wwxst/atlas-console/blob/main/backend/docs/database-migrations.md) 临时设置 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=true` 完成一次 baseline，确认健康后恢复为 `false`。**不要对未核实的数据库启用 baseline。**
+8. 首次访问成功后，创建一个只访问 `wwxst/atlas-console` 的 **GitHub fine-grained PAT**，仅授予仓库 Actions 的读写权限，不授予代码写入、Secrets 或 Administration 权限。把它写入服务器 `/opt/atlas/.env` 的 `ATLAS_DEPLOYMENT_GITHUB_TOKEN`，设置 `ATLAS_DEPLOYMENT_ENABLED=true`，再通过受控部署流程重启 backend 容器。这样后台的一键更新按钮才会启用。
 
 ## 数据库迁移与应用回滚边界
 
@@ -38,13 +38,13 @@
 - 已发布的 Flyway SQL 不可修改。后续 schema 变化只能添加新的版本文件，并优先采用向前兼容的 expand/contract 迁移。
 - 对已有数据库，默认 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=false`。只有先完成备份、确认表/列/索引/约束与 V1 相符后，才可临时打开 baseline；Flyway baseline **不会自动比较或修复完整 DDL**。
 - Flyway migration 在后端启动时运行。迁移失败会阻止后端健康检查通过，因此发布脚本不会记录新应用版本为成功；但应用镜像回滚**不会回滚已提交的数据库 DDL 或数据**。迁移必须兼容当前版本和可回滚的旧应用版本。
-- 真实数据库备份恢复和现有库 baseline 演练仍需在独立测试服务器完成；CI 成功不等于真实服务器验证成功。完整操作步骤见 [后端数据库迁移指南](https://github.com/wwxst/backend/blob/main/docs/database-migrations.md)。
+- 真实数据库备份恢复和现有库 baseline 演练仍需在独立测试服务器完成；CI 成功不等于真实服务器验证成功。完整操作步骤见 [后端数据库迁移指南](https://github.com/wwxst/atlas-console/blob/main/backend/docs/database-migrations.md)。
 
 ## 后续的「一键更新」
 
 1. 将前端、后端代码经 PR 和 CI 合并到各自 `main`。
 2. 使用 ID=1 的超级管理员登录 Atlas Console，打开「版本与更新」。
-3. 点击「一键自动更新」并确认。后台固定触发 GitHub Actions。工作流在验证任务开始时确定前端和后端的 Git SHA。前端使用该工作流的固定 SHA，后端使用测试任务实际检出的 SHA；生产 Runner 在构建前再次校验两者是否一致，若 SHA 缺失或不匹配则拒绝部署。
+3. 点击「一键自动更新」并确认。后台固定触发 GitHub Actions。前端和后端验证任务都使用同一个工作流 SHA；生产 Runner 在构建前再次校验两者与仓库检出的提交完全一致。单仓库部署要求前后端 SHA 相同，若缺失或不匹配则拒绝部署。
 4. 在弹窗或 GitHub Actions 页查看排队、运行、成功、失败状态。显示成功后自行刷新页面以加载前端资源。**刷新页面本身不部署代码**。
 
 
@@ -58,11 +58,11 @@
 
 ## 部署失败、自动回滚与手动回滚
 
-- 每次部署使用本次工作流固定的前端 SHA 与已经通过测试的后端 SHA，分别构建 `atlas-console:git-<40位SHA>` 和 `atlas-backend:git-<40位SHA>` 镜像，**不会覆盖上一版应用镜像标签**。
+- 每次部署使用同一个已通过前后端检查的仓库提交 SHA，分别构建 `atlas-console:git-<40位SHA>` 和 `atlas-backend:git-<40位SHA>` 镜像；两者的 SHA 相同，**不会覆盖上一版应用镜像标签**。
 - 专用 Runner 在服务器 `/opt/atlas/releases/` 保存 `current.env` 和 `previous.env` 两份版本清单（只包含镜像标签，不包含密钥）。首次成功部署只有 current；第二次成功部署开始才有 previous。
 - 更新中 Docker Compose 的健康检查或前端 HTTP 检查失败时，发布脚本自动尝试用 current 清单恢复上一套前后端镜像。**即使自动恢复成功，本次 GitHub Actions 仍标记失败**，便于管理员排查。恢复失败会在日志中明确告警。
 - 超级管理员在「版本与更新」点击「回滚上一版本」并确认，后端使用固定的 `operation=rollback` 触发同一生产工作流，Runner **不再构建当前代码**，而是验证 previous 清单和镜像存在，恢复该版本并执行健康检查。成功后互换 current/previous，因此还可以再次切换回来。
-- **历史版本管理**：每次成功部署都会在 `/opt/atlas/releases/history/` 归档一份前后端 Git SHA 对应的镜像清单（文件名为 `<前端40位SHA>_<后端40位SHA>.env`），保留原始归档时间。超级管理员可在「版本与更新 → 历史版本」浏览最近 50 条、区分当前版本并选择任意非当前的历史版本。
+- **历史版本管理**：每次成功部署都会在 `/opt/atlas/releases/history/` 归档一份镜像清单（文件名为 `<同一40位SHA>_<同一40位SHA>.env`），记录同一仓库提交构建的前后端镜像，并保留原始归档时间。超级管理员可在「版本与更新 → 历史版本」浏览最近 50 条、区分当前版本并选择任意非当前的历史版本。
 - **指定历史版本回滚**：后端校验请求的版本 ID 必须属于该服务器真实保存的历史记录，并通过固定的 `operation=rollback-history` 调度生产工作流；Runner 再次检查文件名、文件内容和本机镜像是否匹配，健康检查通过后才更新当前版本与上一版本记录；失败会尝试恢复先前的服务。
 - 如果历史镜像已被清理，选择该版本会**安全失败，不会从来源不明的镜像或任意提交重新构建**。恢复功能不保证永久可用：需要规划磁盘容量、镜像归档/保留策略，并监控服务器空间。历史列表仅包含服务器成功部署过的应用版本，不是 GitHub 全部提交记录。
 
@@ -76,4 +76,4 @@
 
 检查 Actions 运行记录：`https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml`。
 
-生产服务器运行 `docker compose --env-file /opt/atlas/.env -f <runner-workspace>/atlas-console/deploy/compose.yaml ps` 查看容器状态。Docker Compose 的构建上下文依赖 Runner 工作区内两个仓库并排检出；请使用正式工作流来部署，不要从任意目录直接执行。
+生产服务器运行 `docker compose --env-file /opt/atlas/.env -f <runner-workspace>/atlas-console/deploy/compose.yaml ps` 查看容器状态。Docker Compose 的构建上下文使用同一仓库中的根目录前端与 `backend/` 子目录；请使用正式工作流来部署，不要从任意目录直接执行。
