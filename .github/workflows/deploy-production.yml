@@ -98,10 +98,12 @@ jobs:
 
   deploy:
     needs: [verify-frontend, verify-backend]
+    # Keep rollback eligible when verification jobs are skipped, but allow the
+    # queued production job to be cancelled and release the concurrency group.
     if: >-
-      always() && github.ref == 'refs/heads/main' &&
+      ${{ !cancelled() && github.ref == 'refs/heads/main' &&
       (inputs.operation == 'rollback' || inputs.operation == 'rollback-history' ||
-       (needs.verify-frontend.result == 'success' && needs.verify-backend.result == 'success'))
+       (needs.verify-frontend.result == 'success' && needs.verify-backend.result == 'success')) }}
     runs-on: [self-hosted, linux, x64, atlas-production]
     environment: production
     steps:
