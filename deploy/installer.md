@@ -49,6 +49,17 @@ Atlas 前端只绑定到宿主机回环地址 `127.0.0.1:8088`。在宝塔网站
 
 不要把 Spring Boot 的 `8080`、MySQL 的 `3306` 或 Redis 的 `6379` 直接映射到公网。Atlas 的主机反向代理必须覆盖 `X-Forwarded-For` 为实际客户端 IP；参考 `deploy/README.md` 的可信代理说明。
 
+在宝塔反向代理的高级配置中，确保转发头是覆盖而不是追加客户端传入的值：
+
+```nginx
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-Proto $scheme;
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $remote_addr;
+```
+
+请把这些设置合并进宝塔生成的代理配置，不要覆盖整份 Nginx 配置文件。
+
 ## 安装目录和首次启动
 
 - 应用代码：`/opt/atlas/atlas-console`
