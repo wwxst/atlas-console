@@ -1,6 +1,6 @@
 # Atlas Console 一键部署：首次上线与后续自动更新
 
-> **当前阶段**：项目只有 GitHub 仓库，尚无服务器。仓库中的工作流和部署配置仅是可执行模板，**不会创建服务器、购买域名或完成实际部署**。
+> **首次安装**：新服务器可先运行 [一条命令安装器](installer.md)。安装器负责 Docker 与应用首次启动；域名/HTTPS、宝塔反向代理和后续 GitHub Runner 仍需按本文配置。它不会创建云服务器、购买域名或自动开放公网端口。
 
 ## 架构与边界
 
@@ -22,6 +22,8 @@
 - GitHub Actions 的 `deployment-config` 作业会启动**真实 Nginx 容器**，验证两个不同来源 IP 经代理后仍然不同，并验证一个非可信容器伪造 `X-Forwarded-For` 时会被覆盖。Spring Boot 的单元/MockMvc 测试验证可信代理识别和 Redis IP 限流 key 隔离。首次部署时仍需使用实际域名和真实 TLS 代理做端到端演练。
 
 ## 首次上线：必须人工完成一次
+
+推荐先阅读 [一条命令安装指南](installer.md)。如果需要手动安装或排障，再按以下步骤执行。
 
 1. 准备一台 Linux 生产服务器、域名、有效的 HTTPS 证书以及安全的网络策略。建议运行 Docker Engine + Docker Compose v2；将公网流量交给独立的 TLS 反向代理（Caddy/Nginx），只转发到本机 `127.0.0.1:8088`。数据库和 Redis 没有对外发布端口。
 2. 在服务器建立专用非 root 部署账号，安装 Docker 和 GitHub Actions Runner。Runner 必须注册到 `wwxst/atlas-console`，并添加 `atlas-production` 标签。按照 GitHub 自托管 Runner 官方步骤将 Runner 作为受控服务运行。**Runner 的 Docker 权限具有接近 root 的风险，生产 Runner 不得执行不受信任的 PR 代码。请设置分支保护、审查工作流变更，并限制仓库写入权限。**
