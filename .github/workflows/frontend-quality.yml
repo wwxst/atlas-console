@@ -48,10 +48,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           path: atlas-console
-      - uses: actions/checkout@v4
-        with:
-          repository: wwxst/backend
-          path: backend
       - name: Validate deploy compose without production secrets
         env:
           DB_PASSWORD: ci_test_only

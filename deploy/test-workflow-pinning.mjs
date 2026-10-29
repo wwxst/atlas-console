@@ -52,6 +52,15 @@ test('deployment uses Flyway for a fresh schema and keeps legacy baseline opt-in
   assert.ok(!backend.includes('web_project.sql'))
 })
 
+const ci = readFileSync(new URL('../.github/workflows/frontend-quality.yml', import.meta.url), 'utf8')
+test('deployment-config validates Compose from the single monorepo checkout', () => {
+  const start = ci.indexOf('  deployment-config:')
+  assert.ok(start !== -1)
+  const section = ci.slice(start)
+  assert.ok(!section.includes('repository: wwxst/backend'))
+  assert.ok(section.includes('atlas-console/deploy/compose.yaml'))
+})
+
 test('release script validates one monorepo SHA and does not require a second checkout', () => {
   assert.ok(release.includes('git -C "$project_root" rev-parse HEAD'))
   assert.ok(release.includes('"$VERIFIED_FRONTEND_SHA" != "$VERIFIED_BACKEND_SHA"'))
