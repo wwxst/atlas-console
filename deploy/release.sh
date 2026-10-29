@@ -196,8 +196,8 @@ else
   stable_back=""
 fi
 
-# MySQL initialization image is only built during the first installation.
-if ! docker image inspect atlas-mysql:local >/dev/null 2>&1; then
+# The Flyway-only MySQL image has a new tag so hosts cannot reuse the legacy SQL-init image.
+if ! docker image inspect atlas-mysql:flyway >/dev/null 2>&1; then
   compose build mysql
 fi
 compose build frontend backend
