@@ -2,8 +2,6 @@ import { readFileSync } from 'node:fs'
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
 
-// Prevent a verified backend A from becoming an unverified backend B when
-// main advances between the test job and the production runner checkout.
 const yaml = readFileSync(new URL('../.github/workflows/deploy-production.yml', import.meta.url), 'utf8')
 function section(start, end) {
   const from = yaml.indexOf('\n  ' + start + ':')
@@ -15,36 +13,47 @@ const frontend = section('verify-frontend', 'verify-backend')
 const backend = section('verify-backend', 'deploy')
 const deploy = section('deploy')
 
-test('frontend verification and deployment use workflow event SHA', () => {
-  assert.match(frontend, /actions\/checkout@v4\s+with:\s+ref: \$\{\{ github\.sha \}\}/)
-  assert.match(deploy, /actions\/checkout@v4\s+with:\s+ref: \$\{\{ github\.sha \}\}\s+path: atlas-console/)
+test('frontend verification and deployment use the workflow event SHA', () => {
+  assert.ok(frontend.includes('ref: ${{ github.sha }}'))
+  assert.ok(deploy.includes('ref: ${{ github.sha }}'))
+  assert.ok(deploy.includes('path: atlas-console'))
 })
 
-test('backend exports precisely the commit that was tested', () => {
-  assert.match(backend, /backend_sha: \$\{\{ steps\.revision\.outputs\.sha \}\}/)
-  assert.match(backend, /id: revision/)
-  assert.match(backend, /commit="\$\(git rev-parse HEAD\)"/)
-  assert.match(backend, /printf 'sha=%s\\n' "\$commit" >> "\$GITHUB_OUTPUT"/)
+test('backend verification checks backend/ from the same repository commit', () => {
+  assert.ok(backend.includes('ref: ${{ github.sha }}'))
+  assert.ok(backend.includes('backend_sha: ${{ steps.revision.outputs.sha }}'))
+  assert.ok(backend.includes('commit="$(git rev-parse HEAD)"'))
+  assert.ok(backend.includes('working-directory: backend'))
+  assert.ok(backend.includes('cache-dependency-path: backend/pom.xml'))
+  assert.ok(!backend.includes('repository: wwxst/backend'))
 })
 
-test('production backend checkout uses verified SHA rather than moving main', () => {
-  assert.match(deploy, /if: inputs\.operation == 'deploy'\s+with:\s+repository: wwxst\/backend\s+ref: \$\{\{ needs\.verify-backend\.outputs\.backend_sha \}\}/)
-  assert.doesNotMatch(deploy, /ref: main\b/)
-  assert.match(deploy, /test "\$\(git -C backend rev-parse HEAD\)" = "\$VERIFIED_BACKEND_SHA"/)
-  assert.match(deploy, /test "\$\(git -C atlas-console rev-parse HEAD\)" = "\$VERIFIED_FRONTEND_SHA"/)
+test('production deployment checks out one commit and requires both image revisions to match it', () => {
+  assert.ok(deploy.includes('test "$(git -C atlas-console rev-parse HEAD)" = "$VERIFIED_FRONTEND_SHA"'))
+  assert.ok(deploy.includes('test "$VERIFIED_FRONTEND_SHA" = "$VERIFIED_BACKEND_SHA"'))
+  assert.ok(deploy.includes('test -f atlas-console/backend/pom.xml'))
+  assert.ok(!deploy.includes('repository: wwxst/backend'))
 })
 
-test('historical and previous-release rollback do not require a tested backend checkout', () => {
-  assert.match(backend, /if: inputs\.operation == 'deploy'/)
-  assert.match(deploy, /inputs\.operation == 'rollback-history'/)
-  assert.match(deploy, /RELEASE_OPERATION: \$\{\{ inputs\.operation \}\}/)
+test('rollback operations do not require verification jobs to run', () => {
+  assert.ok(backend.includes("if: inputs.operation == 'deploy'"))
+  assert.ok(deploy.includes("inputs.operation == 'rollback-history'"))
+  assert.ok(deploy.includes('RELEASE_OPERATION: ${{ inputs.operation }}'))
 })
 
 const compose = readFileSync(new URL('./compose.yaml', import.meta.url), 'utf8')
+const release = readFileSync(new URL('./release.sh', import.meta.url), 'utf8')
 
-test('deployment uses Flyway for fresh schema and gates legacy baseline explicitly', () => {
-  assert.match(backend, /MYSQL_DATABASE: web_project/)
-  assert.doesNotMatch(backend, /web_project\.sql/)
-  assert.match(compose, /ATLAS_FLYWAY_BASELINE_ON_MIGRATE: \$\{ATLAS_FLYWAY_BASELINE_ON_MIGRATE:-false\}/)
-  assert.doesNotMatch(compose, /docker-entrypoint-initdb\.d/)
+test('deployment uses Flyway for a fresh schema and keeps legacy baseline opt-in', () => {
+  assert.ok(compose.includes('context: ../backend'))
+  assert.ok(compose.includes('dockerfile: Dockerfile.mysql'))
+  assert.ok(compose.includes('ATLAS_FLYWAY_BASELINE_ON_MIGRATE: ${ATLAS_FLYWAY_BASELINE_ON_MIGRATE:-false}'))
+  assert.ok(!compose.includes('docker-entrypoint-initdb.d'))
+  assert.ok(!backend.includes('web_project.sql'))
+})
+
+test('release script validates one monorepo SHA and does not require a second checkout', () => {
+  assert.ok(release.includes('git -C "$project_root" rev-parse HEAD'))
+  assert.ok(release.includes('"$VERIFIED_FRONTEND_SHA" != "$VERIFIED_BACKEND_SHA"'))
+  assert.ok(!release.includes('workspace/backend/.git'))
 })

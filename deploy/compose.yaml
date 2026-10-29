@@ -4,7 +4,7 @@ name: atlas
 services:
   mysql:
     build:
-      context: ../../backend
+      context: ../backend
       dockerfile: Dockerfile.mysql
     image: atlas-mysql:flyway
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
 
   backend:
     build:
-      context: ../../backend
+      context: ../backend
     image: atlas-backend:${ATLAS_BACKEND_TAG:-local}
     restart: unless-stopped
     environment:

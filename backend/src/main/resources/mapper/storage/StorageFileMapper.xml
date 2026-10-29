@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.web.project.storage.mapper.StorageFileMapper">
+    <select id="selectById" resultType="com.web.project.storage.entity.StorageFile">SELECT id, provider, space_id, storage_key, content_type, size_bytes, created_at, updated_at FROM storage_file WHERE id = #{id}</select>
+    <select id="selectByIdForUpdate" resultType="com.web.project.storage.entity.StorageFile">SELECT id, provider, space_id, storage_key, content_type, size_bytes, created_at, updated_at FROM storage_file WHERE id = #{id} FOR UPDATE</select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO storage_file (provider, space_id, storage_key, content_type, size_bytes)
+        VALUES (#{provider}, #{spaceId}, #{storageKey}, #{contentType}, #{sizeBytes})
+    </insert>
+    <delete id="delete">DELETE FROM storage_file WHERE id = #{id}</delete>
+    <select id="countBySpaceId" resultType="long">SELECT COUNT(*) FROM storage_file WHERE space_id = #{spaceId}</select>
+    <select id="countAvatarReferences" resultType="long">SELECT COUNT(*) FROM sys_user WHERE avatar_file_id = #{fileId}</select>
+</mapper>

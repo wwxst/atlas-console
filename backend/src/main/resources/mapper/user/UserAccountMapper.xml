@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.web.project.user.mapper.UserAccountMapper">
+
+    <!--
+        登录、鉴权和详情查询需要的完整字段。
+        包含 password 和 password_version，只能用于后端身份验证。
+    -->
+    <sql id="UserAccountColumns">
+        id,
+        user_no,
+        phone,
+        email,
+        password,
+        password_version,
+        nickname,
+        avatar,
+        status,
+        created_at,
+        updated_at
+    </sql>
+
+    <!--
+        列表查询使用的安全字段。
+        不查询 password，减少密码密文在程序中的流转。
+    -->
+    <sql id="UserAccountSafeColumns">
+        id,
+        user_no,
+        phone,
+        email,
+        nickname,
+        avatar,
+        status,
+        created_at,
+        updated_at
+    </sql>
+
+    <!-- 用户列表公共查询条件 -->
+    <sql id="UserAccountConditions">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                user_no LIKE CONCAT('%', #{keyword}, '%')
+                OR phone LIKE CONCAT('%', #{keyword}, '%')
+                OR email LIKE CONCAT('%', #{keyword}, '%')
+                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 根据 ID 查询用户 -->
+    <select id="selectById"
+            resultType="com.web.project.user.entity.UserAccount">
+        SELECT
+        <include refid="UserAccountColumns"/>
+        FROM user_account
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <!-- 根据规范化手机号查询用户，供注册、登录和验证码场景资格判断使用 -->
+    <select id="selectByPhone"
+            resultType="com.web.project.user.entity.UserAccount">
+        SELECT
+        <include refid="UserAccountColumns"/>
+        FROM user_account
+        WHERE phone = #{phone}
+        LIMIT 1
+    </select>
+
+    <!-- 根据规范化邮箱查询用户 -->
+    <select id="selectByEmail"
+            resultType="com.web.project.user.entity.UserAccount">
+        SELECT
+        <include refid="UserAccountColumns"/>
+        FROM user_account
+        WHERE email = #{email}
+        LIMIT 1
+    </select>
+
+    <!-- 创建用户账号，主键由服务端预先生成 -->
+    <insert id="insert"
+            parameterType="com.web.project.user.entity.UserAccount">
+        INSERT INTO user_account (id, user_no, phone, email, password, nickname)
+        VALUES (#{id}, #{userNo}, #{phone}, #{email}, #{password}, #{nickname})
+    </insert>
+
+    <!-- 更新密码并递增密码版本 -->
+    <update id="updatePassword">
+        UPDATE user_account
+        SET password         = #{password},
+            password_version = password_version + 1
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新昵称和头像 -->
+    <update id="updateProfile">
+        UPDATE user_account
+        SET nickname = #{nickname},
+            avatar   = #{avatar}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新手机号 -->
+    <update id="updatePhone">
+        UPDATE user_account
+        SET phone = #{phone}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 更新邮箱 -->
+    <update id="updateEmail">
+        UPDATE user_account
+        SET email = #{email}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateAccount">
+        UPDATE user_account
+        SET nickname = #{nickname},
+            phone = #{phone},
+            email = #{email}
+        WHERE id = #{id}
+    </update>
+
+    <!-- Any administrative status write revokes all earlier user access/refresh tokens,
+         including after a disabled account is re-enabled. -->
+    <update id="updateStatus">
+        UPDATE user_account
+        SET status = #{status},
+            password_version = password_version + 1
+        WHERE id = #{id}
+    </update>
+
+    <!-- 查询符合条件的用户总数 -->
+    <select id="countByCondition"
+            resultType="long">
+        SELECT COUNT(*)
+        FROM user_account
+        <include refid="UserAccountConditions"/>
+    </select>
+
+    <!-- 分页查询用户列表 -->
+    <select id="selectPageByCondition"
+            resultType="com.web.project.user.entity.UserAccount">
+        SELECT
+        <include refid="UserAccountSafeColumns"/>
+        FROM user_account
+        <include refid="UserAccountConditions"/>
+        <choose>
+            <when test="createdAtOrder == 'asc'">ORDER BY created_at ASC, id ASC</when>
+            <when test="createdAtOrder == 'desc'">ORDER BY created_at DESC, id DESC</when>
+            <otherwise>ORDER BY created_at DESC, id DESC</otherwise>
+        </choose>
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+</mapper>

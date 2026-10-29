@@ -10,7 +10,7 @@ on:
         options: [deploy, rollback, rollback-history]
         default: deploy
       target_release:
-        description: Exact 40-hex frontend SHA plus underscore and 40-hex backend SHA for rollback-history
+        description: Exact monorepo SHA repeated as frontendSHA_backendSHA for rollback-history
         required: false
         type: string
       request_id:
@@ -73,26 +73,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: wwxst/backend
-      - name: Capture tested backend commit
+          ref: ${{ github.sha }}
+      - name: Capture the monorepo commit under test
         id: revision
         shell: bash
         run: |
           set -euo pipefail
+          test -f backend/pom.xml
           commit="$(git rev-parse HEAD)"
           [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
           printf 'sha=%s\n' "$commit" >> "$GITHUB_OUTPUT"
-          echo "Verifying backend commit: $commit"
+          echo "Verifying backend/ from monorepo commit: $commit"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '25'
           cache: maven
+          cache-dependency-path: backend/pom.xml
       - name: Verify Flyway migration and integration tests on a fresh database
+        working-directory: backend
         run: |
-          chmod +x ./mvnw
-          ./mvnw -B -ntp clean verify
-      - run: |
           chmod +x ./mvnw
           ./mvnw -B -ntp clean verify
 
@@ -110,14 +110,7 @@ jobs:
           ref: ${{ github.sha }}
           path: atlas-console
           persist-credentials: false
-      - uses: actions/checkout@v4
-        if: inputs.operation == 'deploy'
-        with:
-          repository: wwxst/backend
-          ref: ${{ needs.verify-backend.outputs.backend_sha }}
-          path: backend
-          persist-credentials: false
-      - name: Assert production checkouts match verified revisions
+      - name: Assert deployment uses the single verified monorepo commit
         if: inputs.operation == 'deploy'
         shell: bash
         env:
@@ -127,9 +120,10 @@ jobs:
           set -euo pipefail
           [[ "$VERIFIED_FRONTEND_SHA" =~ ^[a-f0-9]{40}$ ]]
           [[ "$VERIFIED_BACKEND_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$VERIFIED_FRONTEND_SHA" = "$VERIFIED_BACKEND_SHA"
           test "$(git -C atlas-console rev-parse HEAD)" = "$VERIFIED_FRONTEND_SHA"
-          test "$(git -C backend rev-parse HEAD)" = "$VERIFIED_BACKEND_SHA"
-          echo "Deploying verified revision pair: frontend=$VERIFIED_FRONTEND_SHA backend=$VERIFIED_BACKEND_SHA"
+          test -f atlas-console/backend/pom.xml
+          echo "Deploying verified monorepo commit: $VERIFIED_FRONTEND_SHA"
       - name: Apply release workflow
         env:
           RELEASE_OPERATION: ${{ inputs.operation }}
