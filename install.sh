@@ -43,7 +43,7 @@ prompt() {
     return
   fi
   read -r -p "$__label [$__default]: " __value
-  printf -v "$__name" '%s' "\${__value:-$__default}"
+  printf -v "$__name" '%s' "${__value:-$__default}"
 }
 valid_port() { [[ "$1" =~ ^[0-9]+$ ]] && (( 10#$1 >= 1024 && 10#$1 <= 65535 )); }
 
@@ -72,7 +72,7 @@ if [[ -z "$DB_MODE" ]]; then
   printf '  1) Docker-managed MySQL (recommended; no database setup in Baota)\n'
   printf '  2) Existing MySQL (for a database already created in Baota)\n'
   read -r -p 'Select [1]: ' db_choice
-  case "\${db_choice:-1}" in
+  case "${db_choice:-1}" in
     1) DB_MODE="docker" ;;
     2) DB_MODE="external" ;;
     *) fail "Please select 1 or 2." ;;
@@ -124,7 +124,7 @@ install_docker() {
   chmod a+r /etc/apt/keyrings/docker.asc
   local arch codename
   arch="$(dpkg --print-architecture)"
-  codename="\${VERSION_CODENAME:-}"
+  codename="${VERSION_CODENAME:-}"
   [[ -n "$codename" ]] || fail "Cannot determine the OS release codename."
   printf 'Types: deb\nURIs: https://download.docker.com/linux/%s\nSuites: %s\nComponents: stable\nArchitectures: %s\nSigned-By: /etc/apt/keyrings/docker.asc\n' "$ID" "$codename" "$arch" > /etc/apt/sources.list.d/docker.sources
   apt-get update -y
