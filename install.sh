@@ -42,7 +42,7 @@ prompt() {
     printf -v "$__name" '%s' "$__default"
     return
   fi
-  read -r -p "$__label [$__default]: " __value
+  read -r -p "$__label [$__default]: " __value < /dev/tty
   printf -v "$__name" '%s' "${__value:-$__default}"
 }
 valid_port() { [[ "$1" =~ ^[0-9]+$ ]] && (( 10#$1 >= 1024 && 10#$1 <= 65535 )); }
@@ -65,13 +65,14 @@ done
 valid_port "$HTTP_PORT" || fail "Port must be an integer from 1024 to 65535."
 
 if [[ -z "$DB_MODE" ]]; then
+  [[ -r /dev/tty ]] || fail "Interactive setup needs a terminal. Use --non-interactive --db-mode docker for an unattended Docker install."
   if [[ "$NON_INTERACTIVE" == true ]]; then
     fail "--non-interactive requires --db-mode docker or --db-mode external."
   fi
   printf 'Choose the database installation mode:\n'
   printf '  1) Docker-managed MySQL (recommended; no database setup in Baota)\n'
   printf '  2) Existing MySQL (for a database already created in Baota)\n'
-  read -r -p 'Select [1]: ' db_choice
+  read -r -p 'Select [1]: ' db_choice < /dev/tty
   case "${db_choice:-1}" in
     1) DB_MODE="docker" ;;
     2) DB_MODE="external" ;;
@@ -159,7 +160,7 @@ else
   [[ "$db_name" =~ ^[A-Za-z0-9_]+$ ]] || fail "Database name may contain only letters, digits, and underscores."
   [[ "$db_user" =~ ^[A-Za-z0-9_.@-]+$ ]] || fail "Database username contains unsupported characters."
   if [[ "$NON_INTERACTIVE" == true ]]; then fail "External database credentials must be entered interactively."; fi
-  read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD
+  read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD < /dev/tty
   printf '\n'
   [[ -n "$ATLAS_DB_PASSWORD" && "$ATLAS_DB_PASSWORD" != *"'"* && "$ATLAS_DB_PASSWORD" != *$'\n'* && "$ATLAS_DB_PASSWORD" != *$'\r'* ]] || fail "Password must be non-empty and cannot contain quotes or newlines."
   DB_PASSWORD="$(openssl rand -hex 32)"
