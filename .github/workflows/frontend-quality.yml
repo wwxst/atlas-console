@@ -63,6 +63,7 @@ jobs:
           ATLAS_DB_URL=jdbc:mysql://host.docker.internal:3306/web_project?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
           ATLAS_DB_USERNAME=atlas
           ATLAS_DB_PASSWORD=ci_external_only
+          DB_PASSWORD=ci_unused_password
           JWT_SECRET=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           STORAGE_ENCRYPTION_KEY=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
           ENV
