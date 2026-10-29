@@ -139,6 +139,15 @@ install_docker() {
 }
 
 install_docker
+
+# A dedicated non-root account will run the future GitHub Actions Runner.
+# Membership in the Docker group is effectively root access, so keep it dedicated.
+getent group atlas-deploy >/dev/null 2>&1 || groupadd --system atlas-deploy
+id atlas-deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash --gid atlas-deploy atlas-deploy
+getent group docker >/dev/null 2>&1 || groupadd docker
+usermod -aG atlas-deploy,docker atlas-deploy
+command -v runuser >/dev/null 2>&1 || fail "runuser is required to run the initial deployment as atlas-deploy."
+
 command -v openssl >/dev/null 2>&1 || {
   command -v apt-get >/dev/null 2>&1 || fail "openssl is required; install it and rerun the installer."
   apt-get install -y openssl
@@ -149,12 +158,18 @@ command -v git >/dev/null 2>&1 || {
 }
 
 mkdir -p "$INSTALL_ROOT" "$RELEASE_DIR"
-chmod 700 "$INSTALL_ROOT" "$RELEASE_DIR"
+chown root:atlas-deploy "$INSTALL_ROOT"
+chmod 750 "$INSTALL_ROOT"
+chown atlas-deploy:atlas-deploy "$RELEASE_DIR"
+chmod 700 "$RELEASE_DIR"
 info "Downloading Atlas Console ($REF)..."
 if ! git clone --depth 1 --branch "$REF" "$REPO" "$SOURCE_DIR"; then
   rm -rf -- "$SOURCE_DIR"
   fail "Could not download Atlas from GitHub. Check network access and the branch/tag name."
 fi
+chown -R root:atlas-deploy "$SOURCE_DIR"
+find "$SOURCE_DIR" -type d -exec chmod 750 {} +
+find "$SOURCE_DIR" -type f -exec chmod g+r {} +
 
 if [[ "$DB_MODE" == docker ]]; then
   DB_PASSWORD="$(openssl rand -hex 32)"
@@ -188,7 +203,8 @@ write_env ATLAS_FLYWAY_BASELINE_ON_MIGRATE false
 write_env ATLAS_HTTP_PORT "$HTTP_PORT"
 write_env ATLAS_DEPLOYMENT_ENABLED false
 write_env ATLAS_DEPLOYMENT_GITHUB_TOKEN ""
-chmod 600 "$ENV_FILE"
+chown root:atlas-deploy "$ENV_FILE"
+chmod 640 "$ENV_FILE"
 
 if [[ "$DB_MODE" == external ]]; then
   warn "The existing MySQL must be reachable from Docker containers. For same-server Baota MySQL, configure its bind address and grant access only to the Atlas Docker subnet; never expose port 3306 to the public internet."
@@ -197,14 +213,14 @@ fi
 
 info "Building and starting Atlas. The first build can take several minutes..."
 commit="$(git -C "$SOURCE_DIR" rev-parse HEAD)"
-ATLAS_ENV_FILE="$ENV_FILE" ATLAS_RELEASE_DIR="$RELEASE_DIR" \
+runuser -u atlas-deploy -- env ATLAS_ENV_FILE="$ENV_FILE" ATLAS_RELEASE_DIR="$RELEASE_DIR" \
   VERIFIED_FRONTEND_SHA="$commit" VERIFIED_BACKEND_SHA="$commit" \
   bash "$SOURCE_DIR/deploy/release.sh" deploy
 
 info "Atlas installation completed."
 printf '\n'
 printf '  Install directory: %s\n' "$INSTALL_ROOT"
-printf '  Config file:       %s/.env (permissions 0600)\n' "$INSTALL_ROOT"
+printf '  Config file:       %s/.env (root:atlas-deploy, permissions 0640)\n' "$INSTALL_ROOT"
 printf '  Local URL:         http://127.0.0.1:%s/\n' "$HTTP_PORT"
 printf '\n'
 printf 'Next steps:\n'
