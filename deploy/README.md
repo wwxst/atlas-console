@@ -28,8 +28,17 @@
 3. 创建 `/opt/atlas/.env`（参考本目录 `env.example`），设置 **独立的** MySQL root 密码和业务密码；用 `openssl rand -base64 48` 生成 JWT_SECRET，用 `openssl rand -base64 32` 生成 STORAGE_ENCRYPTION_KEY。只允许 Runner 的部署账号读取此文件，权限设为 `0600`，**不要提交到 GitHub**。
 4. 在 GitHub 仓库的 Actions 设置中允许执行工作流，创建名为 `production` 的 Environment，可选配置 required reviewers。工作流只允许从 `main` 引用执行。仓库 `main` 必须受代码审查和 CI 约束。
 5. 首次部署：通过 GitHub Actions 页面手动运行 `Deploy production`，输入任意非空的请求标识（例如 `bootstrap-1`）。工作流会在 Runner 上拉取两个仓库、构建并启动容器，验证可启动后再确认外部域名和 HTTPS。**没有 Runner 时会一直排队，不能视为部署成功。**
-6. 初始化 SQL 在**数据库卷第一次建立时**自动执行，之后不会重复清表。系统初始管理员来自项目原有 SQL，**首次公网开放前必须修改其默认密码**；建议另行执行安全审计。
-7. 首次访问成功后，创建一个只访问 `wwxst/atlas-console` 的 **GitHub fine-grained PAT**，仅授予仓库 Actions 的读写权限，不授予代码写入、Secrets 或 Administration 权限。把它写入服务器 `/opt/atlas/.env` 的 `ATLAS_DEPLOYMENT_GITHUB_TOKEN`，设置 `ATLAS_DEPLOYMENT_ENABLED=true`，再通过受控部署流程重启 backend。这样后台的一键更新按钮才会启用。
+6. **数据库 schema 由 Flyway 版本迁移管理**：全新数据库会在后端首次启动时执行 V1 创建表和默认配置，不再通过 MySQL 容器导入 `web_project.sql`。首次公网开放前必须修改默认系统管理员密码。
+7. 如果复用由旧版 `web_project.sql` 初始化的非空数据库，必须先备份并核对 schema，然后按 [后端数据库迁移指南](https://github.com/wwxst/backend/blob/main/docs/database-migrations.md) 临时设置 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=true` 完成一次 baseline，确认健康后恢复为 `false`。**不要对未核实的数据库启用 baseline。**
+8. 首次访问成功后，创建一个只访问 `wwxst/atlas-console` 的 **GitHub fine-grained PAT**，仅授予仓库 Actions 的读写权限，不授予代码写入、Secrets 或 Administration 权限。把它写入服务器 `/opt/atlas/.env` 的 `ATLAS_DEPLOYMENT_GITHUB_TOKEN`，设置 `ATLAS_DEPLOYMENT_ENABLED=true`，再通过受控部署流程重启 backend。这样后台的一键更新按钮才会启用。
+
+## 数据库迁移与应用回滚边界
+
+- 新安装时，MySQL 只创建空的 `web_project` 数据库；后端启动时 Flyway 执行 `V1__initial_schema.sql`。CI 和发布前验证任务都在真实 MySQL 8.4 空数据库上运行相同迁移。
+- 已发布的 Flyway SQL 不可修改。后续 schema 变化只能添加新的版本文件，并优先采用向前兼容的 expand/contract 迁移。
+- 对已有数据库，默认 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=false`。只有先完成备份、确认表/列/索引/约束与 V1 相符后，才可临时打开 baseline；Flyway baseline **不会自动比较或修复完整 DDL**。
+- Flyway migration 在后端启动时运行。迁移失败会阻止后端健康检查通过，因此发布脚本不会记录新应用版本为成功；但应用镜像回滚**不会回滚已提交的数据库 DDL 或数据**。迁移必须兼容当前版本和可回滚的旧应用版本。
+- 真实数据库备份恢复和现有库 baseline 演练仍需在独立测试服务器完成；CI 成功不等于真实服务器验证成功。完整操作步骤见 [后端数据库迁移指南](https://github.com/wwxst/backend/blob/main/docs/database-migrations.md)。
 
 ## 后续的「一键更新」
 
