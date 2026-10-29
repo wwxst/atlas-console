@@ -6,7 +6,7 @@ services:
     build:
       context: ../../backend
       dockerfile: Dockerfile.mysql
-    image: atlas-mysql:local
+    image: atlas-mysql:flyway
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: web_project
