@@ -44,7 +44,7 @@ const compose = readFileSync(new URL('./compose.yaml', import.meta.url), 'utf8')
 
 test('deployment uses Flyway for fresh schema and gates legacy baseline explicitly', () => {
   assert.match(backend, /MYSQL_DATABASE: web_project/)
-  assert.doesNotMatch(backend, /web_project\\.sql/)
-  assert.match(compose, /ATLAS_FLYWAY_BASELINE_ON_MIGRATE: \\?\{ATLAS_FLYWAY_BASELINE_ON_MIGRATE:-false\}/)
-  assert.doesNotMatch(compose, /docker-entrypoint-initdb\\.d/)
+  assert.doesNotMatch(backend, /web_project\.sql/)
+  assert.match(compose, /ATLAS_FLYWAY_BASELINE_ON_MIGRATE: \$\{ATLAS_FLYWAY_BASELINE_ON_MIGRATE:-false\}/)
+  assert.doesNotMatch(compose, /docker-entrypoint-initdb\.d/)
 })
