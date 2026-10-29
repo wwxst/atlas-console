@@ -26,8 +26,8 @@
 推荐先阅读 [一条命令安装指南](installer.md)。如果需要手动安装或排障，再按以下步骤执行。
 
 1. 准备一台 Linux 生产服务器、域名、有效的 HTTPS 证书以及安全的网络策略。建议运行 Docker Engine + Docker Compose v2；将公网流量交给独立的 TLS 反向代理（Caddy/Nginx），只转发到本机 `127.0.0.1:8088`。数据库和 Redis 没有对外发布端口。
-2. 在服务器建立专用非 root 部署账号，安装 Docker 和 GitHub Actions Runner。Runner 必须注册到 `wwxst/atlas-console`，并添加 `atlas-production` 标签。按照 GitHub 自托管 Runner 官方步骤将 Runner 作为受控服务运行。**Runner 的 Docker 权限具有接近 root 的风险，生产 Runner 不得执行不受信任的 PR 代码。请设置分支保护、审查工作流变更，并限制仓库写入权限。**
-3. 首次安装优先使用 [一条命令安装器](installer.md)，它会生成 `/opt/atlas/.env` 和随机密钥。手动安装时参考本目录 `env.example`，根据 `ATLAS_DB_MODE` 配置 `ATLAS_DB_URL`、`ATLAS_DB_USERNAME`、`ATLAS_DB_PASSWORD`；Docker MySQL 模式还需独立的 `MYSQL_ROOT_PASSWORD` 和 `DB_PASSWORD`。只允许部署账号读取 `.env`，权限设为 `0600`，**不要提交到 GitHub**。
+2. 安装器会创建专用非 root 账号 `atlas-deploy`，并将它加入 Docker 组；该组权限接近 root，因此这个账号只能用于专用生产 Runner。以 `atlas-deploy` 身份安装并运行 GitHub Actions Runner，注册到 `wwxst/atlas-console`，并添加 `atlas-production` 标签。**生产 Runner 不得执行不受信任的 PR 代码。请设置分支保护、审查工作流变更，并限制仓库写入权限。**
+3. 首次安装优先使用 [一条命令安装器](installer.md)，它会生成 `/opt/atlas/.env` 和随机密钥。手动安装时参考本目录 `env.example`，根据 `ATLAS_DB_MODE` 配置 `ATLAS_DB_URL`、`ATLAS_DB_USERNAME`、`ATLAS_DB_PASSWORD`；Docker MySQL 模式还需独立的 `MYSQL_ROOT_PASSWORD` 和 `DB_PASSWORD`。只允许部署账号读取 `.env`，权限设为 `0640`，所有者 `root:atlas-deploy`，**不要提交到 GitHub**。
 4. 在 GitHub 仓库的 Actions 设置中允许执行工作流，创建名为 `production` 的 Environment，可选配置 required reviewers。工作流只允许从 `main` 引用执行。仓库 `main` 必须受代码审查和 CI 约束。
 5. 使用安装器时，首次构建和启动由 `install.sh` 在服务器本机完成，结束后再在宝塔配置域名反向代理与 HTTPS。手动安装模式则在 Runner 在线后，通过 GitHub Actions 页面运行 `Deploy production`。后续 GitHub Actions 更新会在 Runner 上检出同一个仓库提交，构建前后端镜像并验证健康状态。**没有 Runner 时，GitHub Actions 任务会一直排队，不能视为部署成功。**
 6. **数据库 schema 由 Flyway 版本迁移管理**：全新数据库会在后端首次启动时执行 V1 创建表和默认配置，不再通过 MySQL 容器导入 `web_project.sql`。首次公网开放前必须修改默认系统管理员密码。
