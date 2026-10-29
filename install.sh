@@ -159,7 +159,10 @@ command -v git >/dev/null 2>&1 || {
 mkdir -p "$INSTALL_ROOT" "$RELEASE_DIR"
 chmod 700 "$INSTALL_ROOT" "$RELEASE_DIR"
 info "Downloading Atlas Console ($REF)..."
-git clone --depth 1 --branch "$REF" "$REPO" "$SOURCE_DIR" || fail "Could not download Atlas from GitHub. Check network access and the branch/tag name."
+if ! git clone --depth 1 --branch "$REF" "$REPO" "$SOURCE_DIR"; then
+  rm -rf -- "$SOURCE_DIR"
+  fail "Could not download Atlas from GitHub. Check network access and the branch/tag name."
+fi
 
 if [[ "$DB_MODE" == docker ]]; then
   DB_PASSWORD="$(openssl rand -hex 32)"
@@ -167,21 +170,7 @@ if [[ "$DB_MODE" == docker ]]; then
   ATLAS_DB_USERNAME="atlas"
   ATLAS_DB_PASSWORD="$DB_PASSWORD"
 else
-  prompt db_host "MySQL host (same-server Baota users usually configure host.docker.internal)" "host.docker.internal"
-  prompt db_port "MySQL port" "3306"
-  prompt db_name "Existing empty database name" "web_project"
-  prompt db_user "MySQL username" "atlas"
-  [[ "$db_host" =~ ^[A-Za-z0-9.-]+$ ]] || fail "MySQL host must be a hostname or IPv4 address."
-  valid_port "$db_port" || fail "MySQL port must be from 1024 to 65535."
-  [[ "$db_name" =~ ^[A-Za-z0-9_]+$ ]] || fail "Database name may contain only letters, digits, and underscores."
-  [[ "$db_user" =~ ^[A-Za-z0-9_.@-]+$ ]] || fail "Database username contains unsupported characters."
-  if [[ "$NON_INTERACTIVE" == true ]]; then fail "External database credentials must be entered interactively."; fi
-  read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD < /dev/tty
-  printf '\n'
-  [[ -n "$ATLAS_DB_PASSWORD" && "$ATLAS_DB_PASSWORD" != *"'"* && "$ATLAS_DB_PASSWORD" != *$'\n'* && "$ATLAS_DB_PASSWORD" != *$'\r'* ]] || fail "Password must be non-empty and cannot contain quotes or newlines."
   DB_PASSWORD="$(openssl rand -hex 32)"
-  ATLAS_DB_URL="jdbc:mysql://$db_host:$db_port/$db_name?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
-  ATLAS_DB_USERNAME="$db_user"
 fi
 
 MYSQL_ROOT_PASSWORD="$(openssl rand -hex 32)"
