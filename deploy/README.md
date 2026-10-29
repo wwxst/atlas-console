@@ -56,6 +56,41 @@
 - 刷新浏览器或者退出重新登录不会依靠前端本地变量维持等待锁；界面以服务端返回的状态、请求 ID、Run ID 和明确终态为准。GitHub API 不可用时，界面显示查询失败并允许重试，**不会自动视为成功或允许跳过部署检查**。
 - GitHub API 执行记录、Redis 跟踪和前端页面的 CI 目前由模拟环境验证。首次生产上线后，还需要按 [独立联调跟踪事项](https://github.com/wwxst/atlas-console/issues/16) 完成真实容器及 Runner 演练。
 
+### 排队、并发锁与无法取消的排查
+
+先区分 **等待 Runner 的 queued job** 和 **等待并发锁的 pending run**。下面命令需要已登录 GitHub CLI；查看 Runner 还需要仓库管理权限，不要为此扩大后台部署 PAT 的权限。
+
+```sh
+# 必须存在 online 且空闲、同时具有全部四个标签的专用 Linux x64 Runner。
+gh api repos/wwxst/atlas-console/actions/runners \
+  --jq '{total_count, runners: [.runners[] | {name, status, busy, labels: [.labels[].name]}]}'
+
+# 用实际 Run ID 替换；检查 deploy 是否 queued、runner_id 是否为 0、steps 是否为空。
+gh api repos/wwxst/atlas-console/actions/runs/RUN_ID/jobs \
+  --jq '.jobs[] | {name, status, conclusion, runner_id, labels, steps}'
+gh api repos/wwxst/atlas-console/actions/runs/RUN_ID \
+  --jq '{id, status, conclusion, head_sha, updated_at}'
+```
+
+- `runs-on: [self-hosted, linux, x64, atlas-production]` 要求标签**全部匹配**。`total_count: 0` 表示没有注册的 Runner，并非仅仅离线；已有 Runner 则检查服务、联网、`status`、`busy` 和标签。准备服务器后，从仓库 **Settings → Actions → Runners → New self-hosted runner** 注册专用 Runner，并作为服务运行。不要给普通开发机随意添加生产标签来消除排队。
+- 工作流的 `atlas-production` 并发组使用 `cancel-in-progress: false`，避免新发布中断正在修改服务的旧发布。旧 run 等待 Runner 时仍占着锁，后续 run 会 `pending`，甚至尚未创建 job。不要改并发组名称、添加 Run ID 或打开自动取消来绕过锁；恢复 Runner 前先处理已有队列，以免积压的部署自动开始。
+- 部署 job 使用 `${{ !cancelled() && ... }}`，既允许回滚跳过验证 job，也允许取消传播。不要恢复 `always()`，也不要直接删除状态函数：后者会让回滚因依赖 job 被跳过而无法执行。job 的 `timeout-minutes` 只限制执行时间，不能解决没有 Runner 的排队问题。
+
+**安全取消顺序**：先核对队列中每个请求的意图。若本次只排障、不部署，先取消尚未开始的后续请求，再取消占锁的旧请求，避免释放锁后后续请求自动部署。确认 `deploy` 尚未分配 Runner、没有执行步骤后，尝试普通取消；请求接受后再次读取状态：
+
+```sh
+gh api --method POST repos/wwxst/atlas-console/actions/runs/RUN_ID/cancel
+gh api repos/wwxst/atlas-console/actions/runs/RUN_ID --jq '{status, conclusion}'
+
+# 仅在普通取消未生效，且已确认可以安全中止时使用。
+gh api --method POST repos/wwxst/atlas-console/actions/runs/RUN_ID/force-cancel
+gh api repos/wwxst/atlas-console/actions/runs/RUN_ID --jq '{status, conclusion}'
+```
+
+`202 Accepted` 只表示接受请求，必须确认最终为 `completed / cancelled`。如果部署已开始，先核实服务器状态和恢复方案，不能将取消视为应用回滚或数据库回滚。若强制取消后仍长期不结束，或接口返回 `409/500`，保存 Run ID、job 状态及响应的 `X-GitHub-Request-Id`，联系 GitHub Support；不要反复触发部署。参考 [GitHub 取消故障排查](https://docs.github.com/en/actions/how-tos/troubleshoot-workflows) 和 [强制取消 API](https://docs.github.com/en/rest/actions/workflow-runs#force-cancel-a-workflow-run)。
+
+2026-10-29 排障记录：旧任务 `40837094201` 的前后端验证成功，`deploy` 等待上述四个标签且 `runner_id=0`、`steps=[]`；仓库 Runner 数量为 0。新任务 `40843633702` 为 `pending`、无 job。先普通取消新任务，再普通取消旧任务；旧任务仍排队后强制取消，两者均确认 `completed / cancelled`，没有执行生产部署。恢复 Runner 后应由负责人重新确认并手动发起新的部署，不能重跑这两个旧请求。
+
 ## 部署失败、自动回滚与手动回滚
 
 - 每次部署使用同一个已通过前后端检查的仓库提交 SHA，分别构建 `atlas-console:git-<40位SHA>` 和 `atlas-backend:git-<40位SHA>` 镜像；两者的 SHA 相同，**不会覆盖上一版应用镜像标签**。

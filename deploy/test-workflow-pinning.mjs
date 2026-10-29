@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { strict as assert } from 'node:assert'
 import { test } from 'node:test'
+import { runInNewContext } from 'node:vm'
 
 const yaml = readFileSync(new URL('../.github/workflows/deploy-production.yml', import.meta.url), 'utf8')
 function section(start, end) {
@@ -12,6 +13,50 @@ function section(start, end) {
 const frontend = section('verify-frontend', 'verify-backend')
 const backend = section('verify-backend', 'deploy')
 const deploy = section('deploy')
+
+// Evaluate the actual job condition so cancellation fixes cannot accidentally
+// disable rollback when its verification dependencies are skipped.
+const deployCondition = deploy.match(/    if: >-\r?\n([\s\S]*?)    runs-on:/)[1]
+  .trim().replace(/^\$\{\{\s*|\s*\}\}$/g, '')
+  .replace(/needs\.([\w-]+)\.result/g, "needs['$1'].result")
+function canDeploy({ operation = 'deploy', ref = 'refs/heads/main', cancelled = false,
+  frontendResult = 'success', backendResult = 'success' } = {}) {
+  return runInNewContext(deployCondition, {
+    always: () => true,
+    cancelled: () => cancelled,
+    github: { ref },
+    inputs: { operation },
+    needs: { 'verify-frontend': { result: frontendResult }, 'verify-backend': { result: backendResult } },
+  }, { timeout: 1000 })
+}
+
+test('cancelling a run prevents deployment and both rollback operations', () => {
+  for (const operation of ['deploy', 'rollback', 'rollback-history']) {
+    assert.equal(canDeploy({ operation, cancelled: true }), false, operation)
+  }
+})
+
+test('deploy requires successful frontend and backend verification', () => {
+  assert.equal(canDeploy(), true)
+  for (const result of ['failure', 'skipped', 'cancelled']) {
+    assert.equal(canDeploy({ frontendResult: result }), false, 'frontend: ' + result)
+    assert.equal(canDeploy({ backendResult: result }), false, 'backend: ' + result)
+  }
+})
+
+test('rollback can run with skipped verification jobs unless the run is cancelled', () => {
+  for (const operation of ['rollback', 'rollback-history']) {
+    const skipped = { operation, frontendResult: 'skipped', backendResult: 'skipped' }
+    assert.equal(canDeploy(skipped), true, operation)
+    assert.equal(canDeploy({ ...skipped, cancelled: true }), false, operation + ' cancelled')
+  }
+})
+
+test('all production operations reject branches other than main', () => {
+  for (const operation of ['deploy', 'rollback', 'rollback-history']) {
+    assert.equal(canDeploy({ operation, ref: 'refs/heads/fix/example' }), false, operation)
+  }
+})
 
 test('frontend verification and deployment use the workflow event SHA', () => {
   assert.ok(frontend.includes('ref: ${{ github.sha }}'))
