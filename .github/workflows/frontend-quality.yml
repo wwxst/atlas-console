@@ -14,12 +14,18 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+        working-directory: frontend
       - run: npm audit --audit-level=high
+        working-directory: frontend
       - run: npm test
+        working-directory: frontend
       - run: node --test deploy/test-workflow-pinning.mjs
       - run: npm run lint
+        working-directory: frontend
       - run: npm run build
+        working-directory: frontend
 
   browser-e2e:
     runs-on: ubuntu-24.04
@@ -29,17 +35,22 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+        working-directory: frontend
       # Installed without saving until Playwright is adopted into the lockfile.
       - run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+        working-directory: frontend
       - run: npx playwright install --with-deps chromium
+        working-directory: frontend
       - run: npx playwright test
+        working-directory: frontend
       - name: Upload failure traces
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-traces
-          path: test-results/
+          path: frontend/test-results/
           if-no-files-found: ignore
 
   deployment-config:
@@ -57,6 +68,8 @@ jobs:
         run: |
           printf 'DB_PASSWORD=%s\nMYSQL_ROOT_PASSWORD=%s\nJWT_SECRET=%s\nSTORAGE_ENCRYPTION_KEY=%s\n' "$DB_PASSWORD" "$MYSQL_ROOT_PASSWORD" "$JWT_SECRET" "$STORAGE_ENCRYPTION_KEY" > /tmp/atlas-ci.env
           docker compose --env-file /tmp/atlas-ci.env -f atlas-console/deploy/compose.yaml -f atlas-console/deploy/compose.mysql.yaml config --quiet
+      - name: Build frontend image from the isolated frontend project context
+        run: docker compose --env-file /tmp/atlas-ci.env -f atlas-console/deploy/compose.yaml build frontend
       - name: Validate external MySQL Compose mode
         run: |
           cat > /tmp/atlas-external.env <<'ENV'

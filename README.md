@@ -1,55 +1,67 @@
 # Atlas Console
 
-基于 React、TypeScript 和 Vite 的自研中后台前端基础项目。
+Atlas Console 是一个前后端一体化的管理系统单仓库（Monorepo）。前端 React 应用与 Spring Boot 后端是两个**平级、独立的工程**，部署配置、数据库迁移、自动化测试和 CI/CD 在同一仓库统一管理。
 
-UI 组件按实际业务需求逐步实现。Arco Design 与 TDesign 仅作为产品设计和交互参考，不复制源码，也不作为运行时组件依赖。
+## 工程结构
 
-## 技术架构
-
-- React 19 + TypeScript + Vite
-- 原生 React 自研 UI，按实际业务需求逐步增加组件
-- React Router 负责路由和页面切换
-- TanStack Query 负责服务端数据、缓存、刷新和 mutation
-- Zustand 负责主题、侧栏等轻量客户端状态
-- Axios 统一封装 API 请求和认证头
-- Less + CSS Modules + CSS 变量，支持局部隔离和主题切换
-
-## 目录
+- `frontend/`：React 19、TypeScript、Vite 前端工程，包含前端源码、静态资源、单元测试和 Playwright 浏览器测试。
+- `backend/`：Spring Boot、Spring Security、MyBatis、MySQL、Redis 后端工程；Flyway 版本迁移位于 `backend/src/main/resources/db/migration/`。
+- `deploy/`：Docker Compose、发布/回滚脚本、安装器回归测试和部署验收脚本。
+- `docs/`：项目级架构、安全、工程和 UI 规范。
+- `.github/workflows/`：前端质量、后端质量和生产发布工作流。
+- `.agents/`：Codex 项目技能；根目录 `AGENTS.md` 提供跨工程协作规范。
 
 ```text
-src/
-├─ app/                 # 应用级 Provider（后续扩展）
-├─ features/            # 按业务域组织接口和业务逻辑
-├─ layouts/             # 中后台布局
-├─ pages/               # 路由页面
-├─ router/              # 路由定义
-├─ services/            # Axios 和基础服务
-├─ stores/              # Zustand 客户端状态
-├─ ui/                  # 自研 UI 组件和主题变量，不依赖第三方组件库
-└─ styles/              # 全局样式和主题（后续扩展）
+atlas-console/
+├── frontend/       # 前端独立工程
+├── backend/        # 后端独立工程
+├── deploy/         # 统一部署与发布
+├── docs/           # 项目级文档
+├── .agents/        # Codex skills
+├── .github/        # CI/CD
+├── install.sh      # 首次安装入口
+├── AGENTS.md       # 仓库级开发规范
+└── README.md
 ```
 
-## 开发
+## 本地开发
+
+前端：
 
 ```bash
-npm install
+cd frontend
+npm ci
 npm run dev
 ```
 
-生产构建与质量检查：
+后端：
 
 ```bash
-npm run build
-npm test
-npm run lint
+cd backend
+./mvnw spring-boot:run
 ```
 
-CI 另外执行 Playwright 浏览器流程测试（模拟 HTTP API）。本地启动方式与安全说明见 [会话与浏览器安全](docs/security.md)；生产静态站点的 CSP/同源代理示例见 `deploy/nginx.conf`。
+## 质量检查
 
+前端（在 `frontend/` 目录执行）：
 
-## 一条命令安装与一键更新
+```bash
+npm test
+npm run lint
+npm run build
+```
 
-全新 Ubuntu/Debian 服务器可以执行下面的命令，自动安装 Docker Engine/Compose、下载 Atlas、生成私密配置并启动前后端：
+后端（在 `backend/` 目录执行）：
+
+```bash
+./mvnw -B -ntp clean verify
+```
+
+CI 还会运行 Playwright 浏览器流程、Docker Compose 配置校验、Nginx 转发 IP 集成测试，以及发布/回滚和安装器回归测试。
+
+## 一键安装与生产部署
+
+全新 Ubuntu/Debian 服务器可以运行：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh | sudo bash
@@ -57,22 +69,10 @@ curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh
 
 安装时可选择 Docker 私有 MySQL（推荐），或使用已在宝塔创建的空数据库。安装完成后，在宝塔配置域名反向代理与 HTTPS。安装器不会自动注册高权限 GitHub Runner；后续 GitHub Actions 自动更新需要单独配置 Runner。
 
-后台「版本与更新」支持超级管理员触发固定的 GitHub Actions 生产部署流程。首次安装、宝塔代理、数据库模式、安全配置、GitHub Runner、备份及后续更新操作见 [一条命令安装指南](deploy/installer.md) 和 [部署与一键更新指南](deploy/README.md)。
+首次安装、宝塔代理、数据库模式、安全配置、GitHub Runner、备份及后续更新操作见 [一条命令安装指南](deploy/installer.md) 和 [部署与一键更新指南](deploy/README.md)。
 
-## 单仓库结构
+## 版本与数据库
 
-前端、后端、部署配置与 CI/CD 工作流统一维护在本仓库：
+前后端通过同一个 Git 提交进行版本管理。发布工作流分别验证 `frontend/` 与 `backend/`，生产部署只使用同一个已验证的 monorepo commit SHA。
 
-- `src/`：React + TypeScript 前端。
-- `backend/`：Spring Boot 后端、Flyway 数据库迁移与后端测试，详见 [后端说明](backend/README.md)。
-- `deploy/`：Docker Compose、Nginx、部署、升级与回滚脚本。
-- `.github/workflows/`：前后端质量检查与统一发布工作流。
-
-前后端通过同一仓库提交进行版本管理；发布前分别验证前端和后端，生产部署只检出一个已验证的提交 SHA。
-
-## 项目文档
-
-- [前端架构](docs/architecture.md)
-- [UI 系统](docs/ui-system.md)
-- [工程规范](docs/engineering.md)
-- [Codex 前端技能](.agents/skills/atlas-frontend/SKILL.md)
+数据库结构由 Flyway 版本迁移管理。已应用到环境的迁移文件不可修改；新增 schema 变更必须新增版本迁移，并通过后端质量工作流验证。

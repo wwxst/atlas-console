@@ -11,16 +11,16 @@ Build components when a current feature requires them. Match established behavio
 ## Layers
 
 1. Tokens define reusable visual decisions such as color, spacing, type, radius, and elevation.
-2. Primitives in `src/ui` provide focused controls such as buttons, panels, badges, progress bars, auth fields, and toasts.
+2. Primitives in `frontend/src/ui` provide focused controls such as buttons, panels, badges, progress bars, auth fields, and toasts.
 3. Feature-local components combine primitives for one business domain.
 4. Pages arrange features and route-level content.
 
-Promote a feature-local component into `src/ui` only when it has a stable, business-neutral contract and proven reuse.
+Promote a feature-local component into `frontend/src/ui` only when it has a stable, business-neutral contract and proven reuse.
 
 ## Styling Contract
 
-- CSS custom properties owned by `src/ui/theme` are the source of truth for runtime theme values.
-- Use the `--atlas-*` prefix for every UI token. Keep global resets and document defaults in `src/index.css`.
+- CSS custom properties owned by `frontend/src/ui/theme` are the source of truth for runtime theme values.
+- Use the `--atlas-*` prefix for every UI token. Keep global resets and document defaults in `frontend/src/index.css`.
 - Component and page styles use `*.module.less`.
 - Less is an authoring tool for nesting and mixins; do not hide theme values in compile-time-only variables.
 - Use restrained surfaces, 6-10 px radii, clear borders, and compact typography suited to repeated operational work.
@@ -68,7 +68,7 @@ Promote a feature-local component into `src/ui` only when it has a stable, busin
 - Page roots fill the available content width without a centered maximum-width cap. The shell owns the outer spacing: 12 px at the top and both sides, with `--atlas-space-xl` bottom padding; pages do not add extra side margins. Keep this behavior when the sidebar is collapsed and on wide desktop screens.
 - Change sidebar width only through the explicit collapse control, not through viewport breakpoints.
 - `系统设置` is an expandable navigation group with `认证配置` and `存储配置` children. Indent child items in the expanded sidebar; retain labeled icons and active-route highlighting in the collapsed sidebar. The group button exposes its expanded state and supports native keyboard activation.
-- The sidebar footer centers an unboxed 20 px SVG package icon and the version from `package.json` in `--atlas-text-md` in the space between the sidebar's left edge and the collapse button, without a secondary caption or badge background. Keep the collapse control at the right. Activating the version opens a nonmodal popover with the current version and a GitHub release/changelog link. Native popover dismissal supports outside clicks and Escape; opening focuses the close control and Escape restores the trigger focus. In the collapsed sidebar, keep a labeled version icon above the expand control. Do not claim the latest-version status or expose update/rollback actions without a real update source.
+- The sidebar footer centers an unboxed 20 px SVG package icon and the version from `frontend/package.json` in `--atlas-text-md` in the space between the sidebar's left edge and the collapse button, without a secondary caption or badge background. Keep the collapse control at the right. Activating the version opens a nonmodal popover with the current version and a GitHub release/changelog link. Native popover dismissal supports outside clicks and Escape; opening focuses the close control and Escape restores the trigger focus. In the collapsed sidebar, keep a labeled version icon above the expand control. Do not claim the latest-version status or expose update/rollback actions without a real update source.
 
 ## Current Top-Bar Interaction
 
