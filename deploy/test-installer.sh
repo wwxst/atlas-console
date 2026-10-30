@@ -3,6 +3,11 @@ set -Eeuo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 bash -n "$root/install.sh"
 help="$(bash "$root/install.sh" --help)"
+# The documented curl | bash path feeds the installer through stdin; verify
+# that this executes the entrypoint instead of treating it as a sourced library.
+stdin_help="$(bash -s -- --help < "$root/install.sh")"
+grep -q "Atlas Console installer" <<<"$stdin_help"
+grep -q -- "--db-mode docker|external" <<<"$stdin_help"
 grep -q 'curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh' <<<"$help"
 grep -q -- '--db-mode docker|external' <<<"$help"
 grep -q 'This script installs the application stack only' <<<"$help"

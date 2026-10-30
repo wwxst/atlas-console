@@ -326,6 +326,6 @@ printf '\n'
 printf 'Do not expose MySQL, Redis, or Spring Boot ports directly to the public internet.\n'
 }
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ -z "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]}" == "$0" ]]; then
   atlas_installer_main "$@"
 fi
