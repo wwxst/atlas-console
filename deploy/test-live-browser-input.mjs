@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
 // Exercise the real CLI before it reads credentials or launches a browser.
@@ -16,14 +15,20 @@ for (const [label, targets, message] of [
   test(`browser acceptance rejects ${label} before reading credentials`, () => {
     const work = mkdtempSync(path.join(tmpdir(), 'atlas-browser-input-'))
     try {
-      const stub = path.join(work, 'node_modules', 'playwright')
+      const stub = path.join(work, 'frontend', 'node_modules', 'playwright')
       mkdirSync(stub, { recursive: true })
+      writeFileSync(path.join(work, 'frontend', 'package.json'), '{}')
       writeFileSync(path.join(stub, 'index.js'), 'exports.chromium = { launch() { throw new Error("Unexpected browser launch") } }')
+      mkdirSync(path.join(work, 'deploy'))
+      const entry = path.join(work, 'deploy', 'test-live-browser.mjs')
+      writeFileSync(entry, readFileSync(new URL('./test-live-browser.mjs', import.meta.url)))
       const input = path.join(work, 'targets.json')
       writeFileSync(input, JSON.stringify(targets))
-      const result = spawnSync(process.execPath, [fileURLToPath(new URL('./test-live-browser.mjs', import.meta.url)),
+      const env = { ...process.env }
+      delete env.NODE_PATH
+      const result = spawnSync(process.execPath, [entry,
         '--targets', input, '--credentials-file', path.join(work, 'must-not-be-read.json'), '--output', path.join(work, 'output')],
-      { env: { ...process.env, NODE_PATH: path.join(work, 'node_modules') }, encoding: 'utf8', timeout: 10000 })
+      { env, encoding: 'utf8', timeout: 10000 })
       assert.equal(result.status, 1)
       assert(result.stderr.includes(message), 'The CLI must reject invalid targets explicitly')
       assert(!result.stderr.includes('ENOENT'), 'Credentials must not be read')

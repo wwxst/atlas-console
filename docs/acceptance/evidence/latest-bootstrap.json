@@ -1,0 +1,32 @@
+[
+  {
+    "mode": "docker",
+    "project": "atlas-acceptance-final-docker",
+    "install_dir": "/opt/atlas-acceptance-final-docker",
+    "source_sha": "b348300b66d3a7d8cd021855dccdbe64f3a0b0b2",
+    "installer_exit": 0,
+    "private_port": 19088,
+    "default_password_changed_before_public_access": true,
+    "env_sha256": "a3e97494949c672619ffb709400db1499a5c50b85d36aaa5391284c2dcd4e027"
+  },
+  {
+    "mode": "external",
+    "project": "atlas-acceptance-final-external",
+    "install_dir": "/opt/atlas-acceptance-final-external",
+    "source_sha": "b348300b66d3a7d8cd021855dccdbe64f3a0b0b2",
+    "installer_exit": 0,
+    "private_port": 19089,
+    "default_password_changed_before_public_access": true,
+    "env_sha256": "b66136261fe09c702847f2a4163e85c775feadf8b1d4210c1d49873258445135"
+  },
+  {
+    "mode": "unattended",
+    "project": "atlas-acceptance-final-unattended",
+    "install_dir": "/opt/atlas-acceptance-final-unattended",
+    "source_sha": "b348300b66d3a7d8cd021855dccdbe64f3a0b0b2",
+    "installer_exit": 0,
+    "private_port": 19090,
+    "default_password_changed_before_public_access": true,
+    "env_sha256": "85a9ebca93b3958d68d7757b604a64316e3ec022e7c66a30f2f693c312c035df"
+  }
+]

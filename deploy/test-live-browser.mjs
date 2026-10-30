@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { readFile, mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-const require = createRequire(import.meta.url)
+const require = createRequire(new URL('../frontend/package.json', import.meta.url))
 const { chromium } = require('playwright')
 const args = process.argv.slice(2)
 const option = (name) => args[args.indexOf(name) + 1]

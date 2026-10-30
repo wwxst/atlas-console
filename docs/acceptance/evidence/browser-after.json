@@ -55,7 +55,13 @@
         "name": "same-origin API and browser error checks",
         "status": "pass"
       }
-    ]
+    ],
+    "network": {
+      "apiRequests": 24,
+      "browserErrors": [],
+      "failedApiResponses": [],
+      "networkViolations": []
+    }
   },
   {
     "mode": "external",
@@ -113,7 +119,13 @@
         "name": "same-origin API and browser error checks",
         "status": "pass"
       }
-    ]
+    ],
+    "network": {
+      "apiRequests": 24,
+      "browserErrors": [],
+      "failedApiResponses": [],
+      "networkViolations": []
+    }
   },
   {
     "mode": "unattended",
@@ -171,6 +183,12 @@
         "name": "same-origin API and browser error checks",
         "status": "pass"
       }
-    ]
+    ],
+    "network": {
+      "apiRequests": 24,
+      "browserErrors": [],
+      "failedApiResponses": [],
+      "networkViolations": []
+    }
   }
 ]

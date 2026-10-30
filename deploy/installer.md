@@ -40,7 +40,7 @@ curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh
 
    多地址支持及限制见 [MySQL 8.4 bind_address 文档](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_bind_address)。旧版本若不支持多地址，不要直接改成 `0.0.0.0`；选择 Docker MySQL，或由运维提供合适的私网监听。修改已有 MySQL 监听会影响其他应用，先保存配置并安排维护窗口。若监听地址属于 Docker 网桥，还应让实际 MySQL systemd 服务在 `docker.service` 后启动（针对实际服务名设置 `After=docker.service`、`Requires=docker.service`），避免重启时地址尚不存在；修改后必须演练重启。
 
-3. 系统防火墙只允许 Atlas 的 `172.30.82.0/24` 到这个私网地址的 3306；云安全组不开放 3306/33060。修改防火墙时合并现有规则，不清空规则。重载后执行 `ss -ltnp '( sport = :3306 or sport = :33060 )'`，确认没有公网或全地址监听；不使用的 MySQL X Protocol 可以在核实无人使用后关闭。
+3. 系统防火墙只允许 Atlas 的 `172.30.82.0/24` 到这个私网地址的 3306；云安全组不开放 3306/33060。修改防火墙时合并现有规则，不清空规则。**规则顺序也必须正确**：若 UFW 已有拒绝 3306 的规则，追加到它后面的允许规则不会生效。先用 `sudo ufw status numbered` 检查顺序，再将精确的私网例外放在拒绝规则前，例如 `sudo ufw insert 1 allow from 172.30.82.0/24 to 172.17.0.1 port 3306 proto tcp`；必须替换为本次实际网段与宿主私网地址，保留公网拒绝规则。重复插入相同规则可能只提示已存在而不移动位置；若本次新建的精确允许项已经排在拒绝后，核实归属后仅移除此项，再插入到前方，并重新检查编号。重载后执行 `ss -ltnp '( sport = :3306 or sport = :33060 )'`，确认没有公网或全地址监听；不使用的 MySQL X Protocol 可以在核实无人使用后关闭。
 
 4. 在宝塔创建专用空库和用户。若需要通过 MySQL 管理终端设置精确来源权限，以下为示例，**仅适用于新建库/新建用户**，将口令替换为本次专用口令：
 

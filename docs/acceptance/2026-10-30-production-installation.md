@@ -1,133 +1,129 @@
 # Atlas 生产安装验收报告（2026-10-30）
 
-**结论：当前 main 不通过生产安装验收；PR #22 的修复候选通过本报告覆盖的三种安装模式、HTTPS 浏览器流程和整机重启验证。PR 尚未合并，不能将候选结果表述为 main 已通过。**
+**结论：当前 main 不通过首次安装验收；PR #22 修复候选的三种全新安装、已实现业务检查、IP HTTPS 和整机重启恢复通过。PR 未合并，不能将候选成绩表述为 main 已通过。**
 
-- main 基线：`654bffd77ce4b71a949344607d361db3b1f269ba`，收尾时再次查询远程 main，未变化。
-- 修复 PR：[wwxst/atlas-console#22](https://github.com/wwxst/atlas-console/pull/22)。仅向修复分支提交，没有直接写 main、强推或更改分支保护设置。
-- 三种完整业务验收环境的构建提交：`086fc4b277c5213f0d8ddc890ab54a4daafa897e`。此后提交增加验收工具并校正测试预期/API 文档，没有修改已部署的应用行为。
-- 最终全新交互安装复验提交：`3d7f34e4ab1aa7ad5fdc22ca9574b5f30c065207`，安装退出码 0、四项健康检查、Flyway、登录和认证 API 均通过。
-- 日期按 UTC 记录在 JSON 中；操作人员时区为 Asia/Shanghai。检查计数为验收工具中的检查点，包含场景汇总，不等于互不重叠的业务功能数量。
+- 最新 main 基线：`b964cb505994cbfcf16720ea5d4681421326193a`。工作期间 main 从 `654bffd77ce4b71a949344607d361db3b1f269ba` 更新为前后端兄弟目录，修复分支已正常合并并适配该变化，再次执行三种干净安装。收尾查询 main 仍为 b964cb5。
+- 最终实际构建、安装、API、浏览器和重启所用候选：`b348300b66d3a7d8cd021855dccdbe64f3a0b0b2`。后续报告提交仅更新文档、证据及浏览器验收工具的依赖定位与自测，不改变已部署应用行为。
+- 修复 PR：[wwxst/atlas-console#22](https://github.com/wwxst/atlas-console/pull/22)。没有直接写 main、强推、合并 PR 或更改分支保护设置。
+- 最终一轮合计 **459 个真实 API 检查点通过，0 失败；重启前后 78 个真实浏览器检查点通过**。计数包含场景汇总，不代表互不重叠的业务功能数量。早期轮次不累加进最终成绩。
 
-## 环境与隔离边界
+## 环境、隔离与数据保留
 
-验收服务器为 Ubuntu 22.04，约 3.8 GiB 内存、2 GiB swap；宝塔已安装。首次盘点没有现有站点、Docker 容器或应用数据库。Docker Engine 29.9.2 / Compose 5.6.1 由首次安装路径安装；另安装宝塔 Nginx 1.28.3 和 MySQL 8.4.13。
+服务器为 Ubuntu 22.04，约 3.8 GiB 内存、2 GiB swap。初始盘点没有现有站点、Docker 容器或应用数据库。Docker Engine 29.9.2 / Compose 5.6.1 由首次安装路径安装；另安装宝塔 Nginx 1.28.3 和 MySQL 8.4.13。
 
-每种模式使用独立空应用环境：目录、Compose project、网络、Redis/上传卷、Docker MySQL 卷或宝塔专用库/用户均隔离。它们共享宿主系统、Docker daemon 和镜像缓存，**不是三台独立新系统或三次系统快照恢复**。自动安装 Docker 依赖的真实新机路径执行了一次；后续环境验证已装依赖的自动检测路径。
+每种模式使用独立空目录、Compose project、网络、Redis/上传卷，以及 Docker MySQL 卷或宝塔专用空库/用户。它们共享宿主系统、Docker daemon 和镜像缓存，**不是三台独立新系统或三次系统快照恢复**。真实新机自动安装 Docker 依赖的路径执行一次；后续环境验证已装依赖的检测路径。
 
-| 模式 | 安装目录 / project | 独立网段 | 本地前端 | 宝塔 HTTPS 端口 |
+| 最终模式 | 安装目录 / Compose project | 网段 | 回环前端 | 宝塔 HTTPS |
 | --- | --- | --- | --- | --- |
-| 交互 + Docker MySQL | `/opt/atlas-acceptance-docker` / `atlas-acceptance-docker` | `172.30.81.0/24` | `127.0.0.1:8088` | 443 |
-| 交互 + 宝塔 MySQL | `/opt/atlas-acceptance-external` / `atlas-acceptance-external` | `172.30.82.0/24` | `127.0.0.1:8089` | 8443 |
-| 非交互 + Docker MySQL | `/opt/atlas-acceptance-unattended` / `atlas-acceptance-unattended` | `172.30.83.0/24` | `127.0.0.1:8090` | 9443 |
-| 最终交互安装补验 | `/opt/atlas-acceptance-docker-fresh` / `atlas-acceptance-docker-fresh` | `172.30.84.0/24` | `127.0.0.1:8091` | 未公开 |
+| 交互 + Docker MySQL | `/opt/atlas-acceptance-final-docker` / `atlas-acceptance-final-docker` | `172.30.90.0/24` | `127.0.0.1:19088` | 443 |
+| 交互 + 宝塔 MySQL | `/opt/atlas-acceptance-final-external` / `atlas-acceptance-final-external` | `172.30.91.0/24` | `127.0.0.1:19089` | 8443 |
+| 非交互 + Docker MySQL | `/opt/atlas-acceptance-final-unattended` / `atlas-acceptance-final-unattended` | `172.30.92.0/24` | `127.0.0.1:19090` | 9443 |
 
-前三种环境当前保留运行，共 11 个健康容器。第四种补验完成后仅停止其四个容器以释放内存，容器与数据卷均保留；该补验不计入前三种环境的重启成绩。
+当前只有最终三个环境的 11 个容器运行。此前多轮测试环境、失败现场、数据库和数据卷保留，旧容器停止以控制内存；没有执行数据库删除、volume rm、down -v、全局 prune、数据覆盖或未经核实的 Flyway baseline。临时无卷回归容器只清理本次创建的容器 ID。
 
-没有删除现有数据库、Docker 数据卷或失败现场，没有执行 `down -v`、全局 prune、生产数据覆盖或 Flyway 强制 baseline。口令和原始运行日志留在服务器 root 专属目录 `/root/atlas-acceptance-20261030`；提交的 JSON 不包含口令、令牌或完整敏感响应。
+口令和原始运行日志在服务器 root 专属目录 `/root/atlas-acceptance-20261030`，不提交 Git。公开证据为筛选后的 JSON，不含口令、令牌或完整敏感响应。最终安装的 SHA、退出码、改密和配置哈希见 [latest-bootstrap.json](evidence/latest-bootstrap.json)。
 
-## 当前 main 的结果
+## 当前 main 的实际失败
 
-原始交互 Docker、非交互 Docker、交互外部 MySQL 安装均复现：root 克隆代码后交给 `atlas-deploy` 运行发布，Git 因所有权不匹配拒绝读取，报 `fatal: detected dubious ownership in repository at '/opt/atlas/atlas-console'`，退出码 128。
+最新 b964cb5 的三种原始安装均重新运行：root 克隆 checkout，交给 atlas-deploy 运行发布后，Git 拒绝读取 root 所有的仓库，报 `fatal: detected dubious ownership in repository at '/opt/atlas/atlas-console'`，退出码 **128**。构建和数据库连接尚未开始。
 
-非交互和外部 MySQL 的原始脚本在独立 mount namespace 中将各自空目录绑定到固定 `/opt/atlas`，避免覆盖首次失败目录。失败发生在构建/启动前，不把后续阶段记为通过。
+三种基线使用独立目录；在独立 mount namespace 中将各自目录绑定到脚本固定的 `/opt/atlas`，不覆盖初次失败现场。外部数据库使用另建的空测试库和专用用户。见 [最新 main 基线](evidence/latest-main-baseline.json)。
 
-| main 检查项 | 交互 Docker | 交互宝塔 MySQL | 非交互 Docker |
+| main 项目 | 交互 Docker | 交互宝塔 MySQL | 非交互 Docker |
 | --- | --- | --- | --- |
-| 原始安装脚本执行 | **失败：Git 所有权** | **失败：Git 所有权** | **失败：Git 所有权** |
-| 由原始安装产生的镜像、迁移、业务和重启 | 未测试：安装被阻断 | 未测试：安装被阻断 | 未测试：安装被阻断 |
+| 首次安装 | **失败：Git 所有权，128** | **失败：Git 所有权，128** | **失败：Git 所有权，128** |
+| 由该原始安装产生的构建、迁移、业务、重启 | 未测试：安装被阻断 | 未测试：安装被阻断 | 未测试：安装被阻断 |
 
-基线失败摘要见 [verification-summary.json](evidence/verification-summary.json)。保留原始脚本失败日志，未通过手动改数据库掩盖失败。
+## 最终修复候选矩阵
 
-## 修复候选验收矩阵
-
-“通过”仅适用于本次环境、列出的提交与已实现功能；外部集成限制另列。
+以下仅针对 b348300、上述最终环境与已实现功能。外部集成及未实现功能另列，不把未测试记为通过。
 
 | 验收项 | 交互 Docker | 交互宝塔 MySQL | 非交互 Docker |
 | --- | --- | --- | --- |
-| 安装脚本及镜像构建 | 通过；失败现场安全重试，另做最终全新安装退出 0 | 通过，完整交互安装 | 通过，非交互退出 0 |
-| MySQL 启动、连接、专用库 | 通过 | 通过，宿主私网监听与来源授权 | 通过 |
-| Flyway 自动迁移 | 通过，V1 success=1 | 通过，V1 success=1 | 通过，V1 success=1 |
+| 全新安装脚本退出码 | 通过：0 | 通过：0，真实交互输入特殊字符密码 | 通过：0 |
+| 前后端及 Docker MySQL 镜像构建 | 通过 | 通过，外部模式不构建 MySQL | 通过 |
+| MySQL 启动、连接与权限 | 通过 | 通过：宝塔私网监听、专用库/来源授权 | 通过 |
+| Flyway 自动迁移 | 通过：V1 success=1 | 通过：V1 success=1 | 通过：V1 success=1 |
 | Redis / Spring Boot / 前端健康 | 通过 | 通过 | 通过 |
-| HTTPS 登录页、真实管理员登录 | 通过 | 通过 | 通过 |
-| 登录后菜单、已实现页面/API | 通过，153 个 API 检查点 | 通过，153 个 API 检查点 | 通过，153 个 API 检查点 |
-| 深层路径刷新、退出、重新登录 | 通过 | 通过 | 通过 |
-| 重复首次安装不修改现有配置 | 通过：写入前拒绝 | 通过：写入前拒绝 | 通过：写入前拒绝 |
-| 整机重启自动恢复 | 通过 | 通过，含宝塔 MySQL 启动依赖 | 通过 |
-| 重启后数据库、文件、Redis、配置保留 | 通过 | 通过 | 通过 |
+| 登录页、静态 SVG、真实登录 | 通过 | 通过 | 通过 |
+| 已实现业务 API | 153 通过 / 0 失败 | 153 通过 / 0 失败 | 153 通过 / 0 失败 |
+| 菜单、深层刷新、退出、再次登录 | 通过 | 通过 | 通过 |
+| 重复首次安装不破坏数据/配置 | 通过：写入前拒绝，配置哈希不变 | 通过 | 通过 |
+| 整机重启自动恢复及持久化 | 通过 | 通过，含宝塔 MySQL 依赖 | 通过 |
 
-API 合计 **459 个通过，0 失败**；每种模式另有 5 个明确未测试条目。API 工具中的“重启”“占位 UI”由独立重启和浏览器检查补充，原始 JSON 保持原样。其余外部集成仍未测试。
+API 覆盖系统/普通用户认证、令牌刷新与撤销、权限、分页查询、用户生命周期、状态/密码变更、验证码/联系方式流程、配置 API 和本地头像上传读取；只清理本轮新建的临时系统账号，保留标记测试用户/文件作为持久化哨兵，不清空 Redis 或数据库。
 
-真实 Chromium（Microsoft Edge）无头浏览器通过 Playwright 访问公网 IP HTTPS，未模拟 API、未忽略证书错误。每种模式重启前 13 项、重启后 13 项，共 **78 项通过**，覆盖五个菜单及刷新、存储配置标签、版本对话框、个人中心占位路由、退出保护和再次登录回到原受保护页面。桌面浏览器控制通道连接失败，因此没有宣称人工桌面操作通过；真实浏览器引擎验收由独立无头会话完成。
+每种 API JSON 有 5 个未测试条目：重启与占位 UI 由独立证据补充，真实 OSS、短信/邮件及生产 Runner 集成仍未测试。原始工具结果保留，不改写工具的未测试计数。
+
+浏览器使用真实 Chromium（Microsoft Edge）无头会话和正常 HTTPS 信任链，没有模拟 API 或忽略证书错误。每种模式重启前后各 13 项：五个菜单及深层刷新、存储标签、版本对话框、个人中心占位路由、退出保护、再次登录返回受保护页面，以及请求同源/HTTPS、console.error、requestfailed 和已认证 API HTTP 错误检查。桌面控制通道超时，未声称人工桌面验收；独立无头浏览器证据是真实运行结果。
 
 - [Docker API](evidence/api-docker-retry.json)、[宝塔 MySQL API](evidence/api-external-retry.json)、[非交互 API](evidence/api-unattended-retry.json)
-- [重启前浏览器](evidence/browser-before.json)、[重启后浏览器](evidence/browser-after.json)
-- [最终全新安装补验](evidence/final-fresh-smoke.json)
+- [重启前浏览器](evidence/browser-before.json)、[重启后浏览器](evidence/browser-after.json)、[最终 Docker 安装补查](evidence/final-fresh-smoke.json)
 
-## 缺陷、复现和修复
+## 缺陷、复现、根因与修复
 
-| 问题与复现 | 根因 | 修复及回归证据 |
+| 复现问题 | 根因 | 修复及自动化验证 |
 | --- | --- | --- |
-| 原始 main 三种首次安装退出 128 | root 拥有 checkout，发布用户执行 Git 时触发安全目录检查 | Git 调用只显式信任当前 checkout，不写全局通配信任；真实所有权回归和三种实际部署通过 |
-| 第一轮修复部署从 `/root` 启动仍失败 | Compose v5 继承了 `atlas-deploy` 无权进入的工作目录 | release 进入已验证的 project_root；Linux root→普通用户、不可读 cwd 回归通过；保留原 `.env` 安全重试成功 |
-| 密码含引号/美元符号等不能可靠进入容器，交互输入丢失边缘空白 | dotenv 引号/插值规则与 Shell 不同；默认 read 的 IFS 裁剪空白 | 专用 dotenv 序列化，美元符号按 Compose 规则转义；`IFS= read -r -s`；真实 PTY 字节比较和真实 Compose 容器字节往返通过 |
-| 多次验收可能碰撞默认目录、project、端口、网段或已有卷 | 安装身份原先固定，缺少完整写入前检查 | 增加隔离参数及资源/端口/路由预检；真实端口占用和路由重叠拒绝，不留部分安装；重复安装的配置哈希不变 |
-| 外部 Shell 环境可能覆盖私有 env 的 Compose 身份 | Compose 优先读取进程环境变量 | 显式 project-name，验证安装身份并清除部署配置同名环境覆盖；行为回归验证，不将模拟测试计为真实部署 |
-| HTTPS 协议与真实 IP 在两层代理间传递不可靠 | 容器看到的是内部 HTTP；未经验证的转发头可能伪造来源 | 仅信任指定网关；合法 http/https 协议转发，宝塔覆盖客户端头；真实 Nginx `/api`、`/files` 和公网宝塔伪造头检查通过 |
+| main 三种首次安装退出 128 | 发布用户读取 root 所有的 checkout 触发 Git 安全检查 | Git 调用仅信任当前精确 checkout；真实所有权回归及最终三种全新安装通过，不配置全局通配信任 |
+| 早期候选从 `/root` 启动时 Compose v5 失败 | 降权后继承不可进入的 cwd | release 进入已验证 project_root；真实 Linux runuser/不可读 cwd 回归通过，原 env 安全重试通过 |
+| 引号、美元符号等密码转义错误，首尾空白丢失 | dotenv 与 Shell 引号/插值规则不同，read 默认 IFS 裁剪空白 | 专用 dotenv 序列化、Compose 美元转义、IFS= read -r -s；真实 PTY 和容器环境逐字节往返通过 |
+| 默认目录/project/端口/网络/卷可能碰撞 | 缺少独立安装身份和完整写入前预检 | 隔离参数、资源/端口/路由预检；真实冲突拒绝且无部分安装，重复执行不改配置 |
+| 外部进程环境覆盖私有 env | Compose 环境优先级 | 验证安装身份、显式 project-name、清除同名部署变量；行为回归通过 |
+| 两层代理的 HTTPS 与真实 IP 不可靠 | 容器看到内部 HTTP，未验证的转发头可能伪造来源 | 只接受指定网关及合法协议，宝塔覆盖客户端头；真实 Nginx 与最终三个公网站点防伪验证通过 |
+| favicon.svg / icons.svg 返回 403 | 私有 checkout 的 0640 被带入镜像，Nginx worker 无权读取 | 仅将镜像公开 html 目录设为可读；真实生产镜像回归旧版 RED=403、修复 GREEN=200，最终全部浏览器无控制台错误 |
 
-回归脚本随 PR 提交：`deploy/test-installer.sh`、`test-release.sh`、`test-install-config.sh`、`test-nginx-forwarded-ip.sh` 及其辅助脚本。安装器/发布器行为测试包含模拟依赖；密码往返、Nginx、真实安装、API、浏览器及重启使用真实服务，分别记账。
+回归脚本随 PR 提交。`test-installer.sh` / `test-release.sh` 的部分依赖为模拟；`test-install-config.sh`、`test-nginx-forwarded-ip.sh`、`test-frontend-assets.sh` 使用真实容器；真实安装/API/浏览器/重启单独计账。新增资产回归按本次 create 返回的 ID 清理，重名失败不会删除已有容器，另有安全回归覆盖。
 
-API 首轮曾有 4 个失败检查（包含场景汇总），根因是验收工具沿用了旧的令牌契约：重复退出、禁用后的旧访问令牌应立即被拒绝。依据现有验证器和安全测试校正测试/API 文档，没有放宽服务端安全行为。旧 `backend/scripts/verify_backend.py` 仍含过时断言，本次没有运行或宣称该旧脚本通过；新增独立验收脚本负责此报告中的实时 API 检查。
+早期浏览器仅检查页面与 HTTP 响应，未直接断言同源/console，因此漏掉了静态 SVG 403。增强工具后发现并修复该缺陷，最终 78 项结果全部重跑，不沿用早期较弱结果。工具还拒绝空目标、重复证据标签、零存储标签，并从新 frontend 项目定位 Playwright。
 
-浏览器工具最初两轮因异步标签切换等待、重新登录返回原受保护页面的测试预期错误失败；修正等待和预期后，完整重跑前后两轮均通过。真实 IP 第一轮取证超过 Redis 60 秒窗口，后改为请求后立即取证，三种环境都验证实际来源计数存在、伪造来源计数不存在。原始失败证据保留，未将初轮失败计为最终通过。
+API 首轮旧预期曾将重复退出和禁用后的旧令牌当作可用；依据现有验证器/安全测试校正验收工具及 API 文档，没有放宽服务端安全行为。旧 backend/scripts/verify_backend.py 含过时断言，本次未运行或宣称其通过；本报告的实时 API 由新增脚本验证。
 
-## 宝塔 MySQL、反向代理与网络
+## 网络配置、失败恢复与宝塔问题
 
-实际 `host.docker.internal:host-gateway` 解析为 `172.17.0.1`。MySQL 只监听 `127.0.0.1,172.17.0.1`，关闭未使用的 X Protocol；防火墙仅允许外部模式的 `172.30.82.0/24` 到宿主私网 3306。专用用户仅有 `atlas_acceptance_external.*` 权限，来源为 `172.30.82.0/255.255.255.0`，不授予 `%` 或全局权限。真实认证和查询成功，读取 `mysql.user` 被拒绝。
+宝塔 MySQL 8.4.13 只监听 `127.0.0.1,172.17.0.1`，关闭未使用的 X Protocol。容器 host.docker.internal 实测解析到 172.17.0.1。最终专用用户仅获 `atlas_acceptance_final_external.*` 权限，来源限制为 `172.30.91.0/255.255.255.0`；真实认证成功，读取 mysql.user 被拒绝。防火墙只给对应私网例外，保留公网 3306 拒绝。
 
-外部数据库真实口令含单引号、双引号、`$`、`#`、反斜线和首尾空格，完整安装、Flyway 与业务 API 均成功。额外容器字节往返还覆盖制表符等边缘输入，不在报告泄露口令。
+真实外部口令含单/双引号、美元符号、井号、反斜线与首尾空格；完整安装、Flyway 和业务通过。另有制表符等真实 PTY/容器字节回归，口令不出现在本报告。
 
-MySQL systemd 增加对 Docker 的 `Wants`/`After` 依赖，保证绑定的 Docker 网桥先出现。宝塔二进制快速安装完成；最初源码安装因可用内存不足被官方脚本拒绝，改用宝塔提供的快速安装路径，没有绕过其内存检查。Nginx 首次安装进程最初未由 systemd 接管，按服务脚本先正常停止再由 systemd 启动并启用自启，未修改宝塔供应商脚本。
+新环境准备时，操作者曾把 UFW 私网允许规则追加到已有拒绝规则之后，导致 MySQL TCP 超时；再次插入同项只提示已存在，没有移动位置。仅将本次新增的精确例外移到前方，保留公网拒绝后，原失败环境安全重试退出 0、env 哈希不变且认证成功。该现场保留停止，随后用正确规则在独立空库完成最终全新外部安装。安装说明已补规则顺序与重复规则注意事项。见 [失败恢复](evidence/external-network-recovery.json)。这是验收环境配置错误，未冒充应用缺陷。
 
-宝塔根路径代理到各自回环端口，保留 `/api/`、`/files/`，覆盖 Host、X-Forwarded-Proto、X-Real-IP、X-Forwarded-For。浏览器同源请求和深层刷新通过，无跨域、混合内容或已认证 API HTTP 错误。真实公网请求携带伪造 IP/协议头时，后端限流计数使用实际来源，伪造来源计数不存在。
+MySQL systemd 增加 Wants/After Docker，确保绑定的 Docker 网桥先出现。宝塔 MySQL 源码安装曾被官方内存检查拒绝，改用官方快速二进制路径，没有绕过检查。Nginx 安装进程按正常服务脚本停止后交由 systemd 启动并启用自启，没有修改供应商脚本。
 
-无域名，使用服务器 IP 证书。浏览器按正常信任链验证成功；证书为 Let's Encrypt IP 短期证书，有效窗口为 2026-10-30 00:34 UTC 至 2026-11-05 16:34 UTC。此结果不证明长期自动续期已通过，必须按短期证书周期管理续期。
+宝塔根路径分别代理三个回环前端，保留 /api/ 与 /files/，覆盖 Host、X-Forwarded-Proto、X-Real-IP、X-Forwarded-For。最终公网伪造 IP/协议请求触发的后端计数使用实际来源，伪造 IP 无计数；没有请求跨域、HTTP 混合内容或控制台错误。公网 443/8443/9443 可达，MySQL/Redis/backend 及全部验收回环端口不可达；容器元数据确认私有服务无宿主端口映射。见 [网络边界](evidence/network-boundary.json)、[安全检查](evidence/post-reboot-safety.json)、[真实冲突预检](evidence/real-preflight.json)。
 
-公网探测：443/8443/9443 可达；3306/6379/8080/8088/8089/8090 不可达。Docker 检查确认 MySQL/Redis/backend 没有宿主端口映射，前端仅映射回环。见 [网络边界](evidence/network-boundary.json)、[真实冲突预检](evidence/real-preflight.json)、[重启后安全检查](evidence/post-reboot-safety.json)。
+没有域名，按用户要求使用 IP HTTPS。有效 Let's Encrypt IP 短期证书的窗口为 **2026-10-30 08:34 至 2026-11-06 00:34（Asia/Shanghai）**；证书自动续期未演练，不将当前访问通过等同长期续期通过。
 
-## 整机重启证据
+用户另报宝塔 Docker 页“返回值非对象”红提示。已确认 SDK 能连接 Docker 29，get_config 返回 dict，Docker/Compose 状态均正常。用户完成本人账号绑定并强制刷新后明确确认页面恢复。未降级/重装 Docker、改写宝塔前端或冒称已定位历史异常响应体；直接触发红提示的历史请求响应未留存。
 
-使用真实 `systemctl reboot`，不是容器重启。SSH 曾断开并在约 45 秒后恢复；没有手动执行 compose up 帮助恢复。
+## 最终整机重启与自动化
 
-- 重启前 boot ID：`994040cf-76cb-4176-b69d-78ea5e6acf48`
-- 重启后 boot ID：`f51ae7f4-bf22-43a6-82f7-e3c51d6af04f`
-- Docker、宝塔 Nginx、宝塔 MySQL 均已启用自启且恢复 active；三个环境的 11 个原容器全部 healthy、策略为 unless-stopped。
-- 前后容器 ID、命名卷身份一致；每库普通用户/系统用户哨兵仍在；上传头像 SHA256、Redis AOF 哨兵、`.env` SHA256 和 Flyway 历史均一致；重新登录和全部浏览器流程通过。
+真实整机 reboot，未手动 compose up 辅助恢复：
 
-见 [重启前记录](evidence/restart-before.json)、[重启后记录](evidence/restart-after.json)。这些哨兵为本次新建测试数据，保留以便复核，没有覆盖既有业务记录。
+- 最终重启前 boot ID：`4d98539e-59a5-4d89-b76f-e2292c208301`
+- 最终重启后 boot ID：`3a52a998-8fb0-4e42-a5bb-a31c4147c479`
+- Docker、宝塔 Nginx、宝塔 MySQL 已启用自启，重启后 active；11 个原容器 healthy，策略 unless-stopped。
+- 容器 ID/卷身份、每库普通用户与系统用户哨兵、上传头像 SHA256、Redis AOF 哨兵、env SHA256、Flyway V1 历史前后相同。重启后的完整浏览器流程通过。
 
-## 自动化与 CI
+见 [重启前](evidence/restart-before.json)、[重启后](evidence/restart-after.json)、[最终执行摘要](evidence/verification-summary.json)。早期两次重启记录在 root 历史证据中保留，最终成绩只引用上述一轮。
 
-- Linux 安装器/发布器回归通过；真实 Compose 密码往返及真实 Nginx 转发回归通过。[执行摘要](evidence/verification-summary.json)
-- 前端单测 41/41、lint、构建通过；工作流约束测试 12/12；实时 API 工具自测 11/11。工具自测和模拟行为不计入 459 项真实 API 结果。
-- 候选提交 `3d7f34e4ab1aa7ad5fdc22ca9574b5f30c065207` 的四项 GitHub checks 全部成功：[backend verify](https://github.com/wwxst/atlas-console/actions/runs/40993576523)、[validate / browser-e2e / deployment-config](https://github.com/wwxst/atlas-console/actions/runs/40993576437)。最终报告提交的检查以 PR 最新 checks 为准。
+新目录结构下，本地前端 41/41 单测、lint、构建通过；工作流约束 15/15、浏览器工具 CLI 3/3、API 工具自测 11/11；Linux 安装器/发布器回归、真实 Compose 密码、真实 Nginx 转发和生产镜像资产回归全部通过。模拟与工具自测不累加到真实 API 成绩。
 
-## 未测试、未实现及上线边界
+b348300 四项 GitHub checks 成功：[validate / browser-e2e / deployment-config](https://github.com/wwxst/atlas-console/actions/runs/41019232053)、[backend verify](https://github.com/wwxst/atlas-console/actions/runs/41019232079)。报告收尾提交的 checks 以 PR 最新状态为准。
 
-| 项目 | 状态及原因 |
+## 未测试或未实现
+
+| 项目 | 状态 |
 | --- | --- |
-| 真正 OSS 上传/签名资源访问 | 未测试，没有提供外部云凭据；本地文件上传/读取通过 |
-| 真正短信、邮件投递 | 未测试；开发发送器和私有 Redis 验证码只验证 API 流程 |
-| GitHub 自托管 Runner 的在线发布/回滚 | 未测试，未配置生产 Runner；脚本回滚回归通过，不等同生产发布演练 |
-| 域名 DNS、域名证书签发 | 未测试，用户明确只使用 IP；IP HTTPS 已通过 |
-| IP 证书自动续期和过期恢复 | 未测试，当前有效证书访问通过，不等于续期通过 |
-| 工作台动态业务、个人中心业务 | 当前实现含静态/占位内容；仅路由和渲染通过，不能标记未实现业务通过 |
-| 长时间负载、备份还原、灾难恢复、多机高可用 | 未测试，不属于本次已执行安装检查 |
-| 修复合并后的 main 再安装 | 未测试，PR 尚未合并；必须在正常评审/CI 合并后重新固定 main SHA 验收 |
+| 真实 OSS 上传、签名资源访问 | 未测试，没有外部云凭据；本地文件流程通过 |
+| 真实短信、邮件投递 | 未测试；开发发送器与私有 Redis 验证码只验证 API 流程 |
+| 生产自托管 Runner 在线发布/回滚 | 未测试，未配置 Runner；脚本回滚回归不等于真实生产演练 |
+| 域名 DNS、域名证书签发 | 未测试，用户只使用 IP |
+| IP 证书自动续期、过期恢复 | 未测试 |
+| 工作台动态业务、个人中心业务 | 现有静态/占位内容，仅路由和渲染通过，不声称未实现业务通过 |
+| 长期负载、容量规划、备份还原、灾难恢复、多机高可用 | 未测试 |
+| 修复合并后的 main 干净安装 | 未测试，PR 尚未合并；需要正常评审/CI 合并后固定新 main SHA 再验 |
 
-本次为安装与已实现功能的验收，不能据此声称所有外部集成或完整生产运维生命周期已通过。四个 Java 环境并行会使本机内存紧张，因此额外补验已停止；本机没有完成容量规划。
+## 交付
 
-## 交付与复核
+[安装说明](../../deploy/installer.md) 已包含一条命令、数据库模式选择、宝塔私网授权/防火墙、反向代理、首次改密、失败安全重试及重启检查。当前三个公开验收站点的默认管理员密码均已修改；凭据位于服务器 `/root/atlas-acceptance-20261030/admin-{docker,external,unattended}.json`，0600，不提交 Git。
 
-部署/安全重试/宝塔私网授权/首次登录说明已更新于 [安装说明](../../deploy/installer.md)。登录种子已验证；三个公开验收站点在开放前均已修改管理员默认密码。各站点当前凭据位于服务器 `/root/atlas-acceptance-20261030/admin-{docker,external,unattended}.json`，权限 0600，不提交 Git。
-
-请通过 PR #22 的正常评审流程合并修复，并在合并后的 main SHA 再次执行干净安装验收。此前不发布“当前 main 已满足一键生产部署”的结论。失败现场、三个运行环境、补验已停止的容器及全部数据卷均保留，便于用户复核。
+修复与回归测试经 PR #22 交付，由正常评审流程决定合并。此前保持“main 不通过、修复候选已通过上述范围”的结论；所有失败现场、旧环境与数据卷保留供复核。

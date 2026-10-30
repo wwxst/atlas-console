@@ -30,3 +30,7 @@ Remote raw evidence: `/root/atlas-acceptance-20261030/evidence` (root only). Pub
 Never run `docker compose down -v`, `docker volume rm`, database deletion, global prune, destructive reset, force-push, direct main write, or schema baseline on an unverified existing database. No MySQL/Redis/backend host-public port bindings. Preserve failed-install state for recovery tests. Record the exact revision used by every build. No domain was supplied; HTTPS is evaluated using the server IP and an IP certificate.
 
 The desktop browser control surface could not connect; real isolated headless Chromium sessions provide browser evidence. Shell/API probes provide separately recorded protocol and persistence evidence. Simulated tests do not count as real service acceptance. A missing prerequisite or unavailable integration must remain marked untested/blocked rather than pass.
+
+## Final baseline update
+
+During execution main moved to b964cb505994cbfcf16720ea5d4681421326193a (sibling frontend/backend projects). The branch merged that baseline normally, adapted all Docker/CI/test paths, and reran all three fresh installation modes at b348300b66d3a7d8cd021855dccdbe64f3a0b0b2. Final API, stronger browser network checks, real server reboot/persistence and main failure evidence are recorded in the acceptance report. Baota account binding and refresh resolved the separate panel toast as confirmed by the user. PR #22 remains unmerged.

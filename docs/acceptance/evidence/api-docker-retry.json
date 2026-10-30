@@ -1,13 +1,13 @@
 {
-  "run_id": "20261030023317_d1b36a",
-  "project": "atlas-acceptance-docker",
+  "run_id": "20261030073921_89864b",
+  "project": "atlas-acceptance-final-docker",
   "scope": "real HTTP API on explicitly isolated existing test stack",
-  "started_at": "2026-10-30T02:33:17.151921+00:00",
+  "started_at": "2026-10-30T07:39:21.040391+00:00",
   "scenarios": [
     {
       "name": "isolated existing stack and private credentials",
       "status": "pass",
-      "seconds": 0.175
+      "seconds": 0.188
     },
     {
       "name": "system password login",
@@ -40,7 +40,7 @@
     {
       "name": "system authentication contracts",
       "status": "pass",
-      "seconds": 0.245
+      "seconds": 0.271
     },
     {
       "name": "menu sys-users list sorted asc",
@@ -159,7 +159,7 @@
     {
       "name": "all implemented menu read APIs",
       "status": "pass",
-      "seconds": 0.408
+      "seconds": 0.555
     },
     {
       "name": "create run-owned system user",
@@ -292,7 +292,7 @@
     {
       "name": "system user lifecycle",
       "status": "pass",
-      "seconds": 1.444
+      "seconds": 1.62
     },
     {
       "name": "enable test phone channel",
@@ -521,7 +521,7 @@
     {
       "name": "restore phone channel snapshot",
       "status": "pass",
-      "seconds": 0.026
+      "seconds": 0.031
     },
     {
       "name": "restore saved email channel values",
@@ -530,7 +530,7 @@
     {
       "name": "restore email channel snapshot",
       "status": "pass",
-      "seconds": 0.023
+      "seconds": 0.026
     },
     {
       "name": "channel values equal original snapshot",
@@ -544,7 +544,7 @@
     {
       "name": "ordinary user lifecycle and reversible channels",
       "status": "pass",
-      "seconds": 3.245
+      "seconds": 3.592
     },
     {
       "name": "create run-owned system user",
@@ -569,17 +569,17 @@
     {
       "name": "retained persistence sentinels",
       "status": "pass",
-      "seconds": 0.212
+      "seconds": 0.567
     },
     {
       "name": "cleanup invalid session cannot refresh",
       "status": "pass",
-      "seconds": 0.014
+      "seconds": 0.019
     },
     {
       "name": "cleanup invalid session cannot refresh",
       "status": "pass",
-      "seconds": 0.014
+      "seconds": 0.019
     },
     {
       "name": "cleanup invalid session cannot refresh",
@@ -589,17 +589,12 @@
     {
       "name": "cleanup invalid session cannot refresh",
       "status": "pass",
-      "seconds": 0.015
+      "seconds": 0.021
     },
     {
       "name": "cleanup invalid session cannot refresh",
       "status": "pass",
-      "seconds": 0.015
-    },
-    {
-      "name": "cleanup invalid session cannot refresh",
-      "status": "pass",
-      "seconds": 0.015
+      "seconds": 0.018
     },
     {
       "name": "cleanup invalid session cannot refresh",
@@ -609,12 +604,17 @@
     {
       "name": "cleanup invalid session cannot refresh",
       "status": "pass",
-      "seconds": 0.016
+      "seconds": 0.017
     },
     {
       "name": "cleanup invalid session cannot refresh",
       "status": "pass",
       "seconds": 0.015
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.017
     },
     {
       "name": "cleanup invalid session cannot refresh",
@@ -628,7 +628,7 @@
     {
       "name": "operator logout",
       "status": "pass",
-      "seconds": 0.016
+      "seconds": 0.018
     },
     {
       "name": "operator logout rejects access",
@@ -641,12 +641,12 @@
     {
       "name": "operator logout invalidates both tokens",
       "status": "pass",
-      "seconds": 0.028
+      "seconds": 0.026
     },
     {
       "name": "close only this run's sessions and temporary accounts",
       "status": "pass",
-      "seconds": 0.318
+      "seconds": 0.349
     },
     {
       "name": "real SMS/email delivery",
@@ -667,18 +667,18 @@
   "sentinels": [
     {
       "kind": "ordinary-user",
-      "id": "109479722538237952",
-      "run_id": "20261030023317_d1b36a",
+      "id": "109556748183928832",
+      "run_id": "20261030073921_89864b",
       "retained": true
     },
     {
       "kind": "system-user",
-      "id": 5,
-      "run_id": "20261030023317_d1b36a",
-      "username": "sent7fe9d5481f0343",
-      "nickname": "live-20261030023317_d1b36a",
+      "id": 3,
+      "run_id": "20261030073921_89864b",
+      "username": "sentb347f9d1435d4a",
+      "nickname": "live-20261030073921_89864b",
       "retained": true,
-      "avatar": "/files/2",
+      "avatar": "/files/1",
       "avatar_sha256": "48801a461aa8f8d09ece78d4d4f290e9bd7ae957c6830943eff92bf76c43da28"
     }
   ],
@@ -688,5 +688,5 @@
     "fail": 0,
     "untested": 5
   },
-  "finished_at": "2026-10-30T02:33:23.205916+00:00"
+  "finished_at": "2026-10-30T07:39:28.189322+00:00"
 }
