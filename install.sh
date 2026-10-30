@@ -184,7 +184,7 @@ if [[ "$DB_MODE" == external ]]; then
   valid_port "$db_port" || fail "MySQL port must be from 1024 to 65535."
   [[ "$db_name" =~ ^[A-Za-z0-9_]+$ ]] || fail "Database name may contain only letters, digits, and underscores."
   [[ "$db_user" =~ ^[A-Za-z0-9_.@-]+$ ]] || fail "Database username contains unsupported characters."
-  read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD < /dev/tty
+  IFS= read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD < /dev/tty
   printf '\n'
   [[ -n "$ATLAS_DB_PASSWORD" && "$ATLAS_DB_PASSWORD" != *$'\n'* && "$ATLAS_DB_PASSWORD" != *$'\r'* ]] || fail "Password must be non-empty and cannot contain newlines."
   ATLAS_DB_URL="jdbc:mysql://$db_host:$db_port/$db_name?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"

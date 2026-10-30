@@ -16,6 +16,9 @@ if [[ "$operation" == rollback-history && ! "$target_release" =~ ^[a-f0-9]{40}_[
 fi
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# runuser inherits the root caller's cwd, which may be unreadable after dropping
+# privileges. Compose resolves its schema/context from cwd even with absolute -f.
+cd "$project_root"
 compose_file="$project_root/deploy/compose.yaml"
 mysql_compose_file="$project_root/deploy/compose.mysql.yaml"
 env_file="${ATLAS_ENV_FILE:-/opt/atlas/.env}"

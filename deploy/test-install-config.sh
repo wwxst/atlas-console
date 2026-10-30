@@ -8,7 +8,7 @@ fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 # Load only the serializer, so this test is also safe against an older installer.
 eval "$(sed -n '/^write_env() {/,/^}/p' "$root/install.sh")"
 declare -F write_env >/dev/null
-passwords=("single'quote" 'space # hash $dollar ${NOT_AN_ENV_VAR} "double" \ backslash' 'ends-in-\' '\\' "slash\\'quote" 'literal\n\t $$ $' 'slash\"double')
+passwords=("single'quote" 'space # hash $dollar ${NOT_AN_ENV_VAR} "double" \ backslash' 'ends-in-\' '\\' "slash\\'quote" 'literal\n\t $$ $' 'slash\"double' $'  \tsecret with edge whitespace\t  ')
 # Read the actual production interpolation expression; do not test a different
 # expression in the probe. config output may escape dollars for reloading, so
 # assert the final process environment instead of its rendered JSON spelling.
