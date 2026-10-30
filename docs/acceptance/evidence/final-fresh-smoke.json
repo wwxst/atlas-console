@@ -1,0 +1,45 @@
+{
+  "mode": "docker",
+  "project": "atlas-acceptance-final-docker",
+  "install_dir": "/opt/atlas-acceptance-final-docker",
+  "source_sha": "b348300b66d3a7d8cd021855dccdbe64f3a0b0b2",
+  "installer_exit": 0,
+  "private_port": 19088,
+  "default_password_changed_before_public_access": true,
+  "env_sha256": "a3e97494949c672619ffb709400db1499a5c50b85d36aaa5391284c2dcd4e027",
+  "status": "pass",
+  "services": {
+    "frontend": {
+      "id": "6c2c397c58ed180dc3e03c1bdfc2656ebad4134b519adc4823e1ed4312fec2ba",
+      "health": "healthy",
+      "restart_policy": "unless-stopped",
+      "volumes": []
+    },
+    "backend": {
+      "id": "c0a27b155b2b65541898f985921148b32ea05a90b1f6be89dbd21f4c04388e27",
+      "health": "healthy",
+      "restart_policy": "unless-stopped",
+      "volumes": [
+        "atlas-acceptance-final-docker_uploads_data"
+      ]
+    },
+    "redis": {
+      "id": "0fc2220db82b0207b49c311a3846f5eedb753ed2e276b2ece8d75961e99f4ac2",
+      "health": "healthy",
+      "restart_policy": "unless-stopped",
+      "volumes": [
+        "atlas-acceptance-final-docker_redis_data"
+      ]
+    },
+    "mysql": {
+      "id": "062b52bfd192cdb3e90ee5eb22b0feaed2c1d0915ba909a9165e3595a3cb6c0d",
+      "health": "healthy",
+      "restart_policy": "unless-stopped",
+      "volumes": [
+        "atlas-acceptance-final-docker_mysql_data"
+      ]
+    }
+  },
+  "flyway": "1\t1",
+  "static_assets_after_reboot": "pass"
+}

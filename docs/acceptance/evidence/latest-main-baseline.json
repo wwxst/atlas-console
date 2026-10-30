@@ -1,0 +1,26 @@
+[
+  {
+    "mode": "docker",
+    "source_sha": "b964cb505994cbfcf16720ea5d4681421326193a",
+    "installer_exit": 128,
+    "status": "fail",
+    "reason": "Git dubious ownership before image build or database connection",
+    "isolated_directory": "/root/atlas-acceptance-20261030/baseline-latest-docker"
+  },
+  {
+    "mode": "external",
+    "source_sha": "b964cb505994cbfcf16720ea5d4681421326193a",
+    "installer_exit": 128,
+    "status": "fail",
+    "reason": "Git dubious ownership before image build or database connection",
+    "isolated_directory": "/root/atlas-acceptance-20261030/baseline-latest-external"
+  },
+  {
+    "mode": "unattended",
+    "source_sha": "b964cb505994cbfcf16720ea5d4681421326193a",
+    "installer_exit": 128,
+    "status": "fail",
+    "reason": "Git dubious ownership before image build or database connection",
+    "isolated_directory": "/root/atlas-acceptance-20261030/baseline-latest-unattended"
+  }
+]

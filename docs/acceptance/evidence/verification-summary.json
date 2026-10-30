@@ -1,0 +1,24 @@
+{
+  "status": "pass",
+  "candidate_sha": "b348300b66d3a7d8cd021855dccdbe64f3a0b0b2",
+  "main_baseline_sha": "b964cb505994cbfcf16720ea5d4681421326193a",
+  "fresh_installer_exit_codes": [
+    0,
+    0,
+    0
+  ],
+  "linux_merged_regression_exit": 0,
+  "frontend_asset_regression": {
+    "baseline_exit": 1,
+    "fixed_exit": 0,
+    "current_three_sites_static_assets": "pass"
+  },
+  "host_services": {
+    "docker": "active",
+    "nginx": "active",
+    "mysqld": "active"
+  },
+  "running_containers": 11,
+  "boot_id_changed": true,
+  "old_environments_stopped_with_data_retained": true
+}

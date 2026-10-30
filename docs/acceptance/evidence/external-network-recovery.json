@@ -1,0 +1,10 @@
+{
+  "status": "pass",
+  "initial_installer_exit": 1,
+  "cause": "Test setup appended subnet allow after existing UFW deny; database TCP connection timed out",
+  "correction": "Insert exact private subnet allow before deny; keep public deny",
+  "retry_exit": 0,
+  "environment_sha256_unchanged": true,
+  "authenticated_login": true,
+  "failed_environment_retained_and_stopped": true
+}

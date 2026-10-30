@@ -1,0 +1,32 @@
+[
+  {
+    "name": "repeat_existing_install",
+    "exit_code": 1,
+    "passed": true,
+    "message": "ERROR: Installation directory already exists: /opt/atlas-acceptance-docker. Nothing was changed. Retry the existing release as atlas-deploy; do not delete data or volumes."
+  },
+  {
+    "name": "occupied_port",
+    "exit_code": 1,
+    "passed": true,
+    "message": "ERROR: HTTP port 23227 is already listening. Choose another --port."
+  },
+  {
+    "name": "overlapping_route",
+    "exit_code": 1,
+    "passed": true,
+    "message": "ERROR: Network 172.17.50.0/24 overlaps host route 172.17.0.0/16. Choose another --network-prefix."
+  },
+  {
+    "name": "existing_environment_preserved",
+    "passed": true
+  },
+  {
+    "name": "no_partial_install_atlas-acceptance-conflict-port",
+    "passed": true
+  },
+  {
+    "name": "no_partial_install_atlas-acceptance-conflict-network",
+    "passed": true
+  }
+]

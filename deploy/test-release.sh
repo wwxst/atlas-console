@@ -5,7 +5,7 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 mkdir -p "$workdir/bin" "$workdir/images"
-touch "$workdir/.env"
+printf 'ATLAS_PROJECT_NAME=atlas-regression\n' > "$workdir/.env"
 export ATLAS_ENV_FILE="$workdir/.env"
 export ATLAS_RELEASE_DIR="$workdir/releases"
 export TEST_DOCKER_DIR="$workdir"
@@ -24,6 +24,8 @@ if [[ "${1:-}" == image && "${2:-}" == inspect ]]; then
   exit $?
 fi
 if [[ "${1:-}" != compose ]]; then exit 7; fi
+[[ " $* " == *" --project-name atlas-regression "* ]] || { echo 'Incorrect explicit project namespace' >&2; exit 1; }
+[[ ! -v COMPOSE_PROJECT_NAME && ! -v ATLAS_PROJECT_NAME && ! -v ATLAS_NETWORK_PREFIX && ! -v ATLAS_HTTP_PORT && ! -v ATLAS_DB_URL ]] || { echo 'Unrelated production context leaked' >&2; exit 1; }
 while (($#)); do
   case "$1" in
     build)
@@ -59,6 +61,8 @@ exit 0
 FAKE_CURL
 chmod +x "$workdir/bin/"*
 export PATH="$workdir/bin:$PATH"
+export COMPOSE_PROJECT_NAME=unrelated-production ATLAS_PROJECT_NAME=unrelated-production
+export ATLAS_NETWORK_PREFIX=10.90.90 ATLAS_HTTP_PORT=443 ATLAS_DB_URL=unrelated-production-database
 
 # This test runs from a single monorepo checkout.
 test -f "$root/backend/pom.xml"

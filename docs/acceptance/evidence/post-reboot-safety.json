@@ -1,0 +1,60 @@
+[
+  {
+    "name": "duplicate_install_preserves_docker",
+    "passed": true,
+    "exit_code": 1
+  },
+  {
+    "name": "healthy_services_and_private_ports_docker",
+    "passed": true
+  },
+  {
+    "name": "duplicate_install_preserves_external",
+    "passed": true,
+    "exit_code": 1
+  },
+  {
+    "name": "healthy_services_and_private_ports_external",
+    "passed": true
+  },
+  {
+    "name": "duplicate_install_preserves_unattended",
+    "passed": true,
+    "exit_code": 1
+  },
+  {
+    "name": "healthy_services_and_private_ports_unattended",
+    "passed": true
+  },
+  {
+    "name": "baota_host_gateway_and_subnet_grant",
+    "passed": true,
+    "authenticated_user": "atlas_acceptance_final_external@172.30.91.0/255.255.255.0"
+  },
+  {
+    "name": "database_user_cannot_read_mysql_system_schema",
+    "passed": true,
+    "exit_code": 1
+  },
+  {
+    "name": "baota_real_ip_overrides_spoofed_headers_docker",
+    "passed": true,
+    "actual_peer_counter_present": true,
+    "spoofed_ip_counter_absent": true,
+    "remaining_ttl": 45
+  },
+  {
+    "name": "baota_real_ip_overrides_spoofed_headers_external",
+    "passed": true,
+    "actual_peer_counter_present": true,
+    "spoofed_ip_counter_absent": true,
+    "remaining_ttl": 54
+  },
+  {
+    "name": "baota_real_ip_overrides_spoofed_headers_unattended",
+    "passed": true,
+    "actual_peer_counter_present": true,
+    "spoofed_ip_counter_absent": true,
+    "remaining_ttl": 56
+  }
+]

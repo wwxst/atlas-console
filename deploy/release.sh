@@ -16,10 +16,15 @@ if [[ "$operation" == rollback-history && ! "$target_release" =~ ^[a-f0-9]{40}_[
 fi
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# runuser inherits the root caller's cwd, which may be unreadable after dropping
+# privileges. Compose resolves its schema/context from cwd even with absolute -f.
+cd "$project_root"
 compose_file="$project_root/deploy/compose.yaml"
 mysql_compose_file="$project_root/deploy/compose.mysql.yaml"
 env_file="${ATLAS_ENV_FILE:-/opt/atlas/.env}"
 state_dir="${ATLAS_RELEASE_DIR:-/opt/atlas/releases}"
+# The same directory must be mounted into the backend, including isolated installs.
+export ATLAS_RELEASE_DIR="$state_dir"
 current="$state_dir/current.env"
 previous="$state_dir/previous.env"
 history_dir="$state_dir/history"
@@ -27,12 +32,13 @@ mkdir -p "$history_dir"
 chmod 700 "$state_dir" "$history_dir"
 test -r "$env_file" || { echo "Production .env not available" >&2; exit 1; }
 
-# Read only this fixed enum from the private env file; never source secrets as shell code.
-db_mode="${ATLAS_DB_MODE:-}"
-if [[ -z "$db_mode" ]]; then
-  db_mode="$(sed -n 's/^ATLAS_DB_MODE=//p' "$env_file" | tail -n 1 | tr -d "'\"")"
-fi
+# Read only these validated non-secret settings; never source secrets as code.
+# Ambient values must not select another installation or database mode.
+db_mode="$(sed -n 's/^ATLAS_DB_MODE=//p' "$env_file" | tail -n 1 | tr -d "'\"")"
 db_mode="${db_mode:-docker}"
+project_name="$(sed -n 's/^ATLAS_PROJECT_NAME=//p' "$env_file" | tail -n 1 | tr -d "'\"")"
+project_name="${project_name:-atlas}"
+[[ "$project_name" =~ ^[a-z0-9][a-z0-9_-]{0,47}$ ]] || { echo "Invalid ATLAS_PROJECT_NAME in production .env" >&2; exit 1; }
 case "$db_mode" in
   docker) compose_args=(-f "$compose_file" -f "$mysql_compose_file") ;;
   external) compose_args=(-f "$compose_file") ;;
@@ -44,7 +50,15 @@ exec 9>"$state_dir/deploy.lock"
 flock -n 9 || { echo "Another release operation is running" >&2; exit 1; }
 
 compose() {
-  docker compose --env-file "$env_file" "${compose_args[@]}" "$@"
+  # Compose gives exported variables precedence over --env-file. Clear settings
+  # from an unrelated shell/stack so preflight and runtime use the same private
+  # installation config. Keep only the verified image tags and selected state dir.
+  env -u COMPOSE_PROJECT_NAME -u ATLAS_PROJECT_NAME -u ATLAS_NETWORK_PREFIX \
+    -u ATLAS_HTTP_PORT -u ATLAS_DB_URL -u ATLAS_DB_USERNAME -u ATLAS_DB_PASSWORD \
+    -u DB_PASSWORD -u MYSQL_ROOT_PASSWORD -u JWT_SECRET -u STORAGE_ENCRYPTION_KEY \
+    -u ATLAS_FLYWAY_BASELINE_ON_MIGRATE -u ATLAS_DEPLOYMENT_ENABLED \
+    -u ATLAS_DEPLOYMENT_GITHUB_TOKEN \
+    docker compose --project-name "$project_name" --env-file "$env_file" "${compose_args[@]}" "$@"
 }
 
 validate_tag() {
@@ -181,7 +195,9 @@ fi
 # Production deployments must use the exact pair the workflow already tested.
 # Rollbacks do not build new source and intentionally bypass this check.
 test -f "$project_root/backend/pom.xml" || { echo "Monorepo backend directory missing" >&2; exit 1; }
-front_sha="$(git -C "$project_root" rev-parse HEAD)"
+# The bootstrap intentionally leaves its checkout root-owned and group-readable.
+# Trust only this exact checkout, never all repositories via safe.directory=*.
+front_sha="$(git -c safe.directory="$project_root" -C "$project_root" rev-parse HEAD)"
 back_sha="$front_sha"
 if [[ ! "${VERIFIED_FRONTEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||
       ! "${VERIFIED_BACKEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||

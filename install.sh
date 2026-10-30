@@ -6,6 +6,8 @@ umask 077
 REPO="https://github.com/wwxst/atlas-console.git"
 REF="main"
 INSTALL_ROOT="/opt/atlas"
+PROJECT_NAME="atlas"
+NETWORK_PREFIX="172.30.80"
 DB_MODE=""
 HTTP_PORT="8088"
 NON_INTERACTIVE=false
@@ -22,6 +24,9 @@ Options:
   --ref REF          Git branch or tag to install (default: main)
   --db-mode MODE     docker = private MySQL container; external = existing MySQL
   --port PORT        Loopback HTTP port for the frontend (default: 8088)
+  --install-dir PATH Absolute, new installation directory (default: /opt/atlas)
+  --project-name NAME Unique Compose project and volume namespace (default: atlas)
+  --network-prefix PREFIX Private /24 IPv4 prefix (default: 172.30.80)
   --non-interactive  Unattended Docker-managed MySQL install
   --help             Show this help
 
@@ -40,11 +45,103 @@ prompt() {
 }
 valid_port() { [[ "$1" =~ ^[0-9]+$ ]] && (( 10#$1 >= 1024 && 10#$1 <= 65535 )); }
 
+write_env() {
+  local key="$1" value="$2"
+  [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || fail "Invalid environment key."
+  [[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || fail "Newlines are not supported for $key."
+  # Compose dotenv double-quoted strings: escape slashes/quotes and suppress
+  # interpolation with $$. Never source this file as shell code.
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//\$/\$\$}"
+  printf '%s="%s"\n' "$key" "$value" >> "$ENV_FILE"
+}
+
+validate_install_options() {
+  valid_port "$HTTP_PORT" || fail "Port must be an integer from 1024 to 65535."
+  HTTP_PORT=$((10#$HTTP_PORT))
+  INSTALL_ROOT="${INSTALL_ROOT%/}"
+  [[ "$INSTALL_ROOT" =~ ^/[A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+$ &&
+     "$INSTALL_ROOT/" != *"/../"* && "$INSTALL_ROOT/" != *"/./"* &&
+     "$INSTALL_ROOT" != *"//"* ]] || fail "Use a new absolute installation directory such as /opt/atlas-test."
+  [[ "$PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]{0,47}$ ]] || fail "Project name must contain 1-48 lowercase letters, digits, underscores or hyphens, starting with a letter or digit."
+  [[ "$NETWORK_PREFIX" =~ ^(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]] || fail "Use a private IPv4 prefix such as 172.30.81."
+  local first second third
+  IFS=. read -r first second third <<< "$NETWORK_PREFIX"
+  (( second <= 255 && third <= 255 )) || fail "Invalid IPv4 prefix."
+  (( first == 10 || (first == 172 && second >= 16 && second <= 31) ||
+     (first == 192 && second == 168) )) || fail "The installation network must use a private IPv4 /24."
+}
+
+cidr_overlaps_install() {
+  local cidr="$1" a b c d bits target mask address
+  [[ "$cidr" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(/[0-9]+)?$ ]] || return 1
+  bits="${cidr#*/}"
+  [[ "$cidr" == */* ]] || bits=32
+  (( bits >= 0 && bits <= 32 )) || return 1
+  IFS=. read -r a b c d <<< "${cidr%/*}"
+  address=$(( (10#$a << 24) | (10#$b << 16) | (10#$c << 8) | 10#$d ))
+  IFS=. read -r a b c <<< "$NETWORK_PREFIX"
+  target=$(( (10#$a << 24) | (10#$b << 16) | (10#$c << 8) ))
+  (( bits <= 24 )) || bits=24
+  mask=$(( (0xffffffff << (32-bits)) & 0xffffffff ))
+  (( (address & mask) == (target & mask) ))
+}
+
+preflight_install() {
+  [[ ! -e "$INSTALL_ROOT" && ! -L "$INSTALL_ROOT" ]] || fail "Installation directory already exists: $INSTALL_ROOT. Nothing was changed. Retry the existing release as atlas-deploy; do not delete data or volumes."
+  command -v ss >/dev/null 2>&1 || fail "ss (iproute2) is required to check the HTTP port safely. Install iproute2 and rerun."
+  local listeners resource networks ranges cidr
+  listeners="$(ss -H -ltn)" || fail "Could not inspect listening ports."
+  if awk -v port="$HTTP_PORT" '$4 ~ (":" port "$") {found=1} END {exit !found}' <<< "$listeners"; then
+    fail "HTTP port $HTTP_PORT is already listening. Choose another --port."
+  fi
+  if command -v ip >/dev/null 2>&1; then
+    ranges="$(ip -4 route show)" || fail "Could not inspect host IPv4 routes."
+    while read -r cidr _; do
+      [[ "$cidr" != default ]] || continue
+      if cidr_overlaps_install "$cidr"; then fail "Network $NETWORK_PREFIX.0/24 overlaps host route $cidr. Choose another --network-prefix."; fi
+    done <<< "$ranges"
+  fi
+  if command -v docker >/dev/null 2>&1; then
+    docker info >/dev/null 2>&1 || fail "Docker is installed but unavailable. Start it, then rerun the read-only preflight."
+    resource="$(docker ps -aq --filter "label=com.docker.compose.project=$PROJECT_NAME")" || fail "Could not inspect Docker containers."
+    [[ -z "$resource" ]] || fail "Compose project $PROJECT_NAME already has containers. Choose another --project-name; existing data is untouched."
+    resource="$(docker volume ls -q --filter "label=com.docker.compose.project=$PROJECT_NAME")" || fail "Could not inspect Docker volumes."
+    [[ -z "$resource" ]] || fail "Compose project $PROJECT_NAME already has volumes. Choose another --project-name; existing data is untouched."
+    resource="$(docker volume ls --format '{{.Name}}')" || fail "Could not inspect Docker volume names."
+    while read -r resource; do
+      case "$resource" in
+        "${PROJECT_NAME}_mysql_data"|"${PROJECT_NAME}_redis_data"|"${PROJECT_NAME}_uploads_data")
+          fail "Volume $resource already exists, including unlabelled data. Choose another --project-name." ;;
+      esac
+    done <<< "$resource"
+    resource="$(docker network ls -q --filter "label=com.docker.compose.project=$PROJECT_NAME")" || fail "Could not inspect Docker project networks."
+    [[ -z "$resource" ]] || fail "Compose project $PROJECT_NAME already has networks. Choose another --project-name."
+    resource="$(docker network ls --format '{{.Name}}')" || fail "Could not inspect Docker network names."
+    while read -r resource; do
+      [[ "$resource" != "${PROJECT_NAME}_default" ]] || fail "Network $resource already exists. Choose another --project-name."
+    done <<< "$resource"
+    networks="$(docker network ls -q)" || fail "Could not inspect Docker networks."
+    if [[ -n "$networks" ]]; then
+      # IDs originate only from Docker, not user input.
+      ranges="$(docker network inspect --format '{{range .IPAM.Config}}{{println .Subnet}}{{end}}' $networks)" || fail "Could not inspect Docker network ranges."
+      while read -r cidr; do
+        if cidr_overlaps_install "$cidr"; then fail "Network $NETWORK_PREFIX.0/24 overlaps Docker network $cidr. Choose another --network-prefix."; fi
+      done <<< "$ranges"
+    fi
+  fi
+}
+
+atlas_installer_main() {
 while (($#)); do
   case "$1" in
     --ref) [[ $# -ge 2 ]] || fail "--ref requires a value"; REF="$2"; shift 2 ;;
     --db-mode) [[ $# -ge 2 ]] || fail "--db-mode requires a value"; DB_MODE="$2"; shift 2 ;;
     --port) [[ $# -ge 2 ]] || fail "--port requires a value"; HTTP_PORT="$2"; shift 2 ;;
+    --install-dir) [[ $# -ge 2 ]] || fail "--install-dir requires a value"; INSTALL_ROOT="$2"; shift 2 ;;
+    --project-name) [[ $# -ge 2 ]] || fail "--project-name requires a value"; PROJECT_NAME="$2"; shift 2 ;;
+    --network-prefix) [[ $# -ge 2 ]] || fail "--network-prefix requires a value"; NETWORK_PREFIX="$2"; shift 2 ;;
     --non-interactive) NON_INTERACTIVE=true; shift ;;
     --help|-h) usage; exit 0 ;;
     *) fail "Unknown option: $1 (use --help)" ;;
@@ -53,7 +150,9 @@ done
 
 [[ "$EUID" -eq 0 ]] || fail "Run as root, for example: curl ... | sudo bash"
 [[ "$REF" =~ ^[A-Za-z0-9._/-]+$ && "$REF" != *".."* && "$REF" != /* ]] || fail "Invalid Git ref."
-valid_port "$HTTP_PORT" || fail "Port must be an integer from 1024 to 65535."
+validate_install_options
+# Inspect existing resources before credentials, package installation or file writes.
+preflight_install
 
 if [[ -z "$DB_MODE" ]]; then
   [[ "$NON_INTERACTIVE" != true ]] || fail "--non-interactive requires --db-mode docker."
@@ -85,9 +184,9 @@ if [[ "$DB_MODE" == external ]]; then
   valid_port "$db_port" || fail "MySQL port must be from 1024 to 65535."
   [[ "$db_name" =~ ^[A-Za-z0-9_]+$ ]] || fail "Database name may contain only letters, digits, and underscores."
   [[ "$db_user" =~ ^[A-Za-z0-9_.@-]+$ ]] || fail "Database username contains unsupported characters."
-  read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD < /dev/tty
+  IFS= read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD < /dev/tty
   printf '\n'
-  [[ -n "$ATLAS_DB_PASSWORD" && "$ATLAS_DB_PASSWORD" != *"'"* && "$ATLAS_DB_PASSWORD" != *$'\n'* && "$ATLAS_DB_PASSWORD" != *$'\r'* ]] || fail "Password must be non-empty and cannot contain quotes or newlines."
+  [[ -n "$ATLAS_DB_PASSWORD" && "$ATLAS_DB_PASSWORD" != *$'\n'* && "$ATLAS_DB_PASSWORD" != *$'\r'* ]] || fail "Password must be non-empty and cannot contain newlines."
   ATLAS_DB_URL="jdbc:mysql://$db_host:$db_port/$db_name?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
   ATLAS_DB_USERNAME="$db_user"
 fi
@@ -95,9 +194,6 @@ fi
 ENV_FILE="$INSTALL_ROOT/.env"
 SOURCE_DIR="$INSTALL_ROOT/atlas-console"
 RELEASE_DIR="$INSTALL_ROOT/releases"
-if [[ -e "$ENV_FILE" || -e "$SOURCE_DIR" ]]; then
-  fail "An Atlas installation already exists at $INSTALL_ROOT. This first-install script will not overwrite it; use the documented update/rollback flow."
-fi
 command -v curl >/dev/null 2>&1 || fail "curl is required. Install it and rerun the installer."
 
 install_docker() {
@@ -185,13 +281,10 @@ MYSQL_ROOT_PASSWORD="$(openssl rand -hex 32)"
 JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
 STORAGE_ENCRYPTION_KEY="$(openssl rand -base64 32 | tr -d '\n')"
 
-write_env() {
-  local key="$1" value="$2"
-  [[ "$value" != *"'"* && "$value" != *$'\n'* && "$value" != *$'\r'* ]] || fail "Unsafe value for $key."
-  printf "%s='%s'\n" "$key" "$value" >> "$ENV_FILE"
-}
-
 : > "$ENV_FILE"
+write_env ATLAS_PROJECT_NAME "$PROJECT_NAME"
+write_env ATLAS_NETWORK_PREFIX "$NETWORK_PREFIX"
+write_env ATLAS_RELEASE_DIR "$RELEASE_DIR"
 write_env ATLAS_DB_MODE "$DB_MODE"
 write_env ATLAS_DB_URL "$ATLAS_DB_URL"
 write_env ATLAS_DB_USERNAME "$ATLAS_DB_USERNAME"
@@ -231,3 +324,8 @@ printf '  3. Change the default Atlas administrator password before public launc
 printf '  4. Configure a dedicated GitHub Actions Runner before enabling automatic updates.\n'
 printf '\n'
 printf 'Do not expose MySQL, Redis, or Spring Boot ports directly to the public internet.\n'
+}
+
+if [[ -z "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]}" == "$0" ]]; then
+  atlas_installer_main "$@"
+fi

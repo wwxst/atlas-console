@@ -1,6 +1,6 @@
 # Production compose stack. Execute from a GitHub Actions runner registered
 # on the intended server. Never commit real .env files or publish DB/Redis ports.
-name: atlas
+name: ${ATLAS_PROJECT_NAME:-atlas}
 services:
   redis:
     image: redis:7.4-alpine
@@ -26,7 +26,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       # Only the statically addressed Nginx container may set X-Forwarded-For.
-      TRUSTED_PROXY_ADDRESSES: "172.30.80.10"
+      TRUSTED_PROXY_ADDRESSES: "${ATLAS_NETWORK_PREFIX:-172.30.80}.10"
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
       STORAGE_ENCRYPTION_KEY: ${STORAGE_ENCRYPTION_KEY:?Set STORAGE_ENCRYPTION_KEY}
       # Set true only for a backed-up, schema-verified legacy DB with no Flyway history.
@@ -36,7 +36,7 @@ services:
       ATLAS_DEPLOYMENT_GITHUB_TOKEN: ${ATLAS_DEPLOYMENT_GITHUB_TOKEN:-}
     volumes:
       - uploads_data:/data/uploads
-      - /opt/atlas/releases:/var/lib/atlas/releases:ro
+      - ${ATLAS_RELEASE_DIR:-/opt/atlas/releases}:/var/lib/atlas/releases:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -54,11 +54,14 @@ services:
       context: ../frontend
     image: atlas-console:${ATLAS_FRONTEND_TAG:-local}
     restart: unless-stopped
+    environment:
+      ATLAS_NETWORK_GATEWAY: "${ATLAS_NETWORK_PREFIX:-172.30.80}.1"
+      NGINX_ENVSUBST_FILTER: "^ATLAS_"
     ports:
       - "127.0.0.1:${ATLAS_HTTP_PORT:-8088}:8080"
     networks:
       default:
-        ipv4_address: 172.30.80.10
+        ipv4_address: "${ATLAS_NETWORK_PREFIX:-172.30.80}.10"
     depends_on:
       backend:
         condition: service_healthy
@@ -67,8 +70,8 @@ networks:
   default:
     ipam:
       config:
-        - subnet: 172.30.80.0/24
-          gateway: 172.30.80.1
+        - subnet: "${ATLAS_NETWORK_PREFIX:-172.30.80}.0/24"
+          gateway: "${ATLAS_NETWORK_PREFIX:-172.30.80}.1"
 
 volumes:
   redis_data:

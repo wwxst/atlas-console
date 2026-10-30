@@ -104,7 +104,8 @@ test('frontend and backend remain sibling Docker build contexts', () => {
   const frontendDockerfile = readFileSync(new URL('../frontend/Dockerfile', import.meta.url), 'utf8')
   const frontendNginx = readFileSync(new URL('../frontend/nginx.conf', import.meta.url), 'utf8')
   const frontendManifest = readFileSync(new URL('../frontend/package.json', import.meta.url), 'utf8')
-  assert.ok(frontendDockerfile.includes('COPY nginx.conf /etc/nginx/conf.d/default.conf'))
+  assert.ok(frontendDockerfile.includes('COPY nginx.conf /etc/nginx/templates/default.conf.template'))
+  assert.ok(frontendDockerfile.includes('NGINX_ENVSUBST_FILTER=^ATLAS_'))
   assert.ok(frontendNginx.includes('location /api/'))
   assert.ok(frontendManifest.includes('"name": "atlas-console"'))
 })
@@ -138,7 +139,7 @@ test('deployment-config validates Compose from the single monorepo checkout', ()
 })
 
 test('release script validates one monorepo SHA and does not require a second checkout', () => {
-  assert.ok(release.includes('git -C "$project_root" rev-parse HEAD'))
+  assert.ok(release.includes('git -c safe.directory="$project_root" -C "$project_root" rev-parse HEAD'))
   assert.ok(release.includes('"$VERIFIED_FRONTEND_SHA" != "$VERIFIED_BACKEND_SHA"'))
   assert.ok(!release.includes('workspace/backend/.git'))
 })

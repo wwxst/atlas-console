@@ -22,6 +22,7 @@ jobs:
       - run: npm test
         working-directory: frontend
       - run: node --test deploy/test-workflow-pinning.mjs
+      - run: node --test deploy/test-live-browser-input.mjs
       - run: npm run lint
         working-directory: frontend
       - run: npm run build
@@ -89,6 +90,12 @@ jobs:
           bash -n atlas-console/deploy/test-installer.sh
           bash atlas-console/deploy/test-installer.sh
           bash atlas-console/deploy/test-release.sh
+      - name: Verify real Compose credential parsing and installation isolation
+        run: bash atlas-console/deploy/test-install-config.sh
+      - name: Verify production frontend asset permissions
+        run: |
+          bash atlas-console/deploy/test-frontend-assets-safety.sh
+          bash atlas-console/deploy/test-frontend-assets.sh
       - name: Verify real Nginx forwarded IPs and spoofing isolation
         run: |
           bash -n atlas-console/deploy/test-nginx-forwarded-ip.sh

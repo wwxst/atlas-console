@@ -1,0 +1,82 @@
+[
+  {
+    "port": 443,
+    "reachable": true,
+    "passed": true
+  },
+  {
+    "port": 3306,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 6379,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 8080,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 8088,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 8089,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 8090,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 8443,
+    "reachable": true,
+    "passed": true
+  },
+  {
+    "port": 9443,
+    "reachable": true,
+    "passed": true
+  },
+  {
+    "port": 18088,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 18089,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 18090,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 18091,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 19088,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 19089,
+    "reachable": false,
+    "passed": true
+  },
+  {
+    "port": 19090,
+    "reachable": false,
+    "passed": true
+  }
+]

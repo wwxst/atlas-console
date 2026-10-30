@@ -1,0 +1,143 @@
+{
+  "phase": "after",
+  "boot_id": "3a52a998-8fb0-4e42-a5bb-a31c4147c479",
+  "modes": {
+    "docker": {
+      "containers": {
+        "frontend": {
+          "id": "6c2c397c58ed180dc3e03c1bdfc2656ebad4134b519adc4823e1ed4312fec2ba",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": []
+        },
+        "backend": {
+          "id": "c0a27b155b2b65541898f985921148b32ea05a90b1f6be89dbd21f4c04388e27",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-docker_uploads_data"
+          ]
+        },
+        "redis": {
+          "id": "0fc2220db82b0207b49c311a3846f5eedb753ed2e276b2ece8d75961e99f4ac2",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-docker_redis_data"
+          ]
+        },
+        "mysql": {
+          "id": "062b52bfd192cdb3e90ee5eb22b0feaed2c1d0915ba909a9165e3595a3cb6c0d",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-docker_mysql_data"
+          ]
+        }
+      },
+      "env_sha256": "a3e97494949c672619ffb709400db1499a5c50b85d36aaa5391284c2dcd4e027",
+      "sentinels": [
+        {
+          "kind": "ordinary-user",
+          "id": "109556748183928832"
+        },
+        {
+          "kind": "system-user",
+          "id": "3",
+          "avatar_sha256": "48801a461aa8f8d09ece78d4d4f290e9bd7ae957c6830943eff92bf76c43da28"
+        }
+      ],
+      "flyway": "1\t1",
+      "redis_sentinel_preserved": true
+    },
+    "external": {
+      "containers": {
+        "frontend": {
+          "id": "0b5761a0d0bd8561dc7c122eca92951837c7917a893cc2862422cdf2e7acc370",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": []
+        },
+        "backend": {
+          "id": "08c9cb2db3ca0dad35d91f338d718635fc0f043b570d86a3eeffdc1f913944ce",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-external_uploads_data"
+          ]
+        },
+        "redis": {
+          "id": "13d7f2b4cda4cbba037aadf357b5e38d79ed1309acb4f92b290315fa609884d6",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-external_redis_data"
+          ]
+        }
+      },
+      "env_sha256": "b66136261fe09c702847f2a4163e85c775feadf8b1d4210c1d49873258445135",
+      "sentinels": [
+        {
+          "kind": "ordinary-user",
+          "id": "109556782682079232"
+        },
+        {
+          "kind": "system-user",
+          "id": "3",
+          "avatar_sha256": "48801a461aa8f8d09ece78d4d4f290e9bd7ae957c6830943eff92bf76c43da28"
+        }
+      ],
+      "flyway": "1\t1",
+      "redis_sentinel_preserved": true
+    },
+    "unattended": {
+      "containers": {
+        "frontend": {
+          "id": "2015dd83faa5cfa2f47092c7218414449bfdd72eb856a30982aa66c652e9c6ed",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": []
+        },
+        "backend": {
+          "id": "a643bab71e6235e907e4b393c79048f39afa0ccfb9c7cbe1e6bcd2ef3d1d04da",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-unattended_uploads_data"
+          ]
+        },
+        "redis": {
+          "id": "1eac1a04633b4694e441da38f637c009eb9aaa84ca1ba44ae303e037dec13457",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-unattended_redis_data"
+          ]
+        },
+        "mysql": {
+          "id": "89aabffef4cff13cc458caae1d116da57fb3dcb9347c93c8d479dd90a9b78d61",
+          "health": "healthy",
+          "restart_policy": "unless-stopped",
+          "volumes": [
+            "atlas-acceptance-final-unattended_mysql_data"
+          ]
+        }
+      },
+      "env_sha256": "85a9ebca93b3958d68d7757b604a64316e3ec022e7c66a30f2f693c312c035df",
+      "sentinels": [
+        {
+          "kind": "ordinary-user",
+          "id": "109556813266944000"
+        },
+        {
+          "kind": "system-user",
+          "id": "3",
+          "avatar_sha256": "48801a461aa8f8d09ece78d4d4f290e9bd7ae957c6830943eff92bf76c43da28"
+        }
+      ],
+      "flyway": "1\t1",
+      "redis_sentinel_preserved": true
+    }
+  },
+  "status": "pass"
+}
