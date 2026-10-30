@@ -125,6 +125,10 @@ test('frontend CI runs from the frontend project root and caches its lockfile', 
   assert.ok(ci.includes('frontend/test-results/'))
 })
 
+test('deployment-config builds the frontend Docker image from its sibling project context', () => {
+  assert.ok(ci.includes('compose.yaml build frontend'))
+})
+
 test('deployment-config validates Compose from the single monorepo checkout', () => {
   const start = ci.indexOf('  deployment-config:')
   assert.ok(start !== -1)
