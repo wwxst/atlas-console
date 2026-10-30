@@ -1,0 +1,692 @@
+{
+  "run_id": "20261030023317_d1b36a",
+  "project": "atlas-acceptance-docker",
+  "scope": "real HTTP API on explicitly isolated existing test stack",
+  "started_at": "2026-10-30T02:33:17.151921+00:00",
+  "scenarios": [
+    {
+      "name": "isolated existing stack and private credentials",
+      "status": "pass",
+      "seconds": 0.175
+    },
+    {
+      "name": "system password login",
+      "status": "pass"
+    },
+    {
+      "name": "current system profile",
+      "status": "pass"
+    },
+    {
+      "name": "acceptance operator is super administrator",
+      "status": "pass"
+    },
+    {
+      "name": "anonymous management denied",
+      "status": "pass"
+    },
+    {
+      "name": "refresh token cannot access resources",
+      "status": "pass"
+    },
+    {
+      "name": "access token cannot refresh",
+      "status": "pass"
+    },
+    {
+      "name": "system refresh",
+      "status": "pass"
+    },
+    {
+      "name": "system authentication contracts",
+      "status": "pass",
+      "seconds": 0.245
+    },
+    {
+      "name": "menu sys-users list sorted asc",
+      "status": "pass"
+    },
+    {
+      "name": "sys-users paging contract",
+      "status": "pass"
+    },
+    {
+      "name": "sys-users list omits passwords",
+      "status": "pass"
+    },
+    {
+      "name": "menu sys-users list sorted desc",
+      "status": "pass"
+    },
+    {
+      "name": "sys-users paging contract",
+      "status": "pass"
+    },
+    {
+      "name": "sys-users list omits passwords",
+      "status": "pass"
+    },
+    {
+      "name": "sys-users invalid paging rejected",
+      "status": "pass"
+    },
+    {
+      "name": "menu users list sorted asc",
+      "status": "pass"
+    },
+    {
+      "name": "users paging contract",
+      "status": "pass"
+    },
+    {
+      "name": "users list omits passwords",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary IDs stay JSON strings",
+      "status": "pass"
+    },
+    {
+      "name": "menu users list sorted desc",
+      "status": "pass"
+    },
+    {
+      "name": "users paging contract",
+      "status": "pass"
+    },
+    {
+      "name": "users list omits passwords",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary IDs stay JSON strings",
+      "status": "pass"
+    },
+    {
+      "name": "users invalid paging rejected",
+      "status": "pass"
+    },
+    {
+      "name": "channel settings menu",
+      "status": "pass"
+    },
+    {
+      "name": "channel configuration boolean contract",
+      "status": "pass"
+    },
+    {
+      "name": "storage settings menu",
+      "status": "pass"
+    },
+    {
+      "name": "OSS credentials status",
+      "status": "pass"
+    },
+    {
+      "name": "OSS credentials query reveals status only",
+      "status": "pass"
+    },
+    {
+      "name": "storage spaces menu",
+      "status": "pass"
+    },
+    {
+      "name": "storage paging bound",
+      "status": "pass"
+    },
+    {
+      "name": "deployment status menu",
+      "status": "pass"
+    },
+    {
+      "name": "deployment release history",
+      "status": "pass"
+    },
+    {
+      "name": "login protection metrics",
+      "status": "pass"
+    },
+    {
+      "name": "live OSS integration",
+      "status": "untested",
+      "reason": "external OSS resources not supplied; configured=false"
+    },
+    {
+      "name": "GitHub Actions runner deployment/rollback",
+      "status": "untested",
+      "reason": "external workflow not triggered; configured=false"
+    },
+    {
+      "name": "all implemented menu read APIs",
+      "status": "pass",
+      "seconds": 0.408
+    },
+    {
+      "name": "create run-owned system user",
+      "status": "pass"
+    },
+    {
+      "name": "created system user matches request",
+      "status": "pass"
+    },
+    {
+      "name": "search created system user",
+      "status": "pass"
+    },
+    {
+      "name": "created system user persisted",
+      "status": "pass"
+    },
+    {
+      "name": "edit created system user",
+      "status": "pass"
+    },
+    {
+      "name": "system nickname saved",
+      "status": "pass"
+    },
+    {
+      "name": "system password login",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary system user cannot read deployment",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary system user cannot read releases",
+      "status": "pass"
+    },
+    {
+      "name": "reset owned system password",
+      "status": "pass"
+    },
+    {
+      "name": "system password reset rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "system password reset rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "old system password rejected",
+      "status": "pass"
+    },
+    {
+      "name": "system password login",
+      "status": "pass"
+    },
+    {
+      "name": "disable owned system user",
+      "status": "pass"
+    },
+    {
+      "name": "system disable rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "system disable rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "disabled system login rejected",
+      "status": "pass"
+    },
+    {
+      "name": "enable owned system user",
+      "status": "pass"
+    },
+    {
+      "name": "system reenable keeps old sessions invalid rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "system reenable keeps old sessions invalid rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "system password login",
+      "status": "pass"
+    },
+    {
+      "name": "sys-user logout",
+      "status": "pass"
+    },
+    {
+      "name": "sys-user revoked token cannot logout again",
+      "status": "pass"
+    },
+    {
+      "name": "sys-user logout rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "sys-user logout rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "system password login",
+      "status": "pass"
+    },
+    {
+      "name": "delete owned system user",
+      "status": "pass"
+    },
+    {
+      "name": "system delete rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "system delete rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "deleted system user absent",
+      "status": "pass"
+    },
+    {
+      "name": "system delete persisted",
+      "status": "pass"
+    },
+    {
+      "name": "system user lifecycle",
+      "status": "pass",
+      "seconds": 1.444
+    },
+    {
+      "name": "enable test phone channel",
+      "status": "pass"
+    },
+    {
+      "name": "disable test email channel",
+      "status": "pass"
+    },
+    {
+      "name": "disabled email channel rejects codes",
+      "status": "pass"
+    },
+    {
+      "name": "cannot disable both channels",
+      "status": "pass"
+    },
+    {
+      "name": "disable test email codes",
+      "status": "pass"
+    },
+    {
+      "name": "disabled email code capability",
+      "status": "pass"
+    },
+    {
+      "name": "enable test email codes",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: REGISTER",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary email registration",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary profile",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary generated ID is precise string",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary refresh",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary role cannot read management",
+      "status": "pass"
+    },
+    {
+      "name": "admin role cannot read ordinary profile",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary profile update",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary updated profile read",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary profile update persisted",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: LOGIN",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary code login",
+      "status": "pass"
+    },
+    {
+      "name": "consumed code cannot login again",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary password login",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary role cannot edit managed user",
+      "status": "pass"
+    },
+    {
+      "name": "disable run-owned ordinary user",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary disable rejects issued tokens rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary disable rejects issued tokens rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "disabled ordinary login denied",
+      "status": "pass"
+    },
+    {
+      "name": "admin edits disabled run-owned user idempotently",
+      "status": "pass"
+    },
+    {
+      "name": "admin edit normalization and ID",
+      "status": "pass"
+    },
+    {
+      "name": "admin edits disabled run-owned user idempotently",
+      "status": "pass"
+    },
+    {
+      "name": "admin edit normalization and ID",
+      "status": "pass"
+    },
+    {
+      "name": "admin edit requires a contact",
+      "status": "pass"
+    },
+    {
+      "name": "reenable run-owned ordinary user",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary password login",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: RESET_PASSWORD",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary authenticated password change",
+      "status": "pass"
+    },
+    {
+      "name": "password change invalidates old refresh",
+      "status": "pass"
+    },
+    {
+      "name": "changed ordinary password rejects old password",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary password login",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: REBIND_OLD",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: REBIND_NEW",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary phone rebind",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: REBIND_OLD",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: REBIND_NEW",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary email rebind",
+      "status": "pass"
+    },
+    {
+      "name": "issue test verification code: RESET_PASSWORD",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary forgotten-password reset",
+      "status": "pass"
+    },
+    {
+      "name": "forgotten password reset invalidates refresh",
+      "status": "pass"
+    },
+    {
+      "name": "ordinary password login",
+      "status": "pass"
+    },
+    {
+      "name": "final sentinel nickname",
+      "status": "pass"
+    },
+    {
+      "name": "search retained ordinary sentinel",
+      "status": "pass"
+    },
+    {
+      "name": "retained ordinary sentinel persisted",
+      "status": "pass"
+    },
+    {
+      "name": "user logout",
+      "status": "pass"
+    },
+    {
+      "name": "user revoked token cannot logout again",
+      "status": "pass"
+    },
+    {
+      "name": "user logout rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "user logout rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "restore saved phone channel values",
+      "status": "pass"
+    },
+    {
+      "name": "restore phone channel snapshot",
+      "status": "pass",
+      "seconds": 0.026
+    },
+    {
+      "name": "restore saved email channel values",
+      "status": "pass"
+    },
+    {
+      "name": "restore email channel snapshot",
+      "status": "pass",
+      "seconds": 0.023
+    },
+    {
+      "name": "channel values equal original snapshot",
+      "status": "pass"
+    },
+    {
+      "name": "channel configuration restored exactly",
+      "status": "pass",
+      "seconds": 0.019
+    },
+    {
+      "name": "ordinary user lifecycle and reversible channels",
+      "status": "pass",
+      "seconds": 3.245
+    },
+    {
+      "name": "create run-owned system user",
+      "status": "pass"
+    },
+    {
+      "name": "created system user matches request",
+      "status": "pass"
+    },
+    {
+      "name": "upload retained local avatar",
+      "status": "pass"
+    },
+    {
+      "name": "anonymous local avatar read is byte-identical",
+      "status": "pass"
+    },
+    {
+      "name": "anonymous local avatar HEAD",
+      "status": "pass"
+    },
+    {
+      "name": "retained persistence sentinels",
+      "status": "pass",
+      "seconds": 0.212
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.014
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.014
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.013
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.015
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.015
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.015
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.016
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.016
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.015
+    },
+    {
+      "name": "cleanup invalid session cannot refresh",
+      "status": "pass",
+      "seconds": 0.012
+    },
+    {
+      "name": "operator session closed",
+      "status": "pass"
+    },
+    {
+      "name": "operator logout",
+      "status": "pass",
+      "seconds": 0.016
+    },
+    {
+      "name": "operator logout rejects access",
+      "status": "pass"
+    },
+    {
+      "name": "operator logout rejects refresh",
+      "status": "pass"
+    },
+    {
+      "name": "operator logout invalidates both tokens",
+      "status": "pass",
+      "seconds": 0.028
+    },
+    {
+      "name": "close only this run's sessions and temporary accounts",
+      "status": "pass",
+      "seconds": 0.318
+    },
+    {
+      "name": "real SMS/email delivery",
+      "status": "untested",
+      "reason": "development sender and test Redis codes verify API flow only"
+    },
+    {
+      "name": "dashboard and profile placeholder UI",
+      "status": "untested",
+      "reason": "no dedicated implemented business API; browser check is separate"
+    },
+    {
+      "name": "restart persistence",
+      "status": "untested",
+      "reason": "sentinels retained for an independent restart and read check"
+    }
+  ],
+  "sentinels": [
+    {
+      "kind": "ordinary-user",
+      "id": "109479722538237952",
+      "run_id": "20261030023317_d1b36a",
+      "retained": true
+    },
+    {
+      "kind": "system-user",
+      "id": 5,
+      "run_id": "20261030023317_d1b36a",
+      "username": "sent7fe9d5481f0343",
+      "nickname": "live-20261030023317_d1b36a",
+      "retained": true,
+      "avatar": "/files/2",
+      "avatar_sha256": "48801a461aa8f8d09ece78d4d4f290e9bd7ae957c6830943eff92bf76c43da28"
+    }
+  ],
+  "status": "pass",
+  "counts": {
+    "pass": 153,
+    "fail": 0,
+    "untested": 5
+  },
+  "finished_at": "2026-10-30T02:33:23.205916+00:00"
+}

@@ -1,0 +1,176 @@
+[
+  {
+    "mode": "docker",
+    "status": "pass",
+    "scenarios": [
+      {
+        "name": "trusted HTTPS login page",
+        "status": "pass"
+      },
+      {
+        "name": "real administrator login",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 工作台",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 普通用户",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 系统用户",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 认证配置",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 存储配置",
+        "status": "pass"
+      },
+      {
+        "name": "storage provider tabs load without external credentials",
+        "status": "pass"
+      },
+      {
+        "name": "version dialog and disabled unconfigured deploy",
+        "status": "pass"
+      },
+      {
+        "name": "profile placeholder route is explicit",
+        "status": "pass"
+      },
+      {
+        "name": "logout and protected-route redirect",
+        "status": "pass"
+      },
+      {
+        "name": "fresh login after logout",
+        "status": "pass"
+      },
+      {
+        "name": "same-origin API and browser error checks",
+        "status": "pass"
+      }
+    ]
+  },
+  {
+    "mode": "external",
+    "status": "pass",
+    "scenarios": [
+      {
+        "name": "trusted HTTPS login page",
+        "status": "pass"
+      },
+      {
+        "name": "real administrator login",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 工作台",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 普通用户",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 系统用户",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 认证配置",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 存储配置",
+        "status": "pass"
+      },
+      {
+        "name": "storage provider tabs load without external credentials",
+        "status": "pass"
+      },
+      {
+        "name": "version dialog and disabled unconfigured deploy",
+        "status": "pass"
+      },
+      {
+        "name": "profile placeholder route is explicit",
+        "status": "pass"
+      },
+      {
+        "name": "logout and protected-route redirect",
+        "status": "pass"
+      },
+      {
+        "name": "fresh login after logout",
+        "status": "pass"
+      },
+      {
+        "name": "same-origin API and browser error checks",
+        "status": "pass"
+      }
+    ]
+  },
+  {
+    "mode": "unattended",
+    "status": "pass",
+    "scenarios": [
+      {
+        "name": "trusted HTTPS login page",
+        "status": "pass"
+      },
+      {
+        "name": "real administrator login",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 工作台",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 普通用户",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 系统用户",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 认证配置",
+        "status": "pass"
+      },
+      {
+        "name": "menu and deep refresh: 存储配置",
+        "status": "pass"
+      },
+      {
+        "name": "storage provider tabs load without external credentials",
+        "status": "pass"
+      },
+      {
+        "name": "version dialog and disabled unconfigured deploy",
+        "status": "pass"
+      },
+      {
+        "name": "profile placeholder route is explicit",
+        "status": "pass"
+      },
+      {
+        "name": "logout and protected-route redirect",
+        "status": "pass"
+      },
+      {
+        "name": "fresh login after logout",
+        "status": "pass"
+      },
+      {
+        "name": "same-origin API and browser error checks",
+        "status": "pass"
+      }
+    ]
+  }
+]

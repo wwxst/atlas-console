@@ -1,0 +1,28 @@
+{
+  "installer_exit": 0,
+  "services": {
+    "mysql": {
+      "health": "healthy",
+      "image": "atlas-mysql:flyway",
+      "private_ports": true
+    },
+    "redis": {
+      "health": "healthy",
+      "image": "redis:7.4-alpine",
+      "private_ports": true
+    },
+    "backend": {
+      "health": "healthy",
+      "image": "atlas-backend:git-3d7f34e4ab1aa7ad5fdc22ca9574b5f30c065207",
+      "private_ports": true
+    },
+    "frontend": {
+      "health": "healthy",
+      "image": "atlas-console:git-3d7f34e4ab1aa7ad5fdc22ca9574b5f30c065207",
+      "private_ports": true
+    }
+  },
+  "flyway": "1\t1",
+  "frontend_and_authenticated_api": "pass",
+  "status": "pass"
+}

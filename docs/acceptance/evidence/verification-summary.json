@@ -1,0 +1,58 @@
+{
+  "status": "pass",
+  "checks": [
+    {
+      "source": "final-installer-tests.log",
+      "result": "pass",
+      "summary": "Installer syntax, help, secret-file permissions, and database-mode checks passed"
+    },
+    {
+      "source": "final-release-tests.log",
+      "result": "pass",
+      "summary": "Release rollback and history regression checks passed"
+    },
+    {
+      "source": "final-config.log",
+      "result": "pass",
+      "summary": "Real Compose password roundtrip and installation isolation checks passed"
+    },
+    {
+      "source": "candidate-nginx.log",
+      "result": "pass",
+      "summary": "Real Nginx client IP, HTTPS forwarding and spoofing isolation tests passed"
+    },
+    {
+      "source": "final-config.exit",
+      "exit_code": 0
+    },
+    {
+      "source": "candidate-nginx.exit",
+      "exit_code": 0
+    },
+    {
+      "source": "final-fresh-interactive-docker.exit",
+      "exit_code": 0
+    },
+    {
+      "source": "main-installer-failure.log",
+      "baseline": "fail",
+      "evidence": "fatal: detected dubious ownership in repository at '/opt/atlas/atlas-console'"
+    },
+    {
+      "source": "main-unattended.log",
+      "baseline": "fail",
+      "evidence": "fatal: detected dubious ownership in repository at '/opt/atlas/atlas-console'"
+    },
+    {
+      "source": "main-external-valid.log",
+      "baseline": "fail",
+      "evidence": "fatal: detected dubious ownership in repository at '/opt/atlas/atlas-console'"
+    }
+  ],
+  "host_services": {
+    "docker": "active",
+    "nginx": "active",
+    "mysqld": "active"
+  },
+  "running_containers": 11
+}
