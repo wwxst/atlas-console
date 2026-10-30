@@ -105,7 +105,58 @@ class LiveApiSelfTest(unittest.TestCase):
             command.return_value.returncode = 0
             command.return_value.stdout = json.dumps({"com.docker.compose.project": "another", "com.docker.compose.service": "redis"})
             with self.assertRaises(self.mod.Failure):
-                self.mod.verify_stack("atlas-acceptance-test")
+                self.mod.verify_stack("atlas-acceptance-test", self.base)
+
+    def stack_inspection(self, host_ip="127.0.0.1", port=None, image=True, runtime_ip=None, frontend_project=None):
+        port = str(port or self.server.server_port)
+        def output(arguments):
+            service = arguments[-1].removeprefix("atlas-acceptance-test-").removesuffix("-1")
+            labels = {"com.docker.compose.project": "atlas-acceptance-test", "com.docker.compose.service": service}
+            if service != "frontend" or arguments[2] == "{{json .Config.Labels}}":
+                return json.dumps(labels)
+            if frontend_project:
+                labels["com.docker.compose.project"] = frontend_project
+            return json.dumps({"labels": labels, "image": "sha256:" + "a" * 64 if image else "",
+                               "configuredImage": "atlas-console:test",
+                               "hostBindings": {"8080/tcp": [{"HostIp": host_ip, "HostPort": port}]},
+                               "ports": {"8080/tcp": [{"HostIp": runtime_ip or host_ip, "HostPort": port}]}})
+        return output
+
+    def test_client_rejects_nonliteral_loopback_http_origins(self):
+        for url in ("http://example.com:8088", "http://localhost:8088", "https://127.0.0.1:8088", "http://[::1]:8088"):
+            with self.subTest(url=url), self.assertRaises(self.mod.Failure):
+                self.mod.Client(url)
+
+    def test_stack_origin_is_bound_to_its_frontend_loopback_port(self):
+        with patch.object(self.mod, "docker_output", side_effect=self.stack_inspection()):
+            self.mod.verify_stack("atlas-acceptance-test", self.base)
+
+    def test_guard_rejects_unrelated_origins_before_any_http(self):
+        cases = [
+            ("remote origin", "http://example.com:8088", self.stack_inspection()),
+            ("DNS alias", "http://localhost:8088", self.stack_inspection()),
+            ("HTTPS alias", "https://127.0.0.1:8088", self.stack_inspection()),
+            ("IPv6 alias", "http://[::1]:8088", self.stack_inspection()),
+            ("wrong project port", self.base, self.stack_inspection(port=self.server.server_port + 1)),
+            ("public port binding", self.base, self.stack_inspection(host_ip="0.0.0.0")),
+            ("public runtime binding only", self.base, self.stack_inspection(runtime_ip="0.0.0.0")),
+            ("public configured binding only", self.base, self.stack_inspection(host_ip="0.0.0.0", runtime_ip="127.0.0.1")),
+            ("foreign frontend project", self.base, self.stack_inspection(frontend_project="other-acceptance")),
+            ("missing image identity", self.base, self.stack_inspection(image=False)),
+        ]
+        for name, base_url, inspection in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                report = Path(directory) / "report.json"
+                args = [str(SCRIPT), "--base-url", base_url, "--project", "atlas-acceptance-test",
+                        "--report", str(report), "--credentials-file", str(Path(directory) / "unused.json")]
+                with patch.object(self.mod.sys, "argv", args), \
+                     patch.object(self.mod, "docker_output", side_effect=inspection), \
+                     patch.object(self.mod, "load_credentials", return_value={"username": "stub", "password": "SECRET"}), \
+                     patch.object(self.mod.Client, "raw") as http, contextlib.redirect_stdout(io.StringIO()):
+                    self.assertEqual(self.mod.main(), 1)
+                    http.assert_not_called()
+                data = json.loads(report.read_text(encoding="utf-8"))
+                self.assertEqual(data["scenarios"][0]["status"], "fail")
 
     def test_failed_http_check_has_its_own_scenario_name(self):
         report = self.mod.Report("test-run", "atlas-acceptance-test")

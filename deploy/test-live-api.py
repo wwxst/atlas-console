@@ -6,6 +6,8 @@ Only newly created system accounts are deleted. Ordinary users have no delete
 API and remain as run-labelled test records. A system sentinel and its local
 avatar also remain for a separate restart/persistence check. Credentials must
 be a private JSON file containing username/password; values never enter reports.
+The origin must be http://127.0.0.1:<port>, matching this project's frontend
+8080/tcp publication in Docker. HTTPS and reverse proxies are checked separately.
 
 Example (run on the test Docker host):
   python3 deploy/test-live-api.py --base-url http://127.0.0.1:18088 \
@@ -25,7 +27,7 @@ import subprocess
 import sys
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote
 from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 import uuid
 
@@ -44,13 +46,16 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
+def validate_origin(base_url):
+    match = re.fullmatch(r"http://127\.0\.0\.1:([1-9][0-9]{0,4})/?", base_url)
+    require(match is not None and int(match[1]) <= 65535,
+            "base URL must be literal http://127.0.0.1:<port>")
+    return match[1]
+
+
 class Client:
     def __init__(self, base_url):
-        parsed = urlsplit(base_url)
-        require(parsed.scheme in ("http", "https") and bool(parsed.hostname)
-                and not parsed.username and not parsed.password
-                and parsed.path in ("", "/") and not parsed.query and not parsed.fragment,
-                "base URL must be an HTTP(S) origin without credentials")
+        validate_origin(base_url)
         self.base = base_url.rstrip("/")
         self.http = build_opener(ProxyHandler({}), NoRedirect())
 
@@ -141,16 +146,33 @@ def docker_output(arguments):
     return result.stdout.strip()
 
 
-def verify_stack(project):
+def verify_stack(project, base_url):
     validate_project(project)
-    # Inspect labels only, never environment variables (which contain secrets).
+    port = validate_origin(base_url)
+    # Select public metadata only; never inspect environment variables/secrets.
     for service in ("redis", "backend", "frontend"):
-        output = docker_output(["inspect", "--format", "{{json .Config.Labels}}",
+        template = "{{json .Config.Labels}}"
+        if service == "frontend":
+            template = ('{"labels":{{json .Config.Labels}},"image":{{json .Image}},'
+                        '"configuredImage":{{json .Config.Image}},'
+                        '"hostBindings":{{json .HostConfig.PortBindings}},'
+                        '"ports":{{json .NetworkSettings.Ports}}}')
+        output = docker_output(["inspect", "--format", template,
                                 f"{project}-{service}-1"])
-        labels = json.loads(output)
+        metadata = json.loads(output)
+        labels = metadata["labels"] if service == "frontend" else metadata
         require(labels.get("com.docker.compose.project") == project
                 and labels.get("com.docker.compose.service") == service,
                 "container does not belong to the specified test project")
+        if service == "frontend":
+            require(bool(re.fullmatch(r"sha256:[0-9a-f]{64}", metadata.get("image", "")))
+                    and metadata.get("configuredImage", "").startswith("atlas-console:"),
+                    "frontend image identity is missing or unexpected")
+            expected = [{"HostIp": "127.0.0.1", "HostPort": port}]
+            require(all(isinstance(metadata.get(key), dict)
+                        and metadata[key].get("8080/tcp") == expected
+                        for key in ("hostBindings", "ports")),
+                    "base URL must match the specified frontend's exclusive loopback port binding")
 
 
 class CodeReader:
@@ -516,7 +538,7 @@ def main():
     def prepare():
         nonlocal gate
         require(args.report.resolve() != args.credentials_file.resolve(), "report cannot overwrite the credentials file")
-        verify_stack(args.project)
+        verify_stack(args.project, args.base_url)
         gate = Gate(Client(args.base_url), report, args.project, run_id, load_credentials(args.credentials_file))
     if report.scenario("isolated existing stack and private credentials", prepare):
         try:
