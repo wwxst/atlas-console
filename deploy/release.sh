@@ -20,6 +20,8 @@ compose_file="$project_root/deploy/compose.yaml"
 mysql_compose_file="$project_root/deploy/compose.mysql.yaml"
 env_file="${ATLAS_ENV_FILE:-/opt/atlas/.env}"
 state_dir="${ATLAS_RELEASE_DIR:-/opt/atlas/releases}"
+# The same directory must be mounted into the backend, including isolated installs.
+export ATLAS_RELEASE_DIR="$state_dir"
 current="$state_dir/current.env"
 previous="$state_dir/previous.env"
 history_dir="$state_dir/history"
@@ -181,7 +183,9 @@ fi
 # Production deployments must use the exact pair the workflow already tested.
 # Rollbacks do not build new source and intentionally bypass this check.
 test -f "$project_root/backend/pom.xml" || { echo "Monorepo backend directory missing" >&2; exit 1; }
-front_sha="$(git -C "$project_root" rev-parse HEAD)"
+# The bootstrap intentionally leaves its checkout root-owned and group-readable.
+# Trust only this exact checkout, never all repositories via safe.directory=*.
+front_sha="$(git -c safe.directory="$project_root" -C "$project_root" rev-parse HEAD)"
 back_sha="$front_sha"
 if [[ ! "${VERIFIED_FRONTEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||
       ! "${VERIFIED_BACKEND_SHA:-}" =~ ^[a-f0-9]{40}$ ||

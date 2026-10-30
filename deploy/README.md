@@ -15,9 +15,10 @@
 
 生产链路为：**外部访客 → 主机 HTTPS 反向代理 → Docker 网桥网关（172.30.80.1）→ Nginx（固定 172.30.80.10）→ Spring Boot**。
 
-- Compose 专用网段为 `172.30.80.0/24`，网关为 `172.30.80.1`，Nginx 使用固定地址 `172.30.80.10`。后端仅配置 `TRUSTED_PROXY_ADDRESSES=172.30.80.10`；本地开发不配置时完全不信任 `X-Forwarded-For`。如果主机网段与此地址冲突，**必须同时调整 compose、nginx.conf 和可信代理地址**，不能只更改一项。
+- 默认专用网段为 `172.30.80.0/24`，网关为 `172.30.80.1`，Nginx 使用固定地址 `172.30.80.10`。后端仅信任本次 Nginx 地址；本地开发不配置时完全不信任 `X-Forwarded-For`。新安装可用 `--network-prefix` 选择无冲突的私有 /24，Compose 从 `.env` 的 `ATLAS_NETWORK_PREFIX` 同时派生网关、Nginx 地址及后端可信代理；官方 Nginx 入口脚本渲染 `deploy/nginx.conf` 模板。不要只修改其中一个地址。
 - 主机 HTTPS 反向代理**必须覆盖**请求里的 `X-Forwarded-For` 为真实客户端单一 IP，不能追加用户自己传入的同名 Header。例如 Nginx 边缘代理在明确控制好接入链时使用 `proxy_set_header X-Forwarded-For $remote_addr;`。如果边缘代理前还有 CDN，必须由边缘代理验证 CDN 来源并采用受信任的真实 IP 恢复规则，禁止盲目信任任意 Header。
 - 容器内的 Nginx 只信任来自 Docker 网关 `172.30.80.1` 的 `X-Forwarded-For`，恢复出客户端地址后**重新生成单一** `X-Forwarded-For` 给后端。后端只在 TCP 对端恰好为 `172.30.80.10` 且收到合法的单一 IP 时才使用该值，其余场景使用 `request.getRemoteAddr()`。
+- HTTPS 在宝塔终止时，容器 Nginx 仅接受本次网关提供的精确 `http`/`https` 协议头，并将其传给后端；其他来源的协议声明及不合法值被忽略。独立网段使用各自派生地址，以上 IP 是默认值。
 - 主机到容器端口保持 `127.0.0.1:8088`，不能直接公开到全网，否则客户端可能直接绕过负责清理转发头的主机 HTTPS 代理。不要把 Spring Boot 8080 端口公开到 Docker 网段以外。
 - GitHub Actions 的 `deployment-config` 作业会启动**真实 Nginx 容器**，验证两个不同来源 IP 经代理后仍然不同，并验证一个非可信容器伪造 `X-Forwarded-For` 时会被覆盖。Spring Boot 的单元/MockMvc 测试验证可信代理识别和 Redis IP 限流 key 隔离。首次部署时仍需使用实际域名和真实 TLS 代理做端到端演练。
 

@@ -117,7 +117,7 @@ test('deployment-config validates Compose from the single monorepo checkout', ()
 })
 
 test('release script validates one monorepo SHA and does not require a second checkout', () => {
-  assert.ok(release.includes('git -C "$project_root" rev-parse HEAD'))
+  assert.ok(release.includes('git -c safe.directory="$project_root" -C "$project_root" rev-parse HEAD'))
   assert.ok(release.includes('"$VERIFIED_FRONTEND_SHA" != "$VERIFIED_BACKEND_SHA"'))
   assert.ok(!release.includes('workspace/backend/.git'))
 })
