@@ -13,6 +13,8 @@ for (const name of ['--targets', '--credentials-file', '--output']) {
   assert(args.includes(name) && option(name), `Required option: ${name}`)
 }
 const targets = JSON.parse(await readFile(option('--targets'), 'utf8'))
+assert(Array.isArray(targets) && targets.length > 0, 'At least one HTTPS target is required')
+assert.equal(new Set(targets.map(target => target.mode)).size, targets.length, 'Evidence labels must be unique')
 const credentials = JSON.parse(await readFile(option('--credentials-file'), 'utf8'))
 const output = path.resolve(option('--output'))
 await mkdir(output, { recursive: true })
@@ -27,8 +29,22 @@ try {
     const page = await context.newPage()
     const errors = []
     const apiFailures = []
+    const networkFailures = []
+    let apiRequests = 0
     let authenticated = false
     page.on('pageerror', () => errors.push('Uncaught browser JavaScript exception'))
+    page.on('console', message => {
+      if (message.type() === 'error') errors.push('Browser console error')
+    })
+    page.on('request', request => {
+      const url = new URL(request.url())
+      if (url.protocol === 'http:') networkFailures.push('Insecure HTTP request from HTTPS page')
+      if (url.pathname.startsWith('/api/') || ['fetch', 'xhr'].includes(request.resourceType())) {
+        apiRequests += 1
+        if (url.origin !== origin) networkFailures.push('Cross-origin application request')
+      }
+    })
+    page.on('requestfailed', request => networkFailures.push({ path: new URL(request.url()).pathname, error: request.failure()?.errorText }))
     page.on('response', (response) => {
       if (authenticated && new URL(response.url()).pathname.startsWith('/api/') && response.status() >= 400) {
         apiFailures.push({ path: new URL(response.url()).pathname, status: response.status() })
@@ -73,7 +89,9 @@ try {
         })
       }
       await check('storage provider tabs load without external credentials', async () => {
-        for (const tab of await page.getByRole('tab').all()) {
+        const tabs = await page.getByRole('tab').all()
+        assert(tabs.length > 0, 'No storage provider tabs were rendered')
+        for (const tab of tabs) {
           const label = await tab.innerText()
           await tab.click()
           // The router commits the selected tab asynchronously after the click.
@@ -107,14 +125,21 @@ try {
         await page.screenshot({ path: path.join(output, `${mode}-authenticated.png`), fullPage: true })
       })
       await check('same-origin API and browser error checks', async () => {
+        await page.waitForLoadState('networkidle')
+        assert(apiRequests > 0, 'No application API requests were observed')
         assert.deepEqual(errors, [])
         assert.deepEqual(apiFailures, [])
+        assert.deepEqual(networkFailures, [])
       })
       record.status = 'pass'
     } catch {
       record.status = 'fail'
       await page.screenshot({ path: path.join(output, `${mode}-failure.png`), fullPage: true }).catch(() => {})
     } finally {
+      record.network = structuredClone({ apiRequests, browserErrors: errors, failedApiResponses: apiFailures, networkViolations: networkFailures })
+      // Closing this test's page must not turn deliberate teardown cancellations
+      // into late failures after the assertions and evidence snapshot.
+      for (const event of ['pageerror', 'console', 'request', 'requestfailed', 'response']) page.removeAllListeners(event)
       authenticated = false
       await context.close()
       await writeFile(path.join(output, 'browser-results.json'), JSON.stringify(results, null, 2))
