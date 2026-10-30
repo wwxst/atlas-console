@@ -11,11 +11,11 @@ cleanup() {
 }
 trap cleanup EXIT
 git -C "$repo" archive HEAD | tar -x -C "$work"
-cp "$repo/Dockerfile" "$work/Dockerfile"
+cp "$repo/frontend/Dockerfile" "$work/frontend/Dockerfile"
 # Installer checkout permissions are private. Public assets must still be served
 # by the image's unprivileged Nginx worker, independently of checkout umask.
-find "$work/public" -type f -exec chmod 0640 {} +
-docker build -t "$image" "$work"
+find "$work/frontend/public" -type f -exec chmod 0640 {} +
+docker build -t "$image" "$work/frontend"
 container_id="$(docker create --name "$container" --network none "$image")"
 docker start "$container_id" >/dev/null
 ready=false

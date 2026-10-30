@@ -2,6 +2,10 @@
 
 This document is the canonical owner for Atlas Console architecture decisions.
 
+## Frontend project boundary
+
+The frontend is an independent project rooted at `frontend/`. Its package manifest, lockfile, Vite/TypeScript configuration, source, static assets, unit tests, and browser tests live together under that directory. Run frontend package commands from `frontend/`; the backend remains a sibling project in `backend/`.
+
 ## Goals
 
 - Keep product features easy to locate and change.
@@ -43,7 +47,7 @@ Do not mirror Query data into Zustand. Do not put every local value into a globa
 ## Module Boundaries
 
 ```text
-src/
+frontend/src/
 |-- features/       Business-domain data and logic
 |-- layouts/        Application shell and route-independent layout
 |-- pages/          Route entry components
@@ -57,7 +61,7 @@ src/
 
 Dependency direction is `pages -> features/ui -> services`. Infrastructure must not import pages. Shared UI must not import business features.
 
-`PaginatedListPanel` in `src/ui/index.tsx` owns the shared list card, toolbar layout, table scroll container, content-area minimum height, and fixed-height pagination footer used by ordinary-user and system-user pages. Pages provide their filters, table content, pagination values, and URL update callback; requests and row details stay in the pages and features.
+`PaginatedListPanel` in `frontend/src/ui/index.tsx` owns the shared list card, toolbar layout, table scroll container, content-area minimum height, and fixed-height pagination footer used by ordinary-user and system-user pages. Pages provide their filters, table content, pagination values, and URL update callback; requests and row details stay in the pages and features.
 
 Both user pages use `ListFilters` for keyword search, status selection, and reset, and `DataTable` for table density and 14px headers. Each page sets the pagination total unit to `个用户`, so the footer displays `共 N 个用户` at the bottom left; the filter toolbar does not repeat the count. Pages keep ownership of column widths, rows, request state, and URL updates. `Avatar` provides shared neutral placeholders or images (40px in rows, 50px in details). User rows show the name without a secondary account ID. Avatar colors follow the active theme.
 
@@ -87,7 +91,7 @@ AppLayout
 
 The sidebar's `系统设置` group expands to `认证配置` at `/settings` and `存储配置` at `/settings/storage`. The group uses a native disclosure button; child routes retain their own active state and labeled icons when the sidebar is collapsed. Existing `/settings` links continue to open authentication settings.
 
-`StorageSettingsPage` reads and saves the effective `storageType` (`local` or `aliyun`) through `src/services/storage.ts` and `/api/sys-user/storage/settings`. Thumbnail and watermark controls remain omitted. The Alibaba tab uses `StorageProviderPanel` to query credential status (`configured` only) and server-paginated spaces (`page`, `pageSize`, `records`, `total`). Numeric space IDs and `bucketName`, `regionId`, nullable `accessDomain`, `isDefault`, and server timestamps follow the backend contract. Binding, synchronization, default selection, domain updates, and deletion use durable storage APIs; no preview rows or client-generated IDs are used. Query keys include pagination, preventing old page responses from replacing the active page. Initial errors retain retry controls while request details appear only in the root Chinese error Toast. Pending actions disable conflicting controls; failed saves keep form input, and successful actions refresh server data and show concise success status.
+`StorageSettingsPage` reads and saves the effective `storageType` (`local` or `aliyun`) through `frontend/src/services/storage.ts` and `/api/sys-user/storage/settings`. Thumbnail and watermark controls remain omitted. The Alibaba tab uses `StorageProviderPanel` to query credential status (`configured` only) and server-paginated spaces (`page`, `pageSize`, `records`, `total`). Numeric space IDs and `bucketName`, `regionId`, nullable `accessDomain`, `isDefault`, and server timestamps follow the backend contract. Binding, synchronization, default selection, domain updates, and deletion use durable storage APIs; no preview rows or client-generated IDs are used. Query keys include pagination, preventing old page responses from replacing the active page. Initial errors retain retry controls while request details appear only in the root Chinese error Toast. Pending actions disable conflicting controls; failed saves keep form input, and successful actions refresh server data and show concise success status.
 
 The add action stays available before credentials exist and opens one centered form containing AccessKeyId, masked AccessKeySecret, Bucket name, region, and public-read (default recommended) and public-read-write radio options. New credentials are required when none are configured; otherwise both fields may stay blank to reuse the saved shared credentials. A supplied pair is submitted with the Bucket binding in one request; the backend validates the candidate credentials and binding before persisting the shared credentials. A partial pair is rejected. Successful binding closes the editor and clears the draft; failed binding retains the space and credential draft for retry. Custom domains are edited separately through the row action. The drawers omit auxiliary explanatory paragraphs; the list footer only renders active loading, retry, or success feedback. Synchronization still requires configured credentials.
 
@@ -96,7 +100,7 @@ The standalone credentials drawer collects both keys, never reads saved keys, an
 ## Data Flow
 
 1. A page or feature calls a typed query or mutation hook.
-2. The feature calls a service client such as `src/services/http.ts`.
+2. The feature calls a service client such as `frontend/src/services/http.ts`.
 3. TanStack Query owns remote loading, error, cache, and invalidation state.
 4. The page renders through shared UI primitives or feature-local compositions.
 
@@ -104,16 +108,16 @@ Mock data may implement the same typed async contract during early development. 
 
 ### Request Error Flow
 
-- Axios transport failures are normalized by `src/services/api.ts` and published by `src/services/http.ts` to the shared request-error channel.
+- Axios transport failures are normalized by `frontend/src/services/api.ts` and published by `frontend/src/services/http.ts` to the shared request-error channel.
 - HTTP 200 responses with a failed backend code are published by `requireApiData` through the same channel before the original error is rethrown to TanStack Query.
 - `RequestErrorToast` is mounted at the application root, so login and protected routes use the same global Chinese error surface.
 - Feature pages retain loading, failure, and retry controls but do not render transport-specific error strings; the global Toast owns that feedback.
 
-The system-user workflow follows `../backend/docs/api.md`. `src/features/auth/api.ts` owns login and current-system-user requests, while `src/features/systemUsers/api.ts` owns the paginated system-user query. The protected route validates the session through `/me`, with Access/Refresh renewal handled in the transport layer. `SystemUsersPage` sends URL-owned `keyword`, `status`, and `page` values to the backend and keeps only dialog visibility and the selected row in local component state.
+The system-user workflow follows `../backend/docs/api.md`. `frontend/src/features/auth/api.ts` owns login and current-system-user requests, while `frontend/src/features/systemUsers/api.ts` owns the paginated system-user query. The protected route validates the session through `/me`, with Access/Refresh renewal handled in the transport layer. `SystemUsersPage` sends URL-owned `keyword`, `status`, and `page` values to the backend and keeps only dialog visibility and the selected row in local component state.
 
 `RequireAdmin` gates the protected tree by refresh-token identity. Initial entry and a changed refresh token show the session-check state, unmount any previous account's pages and drafts, cancel requests, and clear query data before mounting a fresh account observer and validating `/me`. An obsolete cleanup cannot mark a later session ready. Access-token renewal within the same refresh-token session preserves the mounted tree. Missing both tokens redirects to login. Global keyword submission and clearing remove the current `page` parameter while preserving page size, status, and sorting.
 
-`/settings` uses `src/features/settings/api.ts` for the ordinary-user phone and email authentication channels. Query owns the four saved server flags; each channel form owns its unsaved draft. PUT sends both `enabled` and `codeEnabled` for one channel, checks the business code even when response data is null, updates that channel's cached flags on success, then refetches server state. Saving is serialized across the two forms. The page blocks closing the final enabled channel based on saved server state; the backend remains authoritative for concurrent updates. A disabled channel retains its code flag. Failed saves preserve the draft, use the global request-error Toast, and refetch current configuration to reconcile concurrent or uncertain writes; query failure exposes retry and disables editing until a successful read. No organization, notification, or system-user account settings are presented without corresponding backend APIs.
+`/settings` uses `frontend/src/features/settings/api.ts` for the ordinary-user phone and email authentication channels. Query owns the four saved server flags; each channel form owns its unsaved draft. PUT sends both `enabled` and `codeEnabled` for one channel, checks the business code even when response data is null, updates that channel's cached flags on success, then refetches server state. Saving is serialized across the two forms. The page blocks closing the final enabled channel based on saved server state; the backend remains authoritative for concurrent updates. A disabled channel retains its code flag. Failed saves preserve the draft, use the global request-error Toast, and refetch current configuration to reconcile concurrent or uncertain writes; query failure exposes retry and disables editing until a successful read. No organization, notification, or system-user account settings are presented without corresponding backend APIs.
 
 ## Reference Projects
 

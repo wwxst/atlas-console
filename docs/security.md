@@ -6,11 +6,12 @@
 - 后端在每次受保护请求验证 JWT 签名、类型、时间与对应 Redis Session。管理端同时校验账号状态和 `authVersion`。退出登录删除 Session 后，旧 Access/Refresh Token 均不可继续访问；已经通过校验的在途请求不被追溯撤回。
 - Redis 故障时无法验证会话，不得放行请求。代价是所有已认证请求都依赖 Redis 可用性和查询延迟，部署时必须监控 Redis、连接池及接口 P95/P99。
 - `sessionStorage` **不是**针对 XSS 的完整防护：同源恶意脚本仍可能读取 Token。部署层还需要严格 CSP、依赖审计、禁止不可信 HTML 渲染，并避免将 Token 写入日志、URL 或错误上报。
-- `deploy/nginx.conf` 提供静态站点与 API 同源代理以及 CSP、安全响应头的部署样例。只有生产服务器实际使用对应配置，响应头才会生效；将 CSP 应用于你的网关时，应先检查实际加载的脚本、字体和图像资源。正式 HTTPS 站点还应在 TLS 入口设置 HSTS。
+- `frontend/nginx.conf` 提供静态站点与 API 同源代理以及 CSP、安全响应头的部署样例。只有生产服务器实际使用对应配置，响应头才会生效；将 CSP 应用于你的网关时，应先检查实际加载的脚本、字体和图像资源。正式 HTTPS 站点还应在 TLS 入口设置 HSTS。
 
 ## 验证方式
 
 ```bash
+cd frontend
 npm ci
 npm test
 npm run lint

@@ -6,7 +6,7 @@
 
 - 后台超级管理员（系统用户 ID=1）在「版本与更新」点击一键更新。
 - 后端调用 GitHub Actions API，只允许触发 `wwxst/atlas-console` 中固定的 `deploy-production.yml`，引用 `main`。
-- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端和后端测试都检出本次工作流的同一个 `github.sha`；后端位于 `backend/` 子目录。生产 Runner 只检出这一份已验证的仓库提交，Docker Compose 从根目录前端和 `backend/` 构建镜像，并更新 Nginx、Spring Boot、Redis，以及可选的 Docker MySQL。`ATLAS_DB_MODE=docker` 使用 `compose.mysql.yaml`；`ATLAS_DB_MODE=external` 使用宝塔/外部 MySQL，不启动 MySQL 容器。
+- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端和后端测试都检出本次工作流的同一个 `github.sha`，分别位于兄弟目录 `frontend/` 和 `backend/`。生产 Runner 只检出这一份已验证的仓库提交，Docker Compose 从这两个独立目录构建镜像，并更新 Nginx、Spring Boot、Redis，以及可选的 Docker MySQL。`ATLAS_DB_MODE=docker` 使用 `compose.mysql.yaml`；`ATLAS_DB_MODE=external` 使用宝塔/外部 MySQL，不启动 MySQL 容器。
 - 前端查看 Actions 的最近执行状态，**不会直接执行 Shell、传递自定义分支或把 GitHub Token 暴露到浏览器**。
 - 默认禁用自动更新。没有服务器、Runner 和凭据时，按钮保持禁用。
 - **业务数据持久化**：Docker MySQL 模式下 MySQL、Redis、上传目录使用 Docker 命名卷；外部/宝塔 MySQL 的数据由宿主机数据库管理，Redis 和上传目录仍使用命名卷。重启容器不会清空这些数据。但**更新不等于备份**，操作前必须另行备份数据库和上传目录。
@@ -15,7 +15,7 @@
 
 生产链路为：**外部访客 → 主机 HTTPS 反向代理 → Docker 网桥网关（172.30.80.1）→ Nginx（固定 172.30.80.10）→ Spring Boot**。
 
-- 默认专用网段为 `172.30.80.0/24`，网关为 `172.30.80.1`，Nginx 使用固定地址 `172.30.80.10`。后端仅信任本次 Nginx 地址；本地开发不配置时完全不信任 `X-Forwarded-For`。新安装可用 `--network-prefix` 选择无冲突的私有 /24，Compose 从 `.env` 的 `ATLAS_NETWORK_PREFIX` 同时派生网关、Nginx 地址及后端可信代理；官方 Nginx 入口脚本渲染 `deploy/nginx.conf` 模板。不要只修改其中一个地址。
+- 默认专用网段为 `172.30.80.0/24`，网关为 `172.30.80.1`，Nginx 使用固定地址 `172.30.80.10`。后端仅信任本次 Nginx 地址；本地开发不配置时完全不信任 `X-Forwarded-For`。新安装可用 `--network-prefix` 选择无冲突的私有 /24，Compose 从 `.env` 的 `ATLAS_NETWORK_PREFIX` 同时派生网关、Nginx 地址及后端可信代理；官方 Nginx 入口脚本渲染 `frontend/nginx.conf` 模板。不要只修改其中一个地址。
 - 主机 HTTPS 反向代理**必须覆盖**请求里的 `X-Forwarded-For` 为真实客户端单一 IP，不能追加用户自己传入的同名 Header。例如 Nginx 边缘代理在明确控制好接入链时使用 `proxy_set_header X-Forwarded-For $remote_addr;`。如果边缘代理前还有 CDN，必须由边缘代理验证 CDN 来源并采用受信任的真实 IP 恢复规则，禁止盲目信任任意 Header。
 - 容器内的 Nginx 只信任来自 Docker 网关 `172.30.80.1` 的 `X-Forwarded-For`，恢复出客户端地址后**重新生成单一** `X-Forwarded-For` 给后端。后端只在 TCP 对端恰好为 `172.30.80.10` 且收到合法的单一 IP 时才使用该值，其余场景使用 `request.getRemoteAddr()`。
 - HTTPS 在宝塔终止时，容器 Nginx 仅接受本次网关提供的精确 `http`/`https` 协议头，并将其传给后端；其他来源的协议声明及不合法值被忽略。独立网段使用各自派生地址，以上 IP 是默认值。
@@ -114,4 +114,4 @@ gh api repos/wwxst/atlas-console/actions/runs/RUN_ID --jq '{status, conclusion}'
 
 检查 Actions 运行记录：`https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml`。
 
-生产服务器运行 `docker compose --env-file /opt/atlas/.env -f <runner-workspace>/atlas-console/deploy/compose.yaml ps` 查看容器状态。Docker Compose 的构建上下文使用同一仓库中的根目录前端与 `backend/` 子目录；请使用正式工作流来部署，不要从任意目录直接执行。
+生产服务器运行 `docker compose --env-file /opt/atlas/.env -f <runner-workspace>/atlas-console/deploy/compose.yaml ps` 查看容器状态。Docker Compose 的构建上下文使用同一仓库中的 `frontend/` 与 `backend/` 兄弟目录；请使用正式工作流来部署，不要从任意目录直接执行。

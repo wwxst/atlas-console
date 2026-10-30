@@ -37,7 +37,7 @@ created_backend=true
 docker run -d --name "$frontend" --network "$network" --ip "$prefix.10" \
   -p 127.0.0.1::8080 \
   -e ATLAS_NETWORK_GATEWAY="$prefix.1" -e NGINX_ENVSUBST_FILTER='^ATLAS_' \
-  -v "$root/deploy/nginx.conf:/etc/nginx/templates/default.conf.template:ro" \
+  -v "$root/frontend/nginx.conf:/etc/nginx/templates/default.conf.template:ro" \
   nginx:1.27-alpine >/dev/null
 created_frontend=true
 port="$(docker port "$frontend" 8080/tcp | awk -F: 'END {print $NF}')"

@@ -51,7 +51,7 @@ services:
 
   frontend:
     build:
-      context: ..
+      context: ../frontend
     image: atlas-console:${ATLAS_FRONTEND_TAG:-local}
     restart: unless-stopped
     environment:
