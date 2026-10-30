@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Integration test with real Nginx (frontend + upstream) and two external IPs.
 set -Eeuo pipefail
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "$script_dir/.." && pwd)"
 network="atlas-ip-ci-${GITHUB_RUN_ID:-local}-$$"
 frontend="atlas-proxy-ci-$$"
 backend="atlas-ip-echo-ci-$$"
@@ -27,7 +29,7 @@ docker run -d --name "$backend" --network "$network" --network-alias backend \
   -v "$tmp/upstream.conf:/etc/nginx/conf.d/default.conf:ro" nginx:1.27-alpine >/dev/null
 docker run -d --name "$frontend" --network "$network" --ip 172.30.80.10 \
   -p 127.0.0.1:18088:8080 \
-  -v "$(pwd)/atlas-console/deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+  -v "$repo_root/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
   nginx:1.27-alpine >/dev/null
 
 for attempts in $(seq 1 20); do

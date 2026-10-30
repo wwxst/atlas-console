@@ -98,6 +98,17 @@ test('deployment uses Flyway for a fresh schema and keeps legacy baseline opt-in
   assert.ok(!backend.includes('web_project.sql'))
 })
 
+test('frontend and backend remain sibling Docker build contexts', () => {
+  assert.ok(compose.includes('context: ../frontend'))
+  assert.ok(compose.includes('context: ../backend'))
+  const frontendDockerfile = readFileSync(new URL('../frontend/Dockerfile', import.meta.url), 'utf8')
+  const frontendNginx = readFileSync(new URL('../frontend/nginx.conf', import.meta.url), 'utf8')
+  const frontendManifest = readFileSync(new URL('../frontend/package.json', import.meta.url), 'utf8')
+  assert.ok(frontendDockerfile.includes('COPY nginx.conf /etc/nginx/conf.d/default.conf'))
+  assert.ok(frontendNginx.includes('location /api/'))
+  assert.ok(frontendManifest.includes('"name": "atlas-console"'))
+})
+
 test('deployment supports bundled MySQL and an existing external database', () => {
   assert.ok(compose.includes('ATLAS_DB_URL'))
   assert.ok(compose.includes('host.docker.internal:host-gateway'))
@@ -108,6 +119,12 @@ test('deployment supports bundled MySQL and an existing external database', () =
 })
 
 const ci = readFileSync(new URL('../.github/workflows/frontend-quality.yml', import.meta.url), 'utf8')
+test('frontend CI runs from the frontend project root and caches its lockfile', () => {
+  assert.ok(ci.includes('cache-dependency-path: frontend/package-lock.json'))
+  assert.ok(ci.includes('working-directory: frontend'))
+  assert.ok(ci.includes('frontend/test-results/'))
+})
+
 test('deployment-config validates Compose from the single monorepo checkout', () => {
   const start = ci.indexOf('  deployment-config:')
   assert.ok(start !== -1)
