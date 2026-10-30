@@ -21,6 +21,11 @@ class Stub(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
+        if self.headers.get("Authorization") in self.server.revoked:
+            self.send_response(401)
+            self.end_headers()
+            self.wfile.write(b'{"code":40102,"msg":null,"data":null}')
+            return
         self.send_response(302 if self.path == "/redirect" else 200)
         if self.path == "/redirect":
             self.send_header("Location", "/ok")
@@ -33,6 +38,19 @@ class Stub(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        if self.path in ("/api/sys-user/auth/logout", "/api/user/auth/logout"):
+            token = self.headers.get("Authorization")
+            revoked = token in self.server.revoked
+            self.server.revoked.add(token)
+            self.send_response(401 if revoked else 200)
+            self.end_headers()
+            self.wfile.write(b'{"code":40102,"data":null}' if revoked else b'{"code":200,"data":null}')
+            return
+        if self.path in ("/api/sys-user/auth/refresh", "/api/user/auth/refresh"):
+            self.send_response(401)
+            self.end_headers()
+            self.wfile.write(b'{"code":40104,"data":null}')
+            return
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b'{"code":50000,"msg":"SECRET-response","data":null}')
@@ -42,6 +60,7 @@ class LiveApiSelfTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), Stub)
+        cls.server.revoked = set()
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
 
@@ -165,6 +184,15 @@ class LiveApiSelfTest(unittest.TestCase):
             gate.check("specific broken endpoint", "GET", "/business-failure")
         self.assertEqual(report.data["scenarios"], [{"name": "specific broken endpoint", "status": "fail",
                          "reason": "expected HTTP/business 200/200, got 200/50000"}])
+
+    def test_logout_checks_http_authentication_before_repeated_controller_call(self):
+        report = self.mod.Report("test-run", "atlas-acceptance-test")
+        gate = self.mod.Gate(self.mod.Client(self.base), report, "atlas-acceptance-test", "test-run", {})
+        self.assertTrue(callable(getattr(gate, "logout_pair", None)), "shared HTTP logout contract verifier is missing")
+        for kind in ("sys-user", "user"):
+            pair = {"accessToken": "stub-access-" + kind, "refreshToken": "stub-refresh-" + kind}
+            gate.logout_pair(kind, pair)
+        self.assertTrue(all(item["status"] == "pass" for item in report.data["scenarios"]))
 
     def test_cli_real_http_business_failure_exits_nonzero_without_secrets(self):
         with tempfile.TemporaryDirectory() as directory:

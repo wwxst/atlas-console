@@ -321,9 +321,7 @@ class Gate:
         self.check("enable owned system user", "PATCH", path + "/status", {"status": 1}, self.token)
         self.reject_pair("sys-user", device, "system reenable keeps old sessions invalid")
         device = self.login_system(username, new_password)
-        self.check("system logout", "POST", "/api/sys-user/auth/logout", token=device["accessToken"])
-        self.check("system logout is idempotent", "POST", "/api/sys-user/auth/logout", token=device["accessToken"])
-        self.reject_pair("sys-user", device, "system logout")
+        self.logout_pair("sys-user", device)
         device = self.login_system(username, new_password)
         self.check("delete owned system user", "DELETE", path, token=self.token)
         del self.owned_sys[account["id"]]
@@ -337,6 +335,15 @@ class Gate:
         self.check(reason + " rejects access", "GET", path, token=pair["accessToken"], status=401, code=40102)
         self.check(reason + " rejects refresh", "POST", "/api/" + kind + "/auth/refresh",
                    {"refreshToken": pair["refreshToken"]}, status=401, code=40104)
+
+    def logout_pair(self, kind, pair):
+        path = "/api/" + kind + "/auth/logout"
+        self.check(kind + " logout", "POST", path, token=pair["accessToken"])
+        # Session deletion is idempotent, but the second HTTP call cannot pass
+        # AccessSessionValidator and therefore never reaches the controller.
+        self.check(kind + " revoked token cannot logout again", "POST", path,
+                   token=pair["accessToken"], status=401, code=40102)
+        self.reject_pair(kind, pair, kind + " logout")
 
     def set_channel(self, channel, enabled, code_enabled, name):
         self.check(name, "PUT", "/api/sys-user/auth-channels/" + channel,
@@ -401,9 +408,7 @@ class Gate:
         self.check("ordinary role cannot edit managed user", "PUT", path,
                    {"nickname": "forbidden", "phone": None, "email": email}, pair["accessToken"], status=403, code=40301)
         self.check("disable run-owned ordinary user", "PATCH", path + "/status", {"status": 0}, self.token)
-        self.check("disabled ordinary profile denied", "GET", "/api/user/me", token=pair["accessToken"], status=403, code=40303)
-        self.check("disabled ordinary refresh denied", "POST", "/api/user/auth/refresh",
-                   {"refreshToken": pair["refreshToken"]}, status=401, code=40104)
+        self.reject_pair("user", pair, "ordinary disable rejects issued tokens")
         self.check("disabled ordinary login denied", "POST", "/api/user/auth/login",
                    {"target": email, "targetType": "EMAIL", "password": password}, status=403, code=40303)
         for _ in range(2):
@@ -452,9 +457,7 @@ class Gate:
                              token=self.token)
         self.ensure("retained ordinary sentinel persisted", any(row["id"] == user_id
                     and row["nickname"] == "live-" + self.run_id for row in listing["records"]))
-        self.check("ordinary logout", "POST", "/api/user/auth/logout", token=pair["accessToken"])
-        self.check("ordinary logout idempotent", "POST", "/api/user/auth/logout", token=pair["accessToken"])
-        self.reject_pair("user", pair, "ordinary logout")
+        self.logout_pair("user", pair)
 
     def sentinel(self):
         account = self.create_system("sent" + uuid.uuid4().hex[:14], "live-" + self.run_id,

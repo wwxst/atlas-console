@@ -71,6 +71,7 @@
 - Refresh Token 在同一个 Session 生命周期内保持不变，不做轮换。
 - 退出登录删除当前 Redis Session；已签发的 Access Token 和 Refresh Token 在后续请求中立即失效（已经通过鉴权的并发在途请求不被追溯中断）。所有受保护请求均检查会话是否仍存在；Redis 不可用时不能绕过校验。
 - 修改或重置密码会递增 `password_version`，旧 Refresh Token 因版本不一致无法续期。
+- 普通用户 Access Token 每次请求也核对账号状态和 `passwordVersion`。禁用或改密后，已签发 Token 在进入业务接口前返回 HTTP `401` / `40102`；禁用账号的匿名登录仍返回 HTTP `403` / `40303`。
 
 ### 超级管理员
 
@@ -148,7 +149,7 @@ POST /api/sys-user/auth/logout
 Authorization: Bearer <accessToken>
 ```
 
-无请求体。删除当前会话，接口保持幂等。成功响应 `data` 为 `null`。
+无请求体。删除当前会话，成功响应 `data` 为 `null`。Session 删除操作本身幂等；HTTP 接口仍受 Access Token 鉴权保护，同一 Token 退出后再次调用返回 HTTP `401` / `40102`。
 
 ### 当前系统用户
 
@@ -326,7 +327,7 @@ Content-Type: application/json
 仅 `SCOPE_admin` 可调用。`status` 必填，`0` 表示停用，`1` 表示启用；只修改账号状态，
 不修改昵称、联系方式、密码、密码版本、头像、用户号码和创建时间。
 成功返回 `code: 200, data: null`，重复提交相同状态成功。非法状态或用户不存在返回 `40000`。
-停用后登录、个人资料接口和 Refresh 续期按既有禁用账号规则拒绝；启用后可重新登录。
+停用后匿名登录返回 HTTP `403` / `40303`，已签发 Access Token 访问个人资料等受保护接口返回 HTTP `401` / `40102`，Refresh 续期返回 HTTP `401` / `40104`；启用后可重新登录。
 接口不主动删除 Redis 会话或修改密码版本，与状态修改重叠的认证请求沿用现有状态检查规则。
 
 ## 渠道配置
@@ -523,7 +524,7 @@ POST /api/user/auth/logout
 Authorization: Bearer <accessToken>
 ```
 
-无请求体，删除当前会话，接口保持幂等。
+无请求体，删除当前会话。Session 删除操作本身幂等；同一 Token 退出后再次请求该受保护 HTTP 接口返回 `401` / `40102`。
 
 ### 个人资料
 
@@ -576,7 +577,7 @@ Authorization: Bearer <accessToken>
 Content-Type: application/json
 ```
 
-请求字段与忘记密码相同（`target`、`targetType`、`code`、`newPassword`），但 `target` 必须属于当前用户。修改成功后旧 Refresh Token 失效。
+请求字段与忘记密码相同（`target`、`targetType`、`code`、`newPassword`），但 `target` 必须属于当前用户。修改成功后旧 Access Token 和 Refresh Token 均失效，分别返回 `40102` 和 `40104`。
 
 ### 换绑手机号
 
