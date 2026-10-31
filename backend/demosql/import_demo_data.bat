@@ -10,6 +10,7 @@ if not defined DB_NAME set "DB_NAME=web_project"
 if not defined DB_USERNAME set "DB_USERNAME=atlas"
 if not defined DB_PASSWORD set "DB_PASSWORD=123456"
 set "PGPASSWORD=%DB_PASSWORD%"
+set "PGOPTIONS=-c TimeZone=UTC"
 
 set "PSQL="
 if defined PSQL_BIN if exist "%PSQL_BIN%" set "PSQL=%PSQL_BIN%"

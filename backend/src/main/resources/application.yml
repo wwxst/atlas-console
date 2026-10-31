@@ -13,7 +13,7 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/web_project}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/web_project?options=-c%20TimeZone%3DUTC}
     username: ${DB_USERNAME:atlas}
     password: ${DB_PASSWORD:123456}
 

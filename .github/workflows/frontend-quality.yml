@@ -74,7 +74,7 @@ jobs:
       - name: Validate external PostgreSQL Compose mode
         run: |
           cat > /tmp/atlas-external.env <<'ENV'
-          ATLAS_DB_URL=jdbc:postgresql://host.docker.internal:5432/web_project
+          ATLAS_DB_URL=jdbc:postgresql://host.docker.internal:5432/web_project?options=-c%20TimeZone%3DUTC
           ATLAS_DB_USERNAME=atlas
           ATLAS_DB_PASSWORD=ci_external_only
           JWT_SECRET=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=

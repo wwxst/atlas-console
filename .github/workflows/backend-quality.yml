@@ -28,10 +28,10 @@ jobs:
           --health-cmd="redis-cli ping"
           --health-interval=5s --health-timeout=3s --health-retries=10
     env:
-      DB_URL: jdbc:postgresql://127.0.0.1:5432/web_project
+      DB_URL: jdbc:postgresql://127.0.0.1:5432/web_project?options=-c%20TimeZone%3DUTC
       DB_USERNAME: atlas
       DB_PASSWORD: ci_only_password
-      ATLAS_POSTGRES_TEST_URL: jdbc:postgresql://127.0.0.1:5432/web_project
+      ATLAS_POSTGRES_TEST_URL: jdbc:postgresql://127.0.0.1:5432/web_project?options=-c%20TimeZone%3DUTC
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
       JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=

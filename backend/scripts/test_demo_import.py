@@ -22,6 +22,7 @@ class DemoImportTest(unittest.TestCase):
                         DB_PORT=self.env.get("DB_PORT", "5432"),
                         DB_USERNAME=self.env.get("DB_USERNAME", "postgres"))
         self.env["PGPASSWORD"] = self.env.get("DB_PASSWORD", "123456")
+        self.env["PGOPTIONS"] = "-c TimeZone=UTC"
         self.workspace = tempfile.TemporaryDirectory(prefix="atlas demo test ")
         self.addCleanup(self.workspace.cleanup)
         self.directory = Path(self.workspace.name)

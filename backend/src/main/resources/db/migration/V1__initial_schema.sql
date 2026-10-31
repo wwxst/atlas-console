@@ -12,8 +12,9 @@ CREATE TABLE sys_user (
     auth_version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT LOCALTIMESTAMP,
     updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT LOCALTIMESTAMP,
-    CONSTRAINT uk_sys_user_username UNIQUE (username)
 );
+-- Preserve MySQL's default case-insensitive username uniqueness and lookup behavior.
+CREATE UNIQUE INDEX uk_sys_user_username ON sys_user (LOWER(username));
 CREATE INDEX idx_sys_user_avatar_file_id ON sys_user (avatar_file_id);
 
 INSERT INTO sys_user (username, password, nickname, status)

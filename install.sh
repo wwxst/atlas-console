@@ -187,7 +187,7 @@ if [[ "$DB_MODE" == external ]]; then
   IFS= read -r -s -p 'PostgreSQL password: ' ATLAS_DB_PASSWORD < /dev/tty
   printf '\n'
   [[ -n "$ATLAS_DB_PASSWORD" && "$ATLAS_DB_PASSWORD" != *$'\n'* && "$ATLAS_DB_PASSWORD" != *$'\r'* ]] || fail "Password must be non-empty and cannot contain newlines."
-  ATLAS_DB_URL="jdbc:postgresql://$db_host:$db_port/$db_name"
+  ATLAS_DB_URL="jdbc:postgresql://$db_host:$db_port/$db_name?options=-c%20TimeZone%3DUTC"
   ATLAS_DB_USERNAME="$db_user"
 fi
 

@@ -35,8 +35,8 @@
         <where>
             <if test="keyword != null and keyword != ''">
                 AND (
-                username LIKE CONCAT('%', #{keyword}, '%')
-                OR nickname LIKE CONCAT('%', #{keyword}, '%')
+                username ILIKE CONCAT('%', #{keyword}, '%')
+                OR nickname ILIKE CONCAT('%', #{keyword}, '%')
                 )
             </if>
 
@@ -52,7 +52,7 @@
         SELECT
         <include refid="SysUserColumns"/>
         FROM sys_user
-        WHERE username = #{username}
+        WHERE LOWER(username) = LOWER(#{username})
         LIMIT 1
     </select>
 

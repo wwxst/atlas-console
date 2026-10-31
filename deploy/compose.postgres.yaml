@@ -23,7 +23,7 @@ services:
 
   backend:
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/web_project
+      DB_URL: jdbc:postgresql://postgres:5432/web_project?options=-c%20TimeZone%3DUTC
       DB_USERNAME: atlas
       DB_PASSWORD: ${ATLAS_DB_PASSWORD:?Set ATLAS_DB_PASSWORD}
     depends_on:

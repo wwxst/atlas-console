@@ -203,10 +203,12 @@ class MapperIntegrationTest {
     void sysUserListExcludesPasswordWhileCredentialLookupRetainsIt() {
         SysUser credentials = sysUserMapper.selectByUsername("admin");
         assertNotNull(credentials.getPassword());
+        assertEquals(credentials.getId(), sysUserMapper.selectByUsername("ADMIN").getId(),
+                "Username lookup preserves the previous case-insensitive database behavior");
         assertEquals(1L, credentials.getId());
         assertEquals(0L, credentials.getAuthVersion());
         assertEquals(credentials.getId(), sysUserMapper.selectById(credentials.getId()).getId());
-        assertEquals(1L, sysUserMapper.countByCondition("admin", 1));
+        assertEquals(1L, sysUserMapper.countByCondition("ADMIN", 1));
         SysUser listed = sysUserMapper.selectPageByCondition("admin", 1, 0L, 10, null).getFirst();
         assertEquals(credentials.getId(), listed.getId());
         assertNull(listed.getPassword());
