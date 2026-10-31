@@ -93,7 +93,7 @@ export default function EmailLoginSettingsPage() {
           <input id="email-smtp-host" autoComplete="off" value={draft.host} disabled={!saved || saveMutation.isPending} onChange={(event) => setDraftState({ ...draft, host: event.target.value })} placeholder="例如：smtp.example.com" required />
         </FormField>
         <FormField label="SMTP 端口" htmlFor="email-smtp-port" required>
-          <input id="email-smtp-port" type="number" min={1} max={65535} value={draft.port} disabled={!saved || saveMutation.isPending} onChange={(event) => setDraftState({ ...draft, port: Number(event.target.value) }))} required />
+          <input id="email-smtp-port" type="number" min={1} max={65535} value={draft.port} disabled={!saved || saveMutation.isPending} onChange={(event) => setDraftState({ ...draft, port: Number(event.target.value) })} required />
         </FormField>
         <FormField label="SMTP 用户名" htmlFor="email-smtp-username" required>
           <input id="email-smtp-username" autoComplete="username" value={draft.username} disabled={!saved || saveMutation.isPending} onChange={(event) => setDraftState({ ...draft, username: event.target.value })} required />
