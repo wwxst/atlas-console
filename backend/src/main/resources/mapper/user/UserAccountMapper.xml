@@ -93,6 +93,7 @@
             parameterType="com.web.project.user.entity.UserAccount">
         INSERT INTO user_account (id, user_no, phone, email, password, nickname)
         VALUES (#{id}, #{userNo}, #{phone}, #{email}, #{password}, #{nickname})
+        ON CONFLICT ON CONSTRAINT uk_user_account_user_no DO NOTHING
     </insert>
 
     <!-- 更新密码并递增密码版本 -->

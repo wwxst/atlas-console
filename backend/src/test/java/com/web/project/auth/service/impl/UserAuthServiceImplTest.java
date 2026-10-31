@@ -143,12 +143,7 @@ class UserAuthServiceImplTest {
         when(authSessionService.createSession(eq(AccountType.USER), eq(13L), eq(0L)))
                 .thenReturn(new TokenPairVO("access", "refresh"));
 
-        when(userAccountMapper.insert(any(UserAccount.class)))
-                .thenThrow(new DuplicateKeyException(
-                        "Duplicate entry '1' for key 'user_account.uk_user_account_user_no'"))
-                .thenThrow(new DuplicateKeyException(
-                        "Duplicate entry '2' for key 'user_account.uk_user_account_user_no'"))
-                .thenReturn(1);
+        when(userAccountMapper.insert(any(UserAccount.class))).thenReturn(0, 0, 1);
 
         service.register(new UserRegisterDTO(
                 "13800138000", TargetType.PHONE, "123456", null
@@ -160,8 +155,7 @@ class UserAuthServiceImplTest {
     @Test
     void registerFailsAfterUserNoAttemptsExhausted() {
         when(userAccountMapper.selectByPhone(any())).thenReturn(null);
-        doThrow(new DuplicateKeyException("Duplicate entry '1' for key 'user_account.uk_user_account_user_no'"))
-                .when(userAccountMapper).insert(any(UserAccount.class));
+        when(userAccountMapper.insert(any(UserAccount.class))).thenReturn(0, 0, 0, 0, 0);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -177,7 +171,8 @@ class UserAuthServiceImplTest {
     @Test
     void registerMapsContactConflictToAlreadyRegistered() {
         when(userAccountMapper.selectByPhone(any())).thenReturn(null);
-        doThrow(new DuplicateKeyException("Duplicate entry 'x' for key 'user_account.uk_user_account_phone'"))
+        doThrow(new DuplicateKeyException("insert failed", new java.sql.SQLException(
+                "ERROR: duplicate key value violates unique constraint \"uk_user_account_phone\"", "23505")))
                 .when(userAccountMapper).insert(any(UserAccount.class));
 
         BusinessException exception = assertThrows(
@@ -193,9 +188,9 @@ class UserAuthServiceImplTest {
     @Test
     void contactValueContainingUserNoIndexDoesNotTriggerNumberRetries() {
         DuplicateKeyException duplicate = new DuplicateKeyException("insert failed",
-                new java.sql.SQLIntegrityConstraintViolationException(
-                        "Duplicate entry 'uk_user_account_user_no@example.com' "
-                                + "for key 'user_account.uk_user_account_email'"));
+                new java.sql.SQLException(
+                        "ERROR: duplicate key value violates unique constraint \"uk_user_account_email\"",
+                        "23505"));
         doThrow(duplicate).when(userAccountMapper).insert(any(UserAccount.class));
 
         BusinessException exception = assertThrows(BusinessException.class,

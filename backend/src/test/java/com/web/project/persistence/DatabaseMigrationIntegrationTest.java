@@ -39,6 +39,15 @@ class DatabaseMigrationIntegrationTest {
         assertEquals(5, tableCount);
         assertEquals(1, jdbc.queryForObject("""
                 SELECT COUNT(*)
+                FROM pg_constraint c
+                JOIN pg_attribute a
+                  ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+                WHERE c.conrelid = 'user_account'::regclass
+                  AND c.contype = 'p'
+                  AND a.attname = 'id'
+                """, Integer.class), "user_account.id must remain the primary key");
+        assertEquals(1, jdbc.queryForObject("""
+                SELECT COUNT(*)
                 FROM pg_indexes
                 WHERE schemaname = current_schema()
                   AND indexname = 'uk_sys_user_username'

@@ -50,6 +50,26 @@ class MapperIntegrationTest {
     private UserAccountService userAccountService;
 
     @Test
+    void userNoCollisionDoesNotAbortPostgresTransaction() {
+        UserAccount existing = new UserAccount();
+        existing.setId(1010L);
+        existing.setUserNo("user-no-collision");
+        assertEquals(1, userAccountMapper.insert(existing));
+
+        UserAccount collision = new UserAccount();
+        collision.setId(1011L);
+        collision.setUserNo("user-no-collision");
+        assertEquals(0, userAccountMapper.insert(collision));
+
+        UserAccount next = new UserAccount();
+        next.setId(1012L);
+        next.setUserNo("after-user-no-collision");
+        assertEquals(1, userAccountMapper.insert(next));
+        assertEquals(2L, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user_account WHERE id IN (1010, 1011, 1012)", Long.class));
+    }
+
+    @Test
     void enableDisableAndRepeatedStatusWritesPreserveOtherAccountFields() {
         jdbcTemplate.update("""
                 INSERT INTO user_account (id, user_no, phone, email, password, password_version, nickname, avatar)

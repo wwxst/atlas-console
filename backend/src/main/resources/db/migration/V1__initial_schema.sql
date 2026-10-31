@@ -21,7 +21,7 @@ INSERT INTO sys_user (username, password, nickname, status)
 VALUES ('admin', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '系统管理员', 1);
 
 CREATE TABLE user_account (
-    id BIGINT NOT NULL,
+    id BIGINT PRIMARY KEY,
     user_no VARCHAR(32) NOT NULL,
     phone VARCHAR(20),
     email VARCHAR(100),
