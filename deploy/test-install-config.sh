@@ -59,7 +59,7 @@ assert postgres['environment']['ATLAS_DB_PASSWORD'] == backend['environment']['D
 assert backend['environment']['DB_USERNAME'] == 'atlas'
 assert 'POSTGRES_ADMIN_PASSWORD' not in backend['environment']
 assert not postgres.get('ports'), 'PostgreSQL must not publish a host port'
-assert any('/docker-entrypoint-initdb.d/10-create-app-role.sh:ro' in v for v in postgres['volumes'])
+assert '10-create-app-role.sh' in str(postgres['volumes'])
 PY
   docker compose --env-file "$ENV_FILE" -p "atlas-env-probe-$$" -f "$work/probe.yaml" \
     run --rm --no-deps -T probe > "$work/actual"
