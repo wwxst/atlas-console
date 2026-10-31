@@ -6,34 +6,38 @@
 
 /* ===== Table ===== */
 .table {
-  table-layout: fixed;
-  min-width: 64rem;
+  table-layout: auto;
+  min-width: 72rem;
 }
 
 .table th:first-child {
-  width: 6rem;
+  width: 5.5rem;
 }
 
 .table th:nth-child(2) {
-  width: 4rem;
+  width: 3.75rem;
   text-align: center;
 }
 
+.table th:nth-child(3) {
+  width: 9rem;
+}
+
 .table th:nth-child(4) {
-  width: 18%;
+  width: 11rem;
 }
 
 .table th:nth-child(5) {
-  width: 16%;
+  width: 11.5rem;
 }
 
 .table th:nth-child(6),
 .table th:nth-child(7) {
-  width: 7rem;
+  width: 6.5rem;
 }
 
 .table th:last-child {
-  width: 13.5rem;
+  width: 13rem;
 }
 
 
@@ -57,9 +61,13 @@
 }
 
 .username {
+  display: block;
+  overflow: hidden;
   color: var(--atlas-color-text-primary);
   font-family: var(--atlas-font-family-mono);
   font-size: var(--atlas-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ===== View Button ===== */
@@ -67,7 +75,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--atlas-space-xs);
-  height: 1.875rem;
+  height: 1.75rem;
   padding: 0 var(--atlas-space-sm);
   border: 0;
   border-radius: var(--atlas-radius-sm);
@@ -86,7 +94,8 @@
 .rowActions {
   display: inline-flex;
   align-items: center;
-  gap: 0.125rem;
+  justify-content: center;
+  gap: var(--atlas-space-sm);
   white-space: nowrap;
 }
 
@@ -95,7 +104,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--atlas-space-xs);
-  height: 1.875rem;
+  height: 1.75rem;
   min-width: 4.5rem;
   padding: 0 0.375rem;
   border: 0;
@@ -111,7 +120,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--atlas-space-xs);
-  height: 1.875rem;
+  height: 1.75rem;
   padding: 0 0.375rem;
   border: 0;
   border-radius: var(--atlas-radius-sm);
