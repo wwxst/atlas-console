@@ -1,4 +1,0 @@
-FROM mysql:8.4
-
-# Schema creation is owned by Spring Boot Flyway migrations, not MySQL init scripts.
-# Keeping this image free of automatic SQL import lets Flyway track every new install.

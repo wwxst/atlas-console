@@ -87,14 +87,14 @@ test('rollback operations do not require verification jobs to run', () => {
 })
 
 const compose = readFileSync(new URL('./compose.yaml', import.meta.url), 'utf8')
-const mysqlCompose = readFileSync(new URL('./compose.mysql.yaml', import.meta.url), 'utf8')
+const postgresCompose = readFileSync(new URL('./compose.postgres.yaml', import.meta.url), 'utf8')
 const release = readFileSync(new URL('./release.sh', import.meta.url), 'utf8')
 
 test('deployment uses Flyway for a fresh schema and keeps legacy baseline opt-in', () => {
   assert.ok(compose.includes('context: ../backend'))
-  assert.ok(mysqlCompose.includes('dockerfile: Dockerfile.mysql'))
+  assert.ok(postgresCompose.includes('image: postgres:17-alpine'))
   assert.ok(compose.includes('ATLAS_FLYWAY_BASELINE_ON_MIGRATE: ${ATLAS_FLYWAY_BASELINE_ON_MIGRATE:-false}'))
-  assert.ok(!mysqlCompose.includes('docker-entrypoint-initdb.d'))
+  assert.ok(postgresCompose.includes('docker-entrypoint-initdb.d/10-create-app-role.sh'))
   assert.ok(!backend.includes('web_project.sql'))
 })
 
@@ -110,13 +110,13 @@ test('frontend and backend remain sibling Docker build contexts', () => {
   assert.ok(frontendManifest.includes('"name": "atlas-console"'))
 })
 
-test('deployment supports bundled MySQL and an existing external database', () => {
+test('deployment supports bundled PostgreSQL and an existing external database', () => {
   assert.ok(compose.includes('ATLAS_DB_URL'))
   assert.ok(compose.includes('host.docker.internal:host-gateway'))
-  assert.ok(mysqlCompose.includes('mysql:3306/web_project'))
+  assert.ok(postgresCompose.includes('postgres:5432/web_project'))
   assert.ok(release.includes('db_mode'))
   assert.ok(release.includes('external) compose_args=(-f "$compose_file")'))
-  assert.ok(release.includes('docker) compose_args=(-f "$compose_file" -f "$mysql_compose_file")'))
+  assert.ok(release.includes('docker) compose_args=(-f "$compose_file" -f "$postgres_compose_file")'))
 })
 
 const ci = readFileSync(new URL('../.github/workflows/frontend-quality.yml', import.meta.url), 'utf8')
@@ -127,7 +127,7 @@ test('frontend CI runs from the frontend project root and caches its lockfile', 
 })
 
 test('deployment-config builds the frontend Docker image from its sibling project context', () => {
-  assert.ok(ci.includes('compose.yaml build frontend'))
+  assert.ok(ci.includes('compose.postgres.yaml build frontend'))
 })
 
 test('deployment-config validates Compose from the single monorepo checkout', () => {

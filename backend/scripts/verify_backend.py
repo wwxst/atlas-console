@@ -1,4 +1,4 @@
-"""Run the backend gate against a new MySQL database and a private Redis process."""
+"""Run the backend gate against a fresh PostgreSQL database and a private Redis process."""
 
 import argparse
 import base64
@@ -77,12 +77,12 @@ class BackendGate:
             self.coverage_port = free_port()
         self.env = os.environ.copy()
         self.env.update(JAVA_HOME=str(args.java_home), DB_URL=self.jdbc_url,
-                        ATLAS_MYSQL_TEST_URL=self.jdbc_url, REDIS_HOST="127.0.0.1",
+                        ATLAS_POSTGRES_TEST_URL=self.jdbc_url, REDIS_HOST="127.0.0.1",
                         REDIS_PORT=str(self.redis_port), REDIS_DATABASE="0", REDIS_PASSWORD="",
                         JWT_SECRET=base64.b64encode(secrets.token_bytes(32)).decode(),
                         UPLOAD_DIR=str(self.workspace / "uploads"),
                         STORAGE_ENCRYPTION_KEY=base64.b64encode(secrets.token_bytes(32)).decode())
-        self.env["MYSQL_PWD"] = self.env.get("DB_PASSWORD", "123456")
+        self.env["PGPASSWORD"] = self.env.get("DB_PASSWORD", "123456")
         self.redis = None
         self.app = None
         self.created_database = False
@@ -91,7 +91,7 @@ class BackendGate:
                        "verification_scope": "automated verification; standards checks and reviews recorded separately",
                        "resource_metrics": {
                            "tomcat": "JVM process thread count used as an available proxy; connector pool metrics are not exposed",
-                           "hikari": "not exposed by the current application; MySQL Threads_connected recorded",
+                           "hikari": "not exposed by the current application; PostgreSQL active sessions recorded",
                            "redis": "used_memory from private Redis INFO memory",
                            "jvm": "process CPU, working set and thread count",
                        }}
@@ -99,18 +99,35 @@ class BackendGate:
 
     @property
     def jdbc_url(self):
-        return (f"jdbc:mysql://{self.args.db_host}:{self.args.db_port}/{self.database}"
-                "?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true")
+        return (f"jdbc:postgresql://{self.args.db_host}:{self.args.db_port}/{self.database}"
+                "?options=-c%20TimeZone%3DUTC")
 
     def sql(self, statement, select_database=True):
-        command = [str(self.args.mysql_client), "--host=" + self.args.db_host,
-                   "--port=" + str(self.args.db_port), "--user=" + self.env.get("DB_USERNAME", "root"),
-                   "--default-character-set=utf8mb4", "--batch", "--skip-column-names"]
-        if select_database:
-            command += ["--database=" + self.database]
+        admin_connection = not select_database
+        username = self.args.db_admin_username if admin_connection else self.env.get("DB_USERNAME", "atlas")
+        database = "postgres" if admin_connection else self.database
+        command = [
+            str(self.args.postgres_client),
+            "--host=" + self.args.db_host,
+            "--port=" + str(self.args.db_port),
+            "--username=" + username,
+            "--dbname=" + database,
+            "--no-psqlrc",
+            "--no-password",
+            "--quiet",
+            "--set=ON_ERROR_STOP=1",
+            "--tuples-only",
+            "--no-align",
+        ]
+        env = self.env.copy()
+        if admin_connection:
+            env["PGPASSWORD"] = env.get("POSTGRES_ADMIN_PASSWORD", "")
+            require(bool(env["PGPASSWORD"]), "POSTGRES_ADMIN_PASSWORD is required for disposable database lifecycle")
+        else:
+            env["PGPASSWORD"] = env.get("DB_PASSWORD", "123456")
         result = subprocess.run(command, input=statement, text=True, encoding="utf-8",
-                                capture_output=True, env=self.env, timeout=20, creationflags=NO_WINDOW)
-        require(result.returncode == 0, "MySQL operation failed; credentials and SQL details withheld")
+                                capture_output=True, env=env, timeout=20, creationflags=NO_WINDOW)
+        require(result.returncode == 0, "PostgreSQL operation failed; credentials and SQL details withheld")
         return result.stdout.strip()
 
     def start_redis(self):
@@ -774,7 +791,7 @@ class BackendGate:
                           for name, values in successful_operation_timings.items() if values
                       },
                       "redis_used_memory_bytes": int(info["used_memory"]),
-                      "mysql_threads_connected": int(self.sql("SHOW STATUS LIKE 'Threads_connected'").split()[-1])}
+                      "postgres_active_sessions": int(self.sql("SELECT COUNT(*) FROM pg_stat_activity WHERE datname = current_database()"))}
             self.report["pressure"].append(metric)
             print("Pressure " + str(getattr(self, "pressure_mode", "unknown")) + ":", json.dumps(metric), flush=True)
             require(metric["unexpected_errors"] == 0, "Pressure stage had unexpected responses")
@@ -876,7 +893,7 @@ class BackendGate:
             with self.http.open(f"http://127.0.0.1:{self.http_port}" + first_url, timeout=10) as response:
                 require(response.read() == first_png, "Failed reference update removed old image")
         finally:
-            self.sql("ALTER TABLE sys_user DROP CHECK chk_storage_reference_fault")
+            self.sql("ALTER TABLE sys_user DROP CONSTRAINT chk_storage_reference_fault")
         self.report["scenarios"].append({"name": "real database reference failure retains old image and cleans new upload", "passed": True})
         status, _ = upload(b"not an image")
         require(status == 400, "Invalid image bytes were accepted")
@@ -906,8 +923,11 @@ class BackendGate:
     def run(self):
         # Create only an empty disposable database. The real Spring Boot test
         # context must exercise Flyway exactly as a fresh installation does.
+        app_role = self.env.get("DB_USERNAME", "atlas")
+        require(bool(app_role) and app_role[0].isalpha() and app_role.replace("_", "").isalnum(),
+                "DB_USERNAME must be a simple PostgreSQL role name for the disposable quality database")
         self.sql("CREATE DATABASE " + self.database +
-                 " CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci", select_database=False)
+                 " OWNER \"" + app_role + "\" ENCODING 'UTF8' TEMPLATE template0", select_database=False)
         self.created_database = True
         self.start_redis()
         print("Private dependencies ready; starting Maven verification", flush=True)
@@ -948,7 +968,7 @@ class BackendGate:
             self.redis.terminate()
             self.redis.wait(timeout=10)
         if self.created_database:
-            self.sql("DROP DATABASE " + self.database, select_database=False)
+            self.sql("DROP DATABASE " + self.database + " WITH (FORCE)", select_database=False)
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
         for name in ("verify.log", "application.log", "coverage.log", "coverage-dump.log", "redis.log"):
             path = self.workspace / name
@@ -960,10 +980,11 @@ class BackendGate:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--java-home", type=Path, required=True)
-    parser.add_argument("--mysql-client", type=Path, required=True)
+    parser.add_argument("--postgres-client", type=Path, required=True)
     parser.add_argument("--redis-server", type=Path, required=True)
     parser.add_argument("--db-host", default="127.0.0.1")
-    parser.add_argument("--db-port", type=int, default=3306)
+    parser.add_argument("--db-port", type=int, default=5432)
+    parser.add_argument("--db-admin-username", default=os.environ.get("POSTGRES_ADMIN_USERNAME", "postgres"))
     parser.add_argument("--seconds", type=int, default=10)
     args = parser.parse_args()
     require(1 <= args.seconds <= 60, "Each local baseline stage must last between 1 and 60 seconds")
