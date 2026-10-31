@@ -174,7 +174,7 @@ class UserAuthServiceImplTest {
     void registerMapsContactConflictToAlreadyRegistered() {
         when(userAccountMapper.selectByPhone(any())).thenReturn(null);
         doThrow(postgresUniqueViolation("uk_user_account_phone"))
-                .when(userAccountMapper).insert(any(UserAccount.class));                .when(userAccountMapper).insert(any(UserAccount.class));
+                .when(userAccountMapper).insert(any(UserAccount.class));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -189,7 +189,7 @@ class UserAuthServiceImplTest {
     @Test
     void contactValueContainingUserNoIndexDoesNotTriggerNumberRetries() {
         DuplicateKeyException duplicate = postgresUniqueViolation("uk_user_account_email");
-        doThrow(duplicate).when(userAccountMapper).insert(any(UserAccount.class));        doThrow(duplicate).when(userAccountMapper).insert(any(UserAccount.class));
+        doThrow(duplicate).when(userAccountMapper).insert(any(UserAccount.class));
 
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> service.register(new UserRegisterDTO(
