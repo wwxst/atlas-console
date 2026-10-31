@@ -14,7 +14,7 @@
 -- 不删除、不修改任何已有数据，不含 DELETE / TRUNCATE。
 -- ============================================================
 
-INSERT IGNORE INTO sys_user (username, password, nickname, status, created_at, updated_at)
+INSERT INTO sys_user (username, password, nickname, status, created_at, updated_at)
 VALUES
 ('u10020', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '杨静', 1, '2026-08-07 15:58:00', '2026-08-10 14:16:00'),
 ('u10012', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '崔茜', 1, '2026-08-08 12:57:00', '2026-08-11 06:34:00'),
@@ -65,4 +65,5 @@ VALUES
 ('u10027', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '余宁', 1, '2026-09-27 17:22:00', '2026-09-30 01:38:00'),
 ('u10007', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '刘斌', 1, '2026-10-02 20:32:00', '2026-10-04 20:19:00'),
 ('u10050', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '徐超', 1, '2026-10-02 22:20:00', '2026-10-05 16:51:00'),
-('u10025', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '周敏', 1, '2026-10-04 15:36:00', '2026-10-06 16:34:00');
+('u10025', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', '周敏', 1, '2026-10-04 15:36:00', '2026-10-06 16:34:00')
+ON CONFLICT DO NOTHING;

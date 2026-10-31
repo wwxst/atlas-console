@@ -5,7 +5,7 @@ Atlas Console 是一个前后端一体化的管理系统单仓库（Monorepo）�
 ## 工程结构
 
 - `frontend/`：React 19、TypeScript、Vite 前端工程，包含前端源码、静态资源、单元测试和 Playwright 浏览器测试。
-- `backend/`：Spring Boot、Spring Security、MyBatis、MySQL、Redis 后端工程；Flyway 版本迁移位于 `backend/src/main/resources/db/migration/`。
+- `backend/`：Spring Boot、Spring Security、MyBatis、PostgreSQL、Redis 后端工程；Flyway 版本迁移位于 `backend/src/main/resources/db/migration/`。
 - `deploy/`：Docker Compose、发布/回滚脚本、安装器回归测试和部署验收脚本。
 - `docs/`：项目级架构、安全、工程和 UI 规范。
 - `.github/workflows/`：前端质量、后端质量和生产发布工作流。
@@ -67,7 +67,7 @@ CI 还会运行 Playwright 浏览器流程、Docker Compose 配置校验、Nginx
 curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh | sudo bash
 ```
 
-安装时可选择 Docker 私有 MySQL（推荐），或使用已在宝塔创建的空数据库。安装完成后，在宝塔配置域名反向代理与 HTTPS。安装器不会自动注册高权限 GitHub Runner；后续 GitHub Actions 自动更新需要单独配置 Runner。
+安装时可选择 Docker 私有 PostgreSQL（推荐），或使用已在宝塔创建的空数据库。安装完成后，在宝塔配置域名反向代理与 HTTPS。安装器不会自动注册高权限 GitHub Runner；后续 GitHub Actions 自动更新需要单独配置 Runner。
 
 首次安装、宝塔代理、数据库模式、安全配置、GitHub Runner、备份及后续更新操作见 [一条命令安装指南](deploy/installer.md) 和 [部署与一键更新指南](deploy/README.md)。
 

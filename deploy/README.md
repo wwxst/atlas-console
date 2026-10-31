@@ -6,10 +6,10 @@
 
 - 后台超级管理员（系统用户 ID=1）在「版本与更新」点击一键更新。
 - 后端调用 GitHub Actions API，只允许触发 `wwxst/atlas-console` 中固定的 `deploy-production.yml`，引用 `main`。
-- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端和后端测试都检出本次工作流的同一个 `github.sha`，分别位于兄弟目录 `frontend/` 和 `backend/`。生产 Runner 只检出这一份已验证的仓库提交，Docker Compose 从这两个独立目录构建镜像，并更新 Nginx、Spring Boot、Redis，以及可选的 Docker MySQL。`ATLAS_DB_MODE=docker` 使用 `compose.mysql.yaml`；`ATLAS_DB_MODE=external` 使用宝塔/外部 MySQL，不启动 MySQL 容器。
+- GitHub Actions 在挂有 `atlas-production` 标签的**专用自托管 Runner** 上执行。前端和后端测试都检出本次工作流的同一个 `github.sha`，分别位于兄弟目录 `frontend/` 和 `backend/`。生产 Runner 只检出这一份已验证的仓库提交，Docker Compose 从这两个独立目录构建镜像，并更新 Nginx、Spring Boot、Redis，以及可选的 Docker PostgreSQL。`ATLAS_DB_MODE=docker` 使用 `compose.postgres.yaml`；`ATLAS_DB_MODE=external` 使用宝塔/外部 PostgreSQL，不启动 PostgreSQL 容器。
 - 前端查看 Actions 的最近执行状态，**不会直接执行 Shell、传递自定义分支或把 GitHub Token 暴露到浏览器**。
 - 默认禁用自动更新。没有服务器、Runner 和凭据时，按钮保持禁用。
-- **业务数据持久化**：Docker MySQL 模式下 MySQL、Redis、上传目录使用 Docker 命名卷；外部/宝塔 MySQL 的数据由宿主机数据库管理，Redis 和上传目录仍使用命名卷。重启容器不会清空这些数据。但**更新不等于备份**，操作前必须另行备份数据库和上传目录。
+- **业务数据持久化**：Docker PostgreSQL 模式下 PostgreSQL、Redis、上传目录使用 Docker 命名卷；外部/宝塔 PostgreSQL 的数据由宿主机数据库管理，Redis 和上传目录仍使用命名卷。重启容器不会清空这些数据。但**更新不等于备份**，操作前必须另行备份数据库和上传目录。
 
 ## 真实客户端 IP 与登录限流（生产必读）
 
@@ -28,16 +28,16 @@
 
 1. 准备一台 Linux 生产服务器、域名、有效的 HTTPS 证书以及安全的网络策略。建议运行 Docker Engine + Docker Compose v2；将公网流量交给独立的 TLS 反向代理（Caddy/Nginx），只转发到本机 `127.0.0.1:8088`。数据库和 Redis 没有对外发布端口。
 2. 安装器会创建专用非 root 账号 `atlas-deploy`，并将它加入 Docker 组；该组权限接近 root，因此这个账号只能用于专用生产 Runner。以 `atlas-deploy` 身份安装并运行 GitHub Actions Runner，注册到 `wwxst/atlas-console`，并添加 `atlas-production` 标签。**生产 Runner 不得执行不受信任的 PR 代码。请设置分支保护、审查工作流变更，并限制仓库写入权限。**
-3. 首次安装优先使用 [一条命令安装器](installer.md)，它会生成 `/opt/atlas/.env` 和随机密钥。手动安装时参考本目录 `env.example`，根据 `ATLAS_DB_MODE` 配置 `ATLAS_DB_URL`、`ATLAS_DB_USERNAME`、`ATLAS_DB_PASSWORD`；Docker MySQL 模式还需独立的 `MYSQL_ROOT_PASSWORD` 和 `DB_PASSWORD`。只允许部署账号读取 `.env`，权限设为 `0640`，所有者 `root:atlas-deploy`，**不要提交到 GitHub**。
+3. 首次安装优先使用 [一条命令安装器](installer.md)，它会生成 `/opt/atlas/.env` 和随机密钥。手动安装时参考本目录 `env.example`，根据 `ATLAS_DB_MODE` 配置 `ATLAS_DB_URL`、`ATLAS_DB_USERNAME`、`ATLAS_DB_PASSWORD`；Docker PostgreSQL 模式还需 `POSTGRES_ADMIN_PASSWORD`（仅数据库容器初始化使用，后端不读取）。只允许部署账号读取 `.env`，权限设为 `0640`，所有者 `root:atlas-deploy`，**不要提交到 GitHub**。
 4. 在 GitHub 仓库的 Actions 设置中允许执行工作流，创建名为 `production` 的 Environment，可选配置 required reviewers。工作流只允许从 `main` 引用执行。仓库 `main` 必须受代码审查和 CI 约束。
 5. 使用安装器时，首次构建和启动由 `install.sh` 在服务器本机完成，结束后再在宝塔配置域名反向代理与 HTTPS。手动安装模式则在 Runner 在线后，通过 GitHub Actions 页面运行 `Deploy production`。后续 GitHub Actions 更新会在 Runner 上检出同一个仓库提交，构建前后端镜像并验证健康状态。**没有 Runner 时，GitHub Actions 任务会一直排队，不能视为部署成功。**
-6. **数据库 schema 由 Flyway 版本迁移管理**：全新数据库会在后端首次启动时执行 V1 创建表和默认配置，不再通过 MySQL 容器导入 `web_project.sql`。首次公网开放前必须修改默认系统管理员密码。
-7. 如果复用由旧版 `web_project.sql` 初始化的非空数据库，必须先备份并核对 schema，然后按 [后端数据库迁移指南](https://github.com/wwxst/atlas-console/blob/main/backend/docs/database-migrations.md) 临时设置 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=true` 完成一次 baseline，确认健康后恢复为 `false`。**不要对未核实的数据库启用 baseline。**
+6. **数据库 schema 由 Flyway 版本迁移管理**：全新数据库会在后端首次启动时执行 V1 创建表和默认配置，不再通过 PostgreSQL 容器导入 `web_project.sql`。首次公网开放前必须修改默认系统管理员密码。
+7. 旧版 `web_project.sql` 是 MySQL 快照，不能作为 PostgreSQL 数据库直接 baseline 或启动。如果未来确有历史 MySQL 数据需要迁移，必须先备份，再将数据转换到已由 PostgreSQL Flyway 创建的目标 schema，并逐表校验；当前首次部署使用全新 PostgreSQL，不做旧库迁移。
 8. 首次访问成功后，创建一个只访问 `wwxst/atlas-console` 的 **GitHub fine-grained PAT**，仅授予仓库 Actions 的读写权限，不授予代码写入、Secrets 或 Administration 权限。把它写入服务器 `/opt/atlas/.env` 的 `ATLAS_DEPLOYMENT_GITHUB_TOKEN`，设置 `ATLAS_DEPLOYMENT_ENABLED=true`，再通过受控部署流程重启 backend 容器。这样后台的一键更新按钮才会启用。
 
 ## 数据库迁移与应用回滚边界
 
-- 新安装时，MySQL 只创建空的 `web_project` 数据库；后端启动时 Flyway 执行 `V1__initial_schema.sql`。CI 和发布前验证任务都在真实 MySQL 8.4 空数据库上运行相同迁移。
+- 新安装时，PostgreSQL 只创建空的 `web_project` 数据库；后端启动时 Flyway 执行 `V1__initial_schema.sql`。CI 和发布前验证任务都在真实 PostgreSQL 17 空数据库上运行相同迁移。
 - 已发布的 Flyway SQL 不可修改。后续 schema 变化只能添加新的版本文件，并优先采用向前兼容的 expand/contract 迁移。
 - 对已有数据库，默认 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=false`。只有先完成备份、确认表/列/索引/约束与 V1 相符后，才可临时打开 baseline；Flyway baseline **不会自动比较或修复完整 DDL**。
 - Flyway migration 在后端启动时运行。迁移失败会阻止后端健康检查通过，因此发布脚本不会记录新应用版本为成功；但应用镜像回滚**不会回滚已提交的数据库 DDL 或数据**。迁移必须兼容当前版本和可回滚的旧应用版本。
@@ -105,8 +105,8 @@ gh api repos/wwxst/atlas-console/actions/runs/RUN_ID --jq '{status, conclusion}'
 - 如果历史镜像已被清理，选择该版本会**安全失败，不会从来源不明的镜像或任意提交重新构建**。恢复功能不保证永久可用：需要规划磁盘容量、镜像归档/保留策略，并监控服务器空间。历史列表仅包含服务器成功部署过的应用版本，不是 GitHub 全部提交记录。
 
 - `deploy.lock` 使用 `flock` 阻止同一服务器同时运行多次发布，GitHub Actions 的 concurrency 也会串行处理任务。
-- **仅回滚前端和后端应用镜像，不自动回滚 MySQL/Redis 数据、上传文件、数据库 schema、环境变量或外部依赖。** 数据库结构变更必须保持向后兼容；有破坏性 schema 变更时禁止直接使用应用回滚，应先准备数据库迁移与恢复方案。
-- 操作前独立备份 MySQL、上传文件和部署密钥，并定期演练恢复；回滚功能不能替代备份。镜像被 Docker 手动清理、服务器磁盘损坏或首次部署没有上一版本时无法自动恢复。
+- **仅回滚前端和后端应用镜像，不自动回滚 PostgreSQL/Redis 数据、上传文件、数据库 schema、环境变量或外部依赖。** 数据库结构变更必须保持向后兼容；有破坏性 schema 变更时禁止直接使用应用回滚，应先准备数据库迁移与恢复方案。
+- 操作前独立备份 PostgreSQL、上传文件和部署密钥，并定期演练恢复；回滚功能不能替代备份。镜像被 Docker 手动清理、服务器磁盘损坏或首次部署没有上一版本时无法自动恢复。
 - **目前项目尚未准备真实生产服务器或自托管 Runner**。仓库中的 CI 只运行模拟的发布/失败恢复测试与 Compose 配置检查，不能视作真实线上回滚演练。
 - 不允许把 `.env`、GitHub PAT、数据库口令、JWT 签名密钥写入 PR、运行日志或前端环境变量。
 

@@ -16,12 +16,12 @@ class SysUserTableNamingTest {
 
     @Test
     void freshSchemaAndMapperUseSysUserTableName() throws IOException {
-        String schema = read("web_project.sql");
+        String schema = read("src/main/resources/db/migration/V1__initial_schema.sql");
         String mapper = read("src/main/resources/mapper/admin/SysUserMapper.xml");
 
         assertTrue(schema.contains("CREATE TABLE sys_user"));
         assertTrue(schema.contains("uk_sys_user_username"));
-        assertTrue(schema.contains("auth_version   BIGINT       NOT NULL DEFAULT 0"));
+        assertTrue(schema.contains("auth_version BIGINT NOT NULL DEFAULT 0"));
         assertTrue(schema.contains("INSERT INTO sys_user (username, password, nickname, status)"));
         assertFalse(schema.contains("admin_user"));
         assertFalse(mapper.contains("admin_user"));
@@ -30,7 +30,7 @@ class SysUserTableNamingTest {
 
     @Test
     void systemAvatarUsesFileIdInSchemaAndMapper() throws IOException {
-        String schema = read("web_project.sql");
+        String schema = read("src/main/resources/db/migration/V1__initial_schema.sql");
         String mapper = read("src/main/resources/mapper/admin/SysUserMapper.xml");
         assertTrue(schema.contains("avatar_file_id"));
         assertTrue(mapper.contains("avatar_file_id"));

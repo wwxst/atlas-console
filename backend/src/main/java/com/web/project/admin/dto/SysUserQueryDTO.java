@@ -47,7 +47,7 @@ public class SysUserQueryDTO {
     private Integer status;
 
     /**
-     * 创建时间排序方向；不传时按 ID 倒序。
+     * 创建时间排序方向；不传时按 ID 升序。
      */
     @Pattern(regexp = "asc|desc", message = "创建时间排序方向只能为asc或desc")
     private String createdAtOrder;

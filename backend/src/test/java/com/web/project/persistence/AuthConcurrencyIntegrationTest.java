@@ -32,11 +32,11 @@ import java.util.function.IntFunction;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 使用独立 MySQL 库及真实 Redis 验证实际重叠操作，环境不可用时让测试失败。
+ * 使用独立 PostgreSQL 库及真实 Redis 验证实际重叠操作，环境不可用时让测试失败。
  */
-@EnabledIfEnvironmentVariable(named = "ATLAS_MYSQL_TEST_URL", matches = "jdbc:mysql:.*")
+@EnabledIfEnvironmentVariable(named = "ATLAS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.*")
 @SpringBootTest(properties = {
-        "spring.datasource.url=${ATLAS_MYSQL_TEST_URL}",
+        "spring.datasource.url=${ATLAS_POSTGRES_TEST_URL}",
         "spring.flyway.enabled=true",
         "app.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 })

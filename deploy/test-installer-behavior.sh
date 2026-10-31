@@ -51,7 +51,7 @@ docker() {
     info) return 0 ;;
     'ps -aq '*) [[ "${TEST_CONFLICT:-}" != container ]] || echo existing-container ;;
     'volume ls -q '*) [[ "${TEST_CONFLICT:-}" != volume ]] || echo existing-volume ;;
-    'volume ls --format '*) [[ "${TEST_CONFLICT:-}" != unlabelled-volume ]] || echo "${PROJECT_NAME}_mysql_data" ;;
+    'volume ls --format '*) [[ "${TEST_CONFLICT:-}" != unlabelled-volume ]] || echo "${PROJECT_NAME}_postgres_data" ;;
     'network ls -q --filter '*) [[ "${TEST_CONFLICT:-}" != project-network ]] || echo existing-network ;;
     'network ls --format '*) [[ "${TEST_CONFLICT:-}" != unlabelled-network ]] || echo "${PROJECT_NAME}_default" ;;
     'network ls -q') echo other-network ;;
