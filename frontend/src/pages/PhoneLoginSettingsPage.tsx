@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AppButton, FormField, Toast } from '@ui/index'
@@ -50,6 +50,28 @@ export default function PhoneLoginSettingsPage() {
     retry: false,
     refetchOnWindowFocus: false,
   })
+
+  useEffect(() => {
+    if (!aliyunQuery.data) return
+    setAliyunDraft({
+      accessKeyId: aliyunQuery.data.accessKeyId,
+      accessKeySecret: '',
+      signName: aliyunQuery.data.signName,
+      templateCode: aliyunQuery.data.templateCode,
+    })
+  }, [aliyunQuery.data])
+
+  useEffect(() => {
+    if (!tencentQuery.data) return
+    setTencentDraft({
+      secretId: tencentQuery.data.secretId,
+      secretKey: '',
+      sdkAppId: tencentQuery.data.sdkAppId,
+      signName: tencentQuery.data.signName,
+      templateId: tencentQuery.data.templateId,
+      region: tencentQuery.data.region,
+    })
+  }, [tencentQuery.data])
 
   const aliyunSave = useMutation({
     mutationFn: updateAliyunSmsSettings,
