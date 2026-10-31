@@ -73,7 +73,7 @@ jobs:
       DB_URL: jdbc:postgresql://127.0.0.1:5432/web_project
       DB_USERNAME: atlas
       DB_PASSWORD: ci_only_app_password
-      ATLAS_POSTGRES_TEST_URL: jdbc:mysql://127.0.0.1:3306/web_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      ATLAS_POSTGRES_TEST_URL: jdbc:postgresql://127.0.0.1:5432/web_project
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
       JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
