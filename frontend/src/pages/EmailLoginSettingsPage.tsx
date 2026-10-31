@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { AppButton, FormField, Toast } from '@ui/index'
 import {
@@ -25,12 +25,26 @@ export default function EmailLoginSettingsPage() {
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState(emptyDraft)
   const [successMessage, setSuccessMessage] = useState('')
+  const [initialized, setInitialized] = useState(false)
   const settingsQuery = useQuery({
     queryKey: EMAIL_LOGIN_SETTINGS_QUERY_KEY,
     queryFn: getEmailLoginSettings,
     retry: false,
     refetchOnWindowFocus: false,
   })
+  useEffect(() => {
+    if (!settingsQuery.data || initialized) return
+    setDraft({
+      host: settingsQuery.data.host,
+      port: settingsQuery.data.port,
+      username: settingsQuery.data.username,
+      password: '',
+      fromAddress: settingsQuery.data.fromAddress,
+      fromName: settingsQuery.data.fromName,
+      security: settingsQuery.data.security,
+    })
+    setInitialized(true)
+  }, [settingsQuery.data, initialized])
   const saveMutation = useMutation({
     mutationFn: updateEmailLoginSettings,
     onSuccess: (saved) => {
@@ -49,7 +63,7 @@ export default function EmailLoginSettingsPage() {
   })
 
   const saved = settingsQuery.data
-  const dirty = Boolean(saved && (
+  const dirty = Boolean(initialized && saved && (
     draft.host !== saved.host
     || draft.port !== saved.port
     || draft.username !== saved.username
@@ -122,7 +136,7 @@ export default function EmailLoginSettingsPage() {
           </select>
         </FormField>
         <div className={formStyles.formActions}>
-          <AppButton type="button" disabled={!dirty || saveMutation.isPending} onClick={resetDraft}>取消</AppButton>
+          <AppButton type="button" disabled={!initialized || !dirty || saveMutation.isPending} onClick={resetDraft}>取消</AppButton>
           <AppButton type="submit" variant="primary" disabled={!dirty || saveMutation.isPending}>{saveMutation.isPending ? '保存中…' : '保存更改'}</AppButton>
         </div>
       </form>}
