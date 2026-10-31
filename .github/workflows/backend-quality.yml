@@ -12,8 +12,8 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: atlas
-          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_USER: atlas_admin
+          POSTGRES_PASSWORD: ci_only_admin_password
           POSTGRES_DB: web_project
         ports:
           - 5432:5432
@@ -37,6 +37,14 @@ jobs:
       JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
     steps:
       - uses: actions/checkout@v4
+      - name: Create least-privileged PostgreSQL application role
+        env:
+          PGPASSWORD: ci_only_admin_password
+        run: |
+          psql -h 127.0.0.1 -U atlas_admin -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE atlas LOGIN PASSWORD 'ci_only_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+          psql -h 127.0.0.1 -U atlas_admin -d postgres -v ON_ERROR_STOP=1 \
+            -c "ALTER DATABASE web_project OWNER TO atlas"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

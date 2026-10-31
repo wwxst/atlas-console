@@ -41,5 +41,9 @@ class DatabaseMigrationIntegrationTest {
         assertEquals(1, jdbc.queryForObject(
                 "SELECT COUNT(*) FROM sys_user WHERE username = 'admin'", Integer.class));
         assertEquals(8, jdbc.queryForObject("SELECT COUNT(*) FROM sys_config", Integer.class));
+        Boolean applicationRoleIsSuperuser = jdbc.queryForObject(
+                "SELECT rolsuper FROM pg_roles WHERE rolname = current_user", Boolean.class);
+        assertNotNull(applicationRoleIsSuperuser);
+        assertFalse(applicationRoleIsSuperuser, "The application must never connect as a PostgreSQL superuser");
     }
 }

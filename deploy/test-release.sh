@@ -25,7 +25,7 @@ if [[ "${1:-}" == image && "${2:-}" == inspect ]]; then
 fi
 if [[ "${1:-}" != compose ]]; then exit 7; fi
 [[ " $* " == *" --project-name atlas-regression "* ]] || { echo 'Incorrect explicit project namespace' >&2; exit 1; }
-[[ ! -v COMPOSE_PROJECT_NAME && ! -v ATLAS_PROJECT_NAME && ! -v ATLAS_NETWORK_PREFIX && ! -v ATLAS_HTTP_PORT && ! -v ATLAS_DB_URL && ! -v POSTGRES_PASSWORD ]] || { echo 'Unrelated production context leaked' >&2; exit 1; }
+[[ ! -v COMPOSE_PROJECT_NAME && ! -v ATLAS_PROJECT_NAME && ! -v ATLAS_NETWORK_PREFIX && ! -v ATLAS_HTTP_PORT && ! -v ATLAS_DB_URL && ! -v POSTGRES_PASSWORD && ! -v POSTGRES_ADMIN_PASSWORD && ! -v ATLAS_DB_PASSWORD ]] || { echo 'Unrelated production context leaked' >&2; exit 1; }
 while (($#)); do
   case "$1" in
     pull)
