@@ -9,6 +9,7 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
   let recoveryCompleted = false
   let nickname = '测试用户'
   let status = 1
+  let systemUserStatus = 1
   const requests: string[] = []
 
   await page.route('**/api/**', async (route) => {
@@ -94,8 +95,15 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
         { id: 1, username: 'admin', nickname: '测试管理员', avatar: null,
           online: true, status: 1, createdAt: now, updatedAt: now },
         { id: 7, username: 'operator', nickname: '测试操作员', avatar: null,
-          online: false, status: 1, createdAt: now, updatedAt: now },
+          online: false, status: systemUserStatus, createdAt: now, updatedAt: now },
       ] })
+    }
+    if (path.startsWith('/api/sys-user/sys-users/') && path.endsWith('/status') && method === 'PATCH') {
+      const id = Number(path.split('/')[4])
+      const nextStatus = (route.request().postDataJSON() as { status: number }).status
+      requests.push(`system-status:${id}:${nextStatus}`)
+      if (id === 7) systemUserStatus = nextStatus
+      return reply(null)
     }
     if (path === '/api/sys-user/users' && method === 'GET') {
       return reply({ page: 1, pageSize: 20, total: 1, records: [{
@@ -168,8 +176,8 @@ test('admin logs in, edits a user, and changes account status with an exact stri
   expect(requests).toContain('status:' + userId)
 })
 
-test('system administrators show their existing ID as 编号 in the list and detail view', async ({ page }) => {
-  await installMockApi(page)
+test('system-user actions are centered and the root admin cannot be disabled', async ({ page }) => {
+  const requests = await installMockApi(page)
   await login(page)
   await page.goto('/system-users')
   await expect(page.locator('thead th').first()).toHaveText('编号')
@@ -177,7 +185,7 @@ test('system administrators show their existing ID as 编号 in the list and det
   await expect(page.locator('thead th').nth(2)).toHaveText('昵称')
   await expect(page.locator('thead th').nth(5)).toHaveText('在线状态')
   await expect(page.locator('thead th').nth(6)).toHaveText('账号状态')
-  await expect(page.locator('thead th').last()).toHaveCSS('text-align', 'right')
+  await expect(page.locator('thead th').last()).toHaveCSS('text-align', 'center')
   const adminRow = page.getByRole('row', { name: /测试管理员/ })
   await expect(adminRow.locator('td').first()).toHaveText('1')
   await expect(adminRow.locator('td').nth(1).locator('span').first()).toBeVisible()
@@ -185,9 +193,22 @@ test('system administrators show their existing ID as 编号 in the list and det
   await expect(adminRow.locator('td').nth(2)).toHaveText('测试管理员')
   await expect(adminRow.locator('td').nth(5)).toHaveText('在线')
   await expect(adminRow.locator('td').nth(6)).toHaveText('正常')
-  await expect(page.getByRole('row', { name: /测试操作员/ }).locator('td').nth(5)).toHaveText('离线')
-  await expect(adminRow.locator('td').last()).toHaveCSS('text-align', 'right')
-  await expect(page.getByRole('row', { name: /测试操作员/ }).locator('td').first()).toHaveText('7')
+  await expect(adminRow.locator('td').last()).toHaveCSS('text-align', 'center')
+  await expect(adminRow).not.toContainText('超级管理员')
+  await expect(adminRow.getByRole('button', { name: '停用', exact: true })).toBeDisabled()
+
+  const operatorRow = page.getByRole('row', { name: /测试操作员/ })
+  await expect(operatorRow.locator('td').nth(5)).toHaveText('离线')
+  await expect(operatorRow.locator('td').first()).toHaveText('7')
+  await expect(operatorRow.locator('td').last()).toHaveCSS('text-align', 'center')
+  await operatorRow.getByRole('button', { name: '停用', exact: true }).click()
+  await expect(operatorRow.getByRole('button', { name: '启用', exact: true })).toBeVisible()
+  await operatorRow.getByRole('button', { name: '启用', exact: true }).click()
+  await expect(operatorRow.getByRole('button', { name: '停用', exact: true })).toBeVisible()
+  expect(requests).toContain('system-status:7:0')
+  expect(requests).toContain('system-status:7:1')
+  expect(requests).not.toContain('system-status:1:0')
+
   await adminRow.getByRole('button', { name: '查看' }).click()
   await expect(page.getByText('编号：1')).toBeVisible()
 })
