@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AppButton, FormField, Toast } from '@ui/index'
@@ -32,11 +32,9 @@ export default function PhoneLoginSettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab: TabKey = searchParams.get('tab') === 'tencent' ? 'tencent' : 'aliyun'
   const queryClient = useQueryClient()
-  const [aliyunDraft, setAliyunDraft] = useState(emptyAliyun)
-  const [tencentDraft, setTencentDraft] = useState(emptyTencent)
+  const [aliyunDraftState, setAliyunDraftState] = useState<AliyunSmsSettingsUpdate | null>(null)
+  const [tencentDraftState, setTencentDraftState] = useState<TencentSmsSettingsUpdate | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
-  const [aliyunInitialized, setAliyunInitialized] = useState(false)
-  const [tencentInitialized, setTencentInitialized] = useState(false)
 
   const aliyunQuery = useQuery({
     queryKey: ALIYUN_SMS_SETTINGS_QUERY_KEY,
@@ -53,35 +51,26 @@ export default function PhoneLoginSettingsPage() {
     refetchOnWindowFocus: false,
   })
 
-  useEffect(() => {
-    if (!aliyunQuery.data) return
-    setAliyunDraft({
-      accessKeyId: aliyunQuery.data.accessKeyId,
-      accessKeySecret: '',
-      signName: aliyunQuery.data.signName,
-      templateCode: aliyunQuery.data.templateCode,
-    })
-    setAliyunInitialized(true)
-  }, [aliyunQuery.data])
-
-  useEffect(() => {
-    if (!tencentQuery.data) return
-    setTencentDraft({
-      secretId: tencentQuery.data.secretId,
-      secretKey: '',
-      sdkAppId: tencentQuery.data.sdkAppId,
-      signName: tencentQuery.data.signName,
-      templateId: tencentQuery.data.templateId,
-      region: tencentQuery.data.region,
-    })
-    setTencentInitialized(true)
-  }, [tencentQuery.data])
+  const aliyunDraft = aliyunDraftState ?? (aliyunQuery.data ? {
+    accessKeyId: aliyunQuery.data.accessKeyId,
+    accessKeySecret: '',
+    signName: aliyunQuery.data.signName,
+    templateCode: aliyunQuery.data.templateCode,
+  } : emptyAliyun)
+  const tencentDraft = tencentDraftState ?? (tencentQuery.data ? {
+    secretId: tencentQuery.data.secretId,
+    secretKey: '',
+    sdkAppId: tencentQuery.data.sdkAppId,
+    signName: tencentQuery.data.signName,
+    templateId: tencentQuery.data.templateId,
+    region: tencentQuery.data.region,
+  } : emptyTencent)
 
   const aliyunSave = useMutation({
     mutationFn: updateAliyunSmsSettings,
     onSuccess: (saved) => {
       queryClient.setQueryData(ALIYUN_SMS_SETTINGS_QUERY_KEY, saved)
-      setAliyunDraft({ accessKeyId: saved.accessKeyId, accessKeySecret: '', signName: saved.signName, templateCode: saved.templateCode })
+      setAliyunDraftState(null)
       setSuccessMessage('阿里云短信配置已保存')
     },
   })
@@ -89,7 +78,7 @@ export default function PhoneLoginSettingsPage() {
     mutationFn: updateTencentSmsSettings,
     onSuccess: (saved) => {
       queryClient.setQueryData(TENCENT_SMS_SETTINGS_QUERY_KEY, saved)
-      setTencentDraft({ secretId: saved.secretId, secretKey: '', sdkAppId: saved.sdkAppId, signName: saved.signName, templateId: saved.templateId, region: saved.region })
+      setTencentDraftState(null)
       setSuccessMessage('腾讯云短信配置已保存')
     },
   })
@@ -126,13 +115,13 @@ export default function PhoneLoginSettingsPage() {
     tencentSave.mutate(tencentDraft)
   }
 
-  const aliyunDirty = Boolean(aliyunInitialized && aliyunQuery.data && (
+  const aliyunDirty = Boolean(aliyunDraftState && aliyunQuery.data && (
     aliyunDraft.accessKeyId !== aliyunQuery.data.accessKeyId
     || aliyunDraft.signName !== aliyunQuery.data.signName
     || aliyunDraft.templateCode !== aliyunQuery.data.templateCode
     || Boolean(aliyunDraft.accessKeySecret)
   ))
-  const tencentDirty = Boolean(tencentInitialized && tencentQuery.data && (
+  const tencentDirty = Boolean(tencentDraftState && tencentQuery.data && (
     tencentDraft.secretId !== tencentQuery.data.secretId
     || tencentDraft.sdkAppId !== tencentQuery.data.sdkAppId
     || tencentDraft.signName !== tencentQuery.data.signName
@@ -163,7 +152,7 @@ export default function PhoneLoginSettingsPage() {
       <div className={storageStyles.notice}>
         <div>
           <p>请先在阿里云短信控制台创建并审核通过短信签名和验证码模板。</p>
-          <p>模板变量请使用 <code>${code}</code>，发送时系统会将验证码作为 <code>code</code> 参数传入。</p>
+          <p>模板变量请使用 <code>{'${code}'}</code>，发送时系统会将验证码作为 <code>code</code> 参数传入。</p>
         </div>
         <a href="https://dysms.console.aliyun.com/" target="_blank" rel="noreferrer">打开阿里云短信控制台</a>
       </div>
@@ -171,19 +160,19 @@ export default function PhoneLoginSettingsPage() {
       {aliyunQuery.isError && <p role="alert" className={formStyles.formError}>阿里云短信配置加载失败，请刷新页面重试。</p>}
       {aliyunQuery.data && <form className={formStyles.form} onSubmit={submitAliyun} aria-busy={aliyunSave.isPending}>
         <FormField label="AccessKey ID" htmlFor="aliyun-sms-access-id" required>
-          <input id="aliyun-sms-access-id" autoComplete="off" value={aliyunDraft.accessKeyId} disabled={!aliyunInitialized || aliyunSave.isPending} onChange={(event) => setAliyunDraft((draft) => ({ ...draft, accessKeyId: event.target.value }))} required />
+          <input id="aliyun-sms-access-id" autoComplete="off" value={aliyunDraft.accessKeyId} disabled={!aliyunQuery.data || aliyunSave.isPending} onChange={(event) => setAliyunDraftState({ ...aliyunDraft, accessKeyId: event.target.value }))} required />
         </FormField>
         <FormField label="AccessKey Secret" htmlFor="aliyun-sms-access-secret" required={!aliyunQuery.data.accessKeySecretConfigured}>
-          <input id="aliyun-sms-access-secret" type="password" autoComplete="new-password" className={aliyunQuery.data.accessKeySecretConfigured ? formStyles.savedSecret : undefined} value={aliyunDraft.accessKeySecret} disabled={!aliyunInitialized || aliyunSave.isPending} onChange={(event) => setAliyunDraft((draft) => ({ ...draft, accessKeySecret: event.target.value }))} placeholder={aliyunQuery.data.accessKeySecretConfigured ? '已保存，留空则保持不变' : '请输入 AccessKey Secret'} required={!aliyunQuery.data.accessKeySecretConfigured} />
+          <input id="aliyun-sms-access-secret" type="password" autoComplete="new-password" className={aliyunQuery.data.accessKeySecretConfigured ? formStyles.savedSecret : undefined} value={aliyunDraft.accessKeySecret} disabled={!aliyunQuery.data || aliyunSave.isPending} onChange={(event) => setAliyunDraftState({ ...aliyunDraft, accessKeySecret: event.target.value }))} placeholder={aliyunQuery.data.accessKeySecretConfigured ? '已保存，留空则保持不变' : '请输入 AccessKey Secret'} required={!aliyunQuery.data.accessKeySecretConfigured} />
         </FormField>
         <FormField label="短信签名" htmlFor="aliyun-sms-sign" required>
-          <input id="aliyun-sms-sign" value={aliyunDraft.signName} disabled={!aliyunInitialized || aliyunSave.isPending} onChange={(event) => setAliyunDraft((draft) => ({ ...draft, signName: event.target.value }))} placeholder="请输入已审核通过的签名名称" required />
+          <input id="aliyun-sms-sign" value={aliyunDraft.signName} disabled={!aliyunQuery.data || aliyunSave.isPending} onChange={(event) => setAliyunDraftState({ ...aliyunDraft, signName: event.target.value }))} placeholder="请输入已审核通过的签名名称" required />
         </FormField>
         <FormField label="短信模板 Code" htmlFor="aliyun-sms-template" required>
-          <input id="aliyun-sms-template" value={aliyunDraft.templateCode} disabled={!aliyunInitialized || aliyunSave.isPending} onChange={(event) => setAliyunDraft((draft) => ({ ...draft, templateCode: event.target.value }))} placeholder="例如：SMS_123456789" required />
+          <input id="aliyun-sms-template" value={aliyunDraft.templateCode} disabled={!aliyunQuery.data || aliyunSave.isPending} onChange={(event) => setAliyunDraftState({ ...aliyunDraft, templateCode: event.target.value }))} placeholder="例如：SMS_123456789" required />
         </FormField>
         <div className={formStyles.formActions}>
-          <AppButton type="button" disabled={aliyunSave.isPending || !aliyunDirty} onClick={() => setAliyunDraft({ accessKeyId: aliyunQuery.data.accessKeyId, accessKeySecret: '', signName: aliyunQuery.data.signName, templateCode: aliyunQuery.data.templateCode })}>取消</AppButton>
+          <AppButton type="button" disabled={aliyunSave.isPending || !aliyunDirty} onClick={() => setAliyunDraftState(null)}>取消</AppButton>
           <AppButton type="submit" variant="primary" disabled={aliyunSave.isPending || !aliyunDirty}>{aliyunSave.isPending ? '保存中…' : '保存更改'}</AppButton>
         </div>
       </form>}
@@ -201,22 +190,22 @@ export default function PhoneLoginSettingsPage() {
       {tencentQuery.isError && <p role="alert" className={formStyles.formError}>腾讯云短信配置加载失败，请刷新页面重试。</p>}
       {tencentQuery.data && <form className={formStyles.form} onSubmit={submitTencent} aria-busy={tencentSave.isPending}>
         <FormField label="SecretId" htmlFor="tencent-sms-secret-id" required>
-          <input id="tencent-sms-secret-id" autoComplete="off" value={tencentDraft.secretId} disabled={!tencentInitialized || tencentSave.isPending} onChange={(event) => setTencentDraft((draft) => ({ ...draft, secretId: event.target.value }))} required />
+          <input id="tencent-sms-secret-id" autoComplete="off" value={tencentDraft.secretId} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, secretId: event.target.value }))} required />
         </FormField>
         <FormField label="SecretKey" htmlFor="tencent-sms-secret-key" required={!tencentQuery.data.secretKeyConfigured}>
-          <input id="tencent-sms-secret-key" type="password" autoComplete="new-password" className={tencentQuery.data.secretKeyConfigured ? formStyles.savedSecret : undefined} value={tencentDraft.secretKey} disabled={!tencentInitialized || tencentSave.isPending} onChange={(event) => setTencentDraft((draft) => ({ ...draft, secretKey: event.target.value }))} placeholder={tencentQuery.data.secretKeyConfigured ? '已保存，留空则保持不变' : '请输入 SecretKey'} required={!tencentQuery.data.secretKeyConfigured} />
+          <input id="tencent-sms-secret-key" type="password" autoComplete="new-password" className={tencentQuery.data.secretKeyConfigured ? formStyles.savedSecret : undefined} value={tencentDraft.secretKey} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, secretKey: event.target.value }))} placeholder={tencentQuery.data.secretKeyConfigured ? '已保存，留空则保持不变' : '请输入 SecretKey'} required={!tencentQuery.data.secretKeyConfigured} />
         </FormField>
         <FormField label="短信 SDK App ID" htmlFor="tencent-sms-app-id" required>
-          <input id="tencent-sms-app-id" value={tencentDraft.sdkAppId} disabled={!tencentInitialized || tencentSave.isPending} onChange={(event) => setTencentDraft((draft) => ({ ...draft, sdkAppId: event.target.value }))} required />
+          <input id="tencent-sms-app-id" value={tencentDraft.sdkAppId} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, sdkAppId: event.target.value }))} required />
         </FormField>
         <FormField label="短信签名" htmlFor="tencent-sms-sign" required>
-          <input id="tencent-sms-sign" value={tencentDraft.signName} disabled={!tencentInitialized || tencentSave.isPending} onChange={(event) => setTencentDraft((draft) => ({ ...draft, signName: event.target.value }))} placeholder="请输入已审核通过的签名名称" required />
+          <input id="tencent-sms-sign" value={tencentDraft.signName} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, signName: event.target.value }))} placeholder="请输入已审核通过的签名名称" required />
         </FormField>
         <FormField label="短信模板 ID" htmlFor="tencent-sms-template" required>
-          <input id="tencent-sms-template" value={tencentDraft.templateId} disabled={!tencentInitialized || tencentSave.isPending} onChange={(event) => setTencentDraft((draft) => ({ ...draft, templateId: event.target.value }))} required />
+          <input id="tencent-sms-template" value={tencentDraft.templateId} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, templateId: event.target.value }))} required />
         </FormField>
         <FormField label="接入地域" htmlFor="tencent-sms-region" required>
-          <select id="tencent-sms-region" value={tencentDraft.region} disabled={!tencentInitialized || tencentSave.isPending} onChange={(event) => setTencentDraft((draft) => ({ ...draft, region: event.target.value }))}>
+          <select id="tencent-sms-region" value={tencentDraft.region} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, region: event.target.value }))}>
             <option value="ap-guangzhou">广州（ap-guangzhou）</option>
             <option value="ap-shanghai">上海（ap-shanghai）</option>
             <option value="ap-beijing">北京（ap-beijing）</option>
@@ -226,7 +215,7 @@ export default function PhoneLoginSettingsPage() {
           </select>
         </FormField>
         <div className={formStyles.formActions}>
-          <AppButton type="button" disabled={tencentSave.isPending || !tencentDirty} onClick={() => setTencentDraft({ secretId: tencentQuery.data.secretId, secretKey: '', sdkAppId: tencentQuery.data.sdkAppId, signName: tencentQuery.data.signName, templateId: tencentQuery.data.templateId, region: tencentQuery.data.region })}>取消</AppButton>
+          <AppButton type="button" disabled={tencentSave.isPending || !tencentDirty} onClick={() => setTencentDraftState(null)}>取消</AppButton>
           <AppButton type="submit" variant="primary" disabled={tencentSave.isPending || !tencentDirty}>{tencentSave.isPending ? '保存中…' : '保存更改'}</AppButton>
         </div>
       </form>}
