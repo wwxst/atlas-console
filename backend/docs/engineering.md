@@ -96,17 +96,20 @@ PostgreSQL 集成测试先建立空的、可丢弃的独立数据库，再设置
 
 `pom.xml` 使用 JaCoCo 0.8.15 支持 JDK 25；`mvnw.cmd verify` 生成 `target/site/jacoco/index.html` 和 `jacoco.xml`，不设置统一覆盖率百分比门槛，也不排除业务代码。JaCoCo 自身过滤编译器/Lombok 生成的部分代码，统计以报告中的可分析代码为准。Maven 成功只证明该次构建和测试，不能代替完整门禁。
 
-Windows 本机完整测试入口为 `scripts/verify_backend.py`，仅使用 Python 标准库。需要 Python 3、JDK 25、本机 PostgreSQL 17、psql 客户端和 Redis 可执行文件。在 `backend` 目录执行。测试账号分为应用角色（`DB_USERNAME`/`DB_PASSWORD`）和有权创建/删除临时数据库的管理角色（`POSTGRES_ADMIN_USERNAME`/`POSTGRES_ADMIN_PASSWORD`）：
+Windows 本机完整测试入口为 `scripts/verify_backend.py`，仅使用 Python 标准库。需要 Python 3、JDK 25、本机 PostgreSQL 17、psql 客户端和 Redis 可执行文件。在 `backend` 目录执行。测试账号分为应用角色（`DB_USERNAME`/`DB_PASSWORD`）和数据库管理角色（`POSTGRES_ADMIN_USERNAME`/`POSTGRES_ADMIN_PASSWORD`）；管理角色必须能创建/删除数据库，并能将临时库所有权交给应用角色。
 
 ```powershell
+$env:DB_USERNAME = 'atlas'
+$env:DB_PASSWORD = '应用角色密码'
+$env:POSTGRES_ADMIN_USERNAME = 'postgres'
+$env:POSTGRES_ADMIN_PASSWORD = '数据库管理角色密码'
 python scripts/verify_backend.py `
   --java-home C:/Users/ww/.jdks/temurin-25.0.4.1 `
-  --PostgreSQL-client D:/Develop/sofe/Mysql/bin/PostgreSQL.exe `
+  --postgres-client 'C:/Program Files/PostgreSQL/17/bin/psql.exe' `
   --redis-server D:/Develop/sofe/Redis/redis-server.exe
 ```
 
-路径按本机安装位置调整；PostgreSQL 地址可通过 `--db-host`、`--db-port` 指定，管理角色名可通过 `--db-admin-username` 指定。应用角色必须已存在，管理角色必须有 CREATEDB/删除临时库的权限。脚本自行生成独立数据库和 JWT 密钥、启动私有 Redis 与实际打包应用，不使用现有业务库或 Redis 数据；结束后删除本次创建的库并关闭自己的进程。PostgreSQL 服务是已有本机服务，不会被停止；容量结论因此只用于本机基线。
-
+路径按本机安装位置调整；PostgreSQL 地址可通过 `--db-host`、`--db-port` 指定，管理角色名可通过 `--db-admin-username` 指定。应用角色必须已存在。脚本自行生成独立数据库和 JWT 密钥、启动私有 Redis 与实际打包应用，不使用现有业务库或 Redis 数据；结束后删除本次创建的库并关闭自己的进程。PostgreSQL 服务是已有本机服务，不会被停止；容量结论因此只用于本机基线。
 脚本执行 `clean verify`，拒绝必需集成测试跳过，再通过真实 HTTP 验证注册、两类账号登录/续期/退出、权限、渠道、个人资料、密码版本、换绑、管理端编辑普通用户及错误路径。普通用户注册后的资料 ID 必须是与数据库一致的字符串；管理端编辑与过滤列表使用 `9007199254740993` 验证超出 JavaScript 安全整数范围时仍精确返回字符串 ID。并发检查在 HTTP 层验证验证码登录、发送和注册各 16 个请求的结果分布，以及两个管理员编辑请求争用同一联系方式时仅一个成功。故障检查验证无效渠道配置、Redis 中断及恢复，并扫描本次敏感值是否进入应用日志。验证码从私有 Redis 读取，只用于验证开发发送实现，不代表真实短信/邮件送达。
 
 默认性能基线分别重启应用执行 `control` 和 `protected` 两轮：前者将并行密码校验上限设为 100000，后者设为 8；两轮都将每 IP 和每账号的登录次数上限设为 1000000000，以观察并行密码校验限制。每轮先预热 20 次资料查询，再执行混合请求（约 40% 查询资料、40% 续期、20% 密码登录）和纯密码登录两种模式，各自以 1、8、24、48 个并发工作线程持续 10 秒，共 16 个负载阶段；`--seconds` 可将每阶段时长设为 1～60 秒。每阶段清空私有 Redis 并重新登录后开始计量。
@@ -131,7 +134,7 @@ python scripts/verify_backend.py `
 
 Snowflake 节点标识通过 `ID_GENERATOR_DATACENTER_ID`、`ID_GENERATOR_WORKER_ID` 配置，取值均为 0～31，默认均为 0。多实例部署必须为每个实例分配唯一的组合；普通用户主键由该节点生成后写入数据库，不依赖自增主键。
 
-PostgreSQL Connector/J 使用默认的 `PostgreSQL UPDATE 行数语义`，UPDATE 返回匹配行数，重复提交相同值也返回 1。自定义 `DB_URL` 时保持该语义；Service 用它区分“记录存在”与“记录已消失”。JWT issuer 不得为空，Access/Refresh 有效期均至少为 1 秒，无效配置在启动时拒绝。
+PostgreSQL JDBC 的 `executeUpdate()` 返回受影响行数；对匹配记录执行相同值更新仍会计为 1 行。自定义 `DB_URL` 时保持 PostgreSQL 语义；Service 用它区分“记录存在”与“记录已消失”。JWT issuer 不得为空，Access/Refresh 有效期均至少为 1 秒，无效配置在启动时拒绝。
 
 ## 错误处理约定
 

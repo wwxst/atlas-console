@@ -113,10 +113,11 @@ class BackendGate:
             "--username=" + username,
             "--dbname=" + database,
             "--no-psqlrc",
+            "--no-password",
+            "--quiet",
             "--set=ON_ERROR_STOP=1",
             "--tuples-only",
             "--no-align",
-            "--field-separator=\\t",
         ]
         env = self.env.copy()
         if admin_connection:
