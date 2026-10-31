@@ -54,7 +54,7 @@ compose() {
   # from an unrelated shell/stack so preflight and runtime use the same private
   # installation config. Keep only the verified image tags and selected state dir.
   env -u COMPOSE_PROJECT_NAME -u ATLAS_PROJECT_NAME -u ATLAS_NETWORK_PREFIX \
-    -u ATLAS_HTTP_PORT -u ATLAS_DB_URL -u ATLAS_DB_USERNAME -u ATLAS_DB_PASSWORD \
+    -u ATLAS_HTTP_PORT -u ATLAS_DB_URL -u ATLAS_DB_USERNAME \
     -u DB_PASSWORD -u ATLAS_DB_PASSWORD -u POSTGRES_PASSWORD -u POSTGRES_ADMIN_PASSWORD -u JWT_SECRET -u STORAGE_ENCRYPTION_KEY \
     -u ATLAS_FLYWAY_BASELINE_ON_MIGRATE -u ATLAS_DEPLOYMENT_ENABLED \
     -u ATLAS_DEPLOYMENT_GITHUB_TOKEN \
