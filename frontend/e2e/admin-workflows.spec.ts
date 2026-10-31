@@ -10,6 +10,10 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
   let nickname = '测试用户'
   let status = 1
   let systemUserStatus = 1
+  let loginSettings = { phoneLoginEnabled: true, emailLoginEnabled: true, smsProvider: 'aliyun' as 'aliyun' | 'tencent' }
+  let aliyunConfig = { accessKeyId: '', signName: '', templateCode: '', accessKeySecretConfigured: false, configured: false }
+  let tencentConfig = { secretId: '', sdkAppId: '', signName: '', templateId: '', region: 'ap-guangzhou', secretKeyConfigured: false, configured: false }
+  let emailConfig = { host: '', port: 465, username: '', fromAddress: '', fromName: 'Atlas', security: 'SSL', passwordConfigured: false, configured: false }
   const requests: string[] = []
 
   await page.route('**/api/**', async (route) => {
@@ -124,6 +128,33 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
       requests.push('status:' + userId)
       return reply(null)
     }
+    if (path === '/api/sys-user/login-settings' && method === 'GET') return reply(loginSettings)
+    if (path === '/api/sys-user/login-settings' && method === 'PUT') {
+      loginSettings = route.request().postDataJSON() as typeof loginSettings
+      requests.push(`login-settings:${loginSettings.phoneLoginEnabled}:${loginSettings.emailLoginEnabled}:${loginSettings.smsProvider}`)
+      return reply(loginSettings)
+    }
+    if (path === '/api/sys-user/login-providers/sms/aliyun' && method === 'GET') return reply(aliyunConfig)
+    if (path === '/api/sys-user/login-providers/sms/aliyun' && method === 'PUT') {
+      const data = route.request().postDataJSON() as { accessKeyId: string; accessKeySecret: string; signName: string; templateCode: string }
+      aliyunConfig = { accessKeyId: data.accessKeyId, signName: data.signName, templateCode: data.templateCode, accessKeySecretConfigured: Boolean(data.accessKeySecret) || aliyunConfig.accessKeySecretConfigured, configured: true }
+      requests.push('aliyun-sms-saved')
+      return reply(aliyunConfig)
+    }
+    if (path === '/api/sys-user/login-providers/sms/tencent' && method === 'GET') return reply(tencentConfig)
+    if (path === '/api/sys-user/login-providers/sms/tencent' && method === 'PUT') {
+      const data = route.request().postDataJSON() as { secretId: string; secretKey: string; sdkAppId: string; signName: string; templateId: string; region: string }
+      tencentConfig = { secretId: data.secretId, sdkAppId: data.sdkAppId, signName: data.signName, templateId: data.templateId, region: data.region, secretKeyConfigured: Boolean(data.secretKey) || tencentConfig.secretKeyConfigured, configured: true }
+      requests.push('tencent-sms-saved')
+      return reply(tencentConfig)
+    }
+    if (path === '/api/sys-user/login-providers/email' && method === 'GET') return reply(emailConfig)
+    if (path === '/api/sys-user/login-providers/email' && method === 'PUT') {
+      const data = route.request().postDataJSON() as { host: string; port: number; username: string; password: string; fromAddress: string; fromName: string; security: string }
+      emailConfig = { host: data.host, port: data.port, username: data.username, fromAddress: data.fromAddress, fromName: data.fromName, security: data.security, passwordConfigured: Boolean(data.password) || emailConfig.passwordConfigured, configured: true }
+      requests.push('email-smtp-saved')
+      return reply(emailConfig)
+    }
     if (path === '/api/sys-user/storage/settings') {
       return reply({ storageType: 'local' })
     }
@@ -230,6 +261,49 @@ test('system-user actions are centered and the root admin cannot be disabled', a
 
   await adminRow.getByRole('button', { name: '查看' }).click()
   await expect(page.getByText('编号：1')).toBeVisible()
+})
+
+test('login settings separate master switches from SMS and SMTP provider details', async ({ page }) => {
+  const requests = await installMockApi(page)
+  await login(page)
+
+  await page.goto('/settings')
+  await expect(page.getByText('登录基础配置')).toBeVisible()
+  await expect(page.getByRole('switch', { name: '手机登录' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.getByRole('switch', { name: '邮箱登录' })).toHaveAttribute('aria-checked', 'true')
+  await page.getByRole('switch', { name: '邮箱登录' }).click()
+  await page.getByRole('radio', { name: '腾讯云短信' }).check()
+  await page.getByRole('button', { name: '保存更改' }).click()
+  await expect.poll(() => requests.includes('login-settings:true:false:tencent')).toBe(true)
+
+  await page.getByRole('button', { name: '手机登录配置' }).click()
+  await expect(page).toHaveURL(/\/settings\/phone-login$/)
+  await expect(page.getByRole('tab', { name: '阿里云配置' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByLabel('AccessKey ID').fill('example-access-id')
+  await page.getByLabel('AccessKey Secret').fill('example-credential')
+  await page.getByLabel('短信签名').fill('Atlas')
+  await page.getByLabel('短信模板 Code').fill('SMS_123456')
+  await page.getByRole('button', { name: '保存更改' }).click()
+  await expect.poll(() => requests.includes('aliyun-sms-saved')).toBe(true)
+
+  await page.getByRole('tab', { name: '腾讯云配置' }).click()
+  await page.getByLabel('SecretId').fill('example-secret-id')
+  await page.getByLabel('SecretKey').fill('example-credential')
+  await page.getByLabel('短信 SDK App ID').fill('1400000000')
+  await page.getByLabel('短信签名').fill('Atlas')
+  await page.getByLabel('短信模板 ID').fill('123456')
+  await page.getByRole('button', { name: '保存更改' }).click()
+  await expect.poll(() => requests.includes('tencent-sms-saved')).toBe(true)
+
+  await page.getByRole('button', { name: '邮箱登录配置' }).click()
+  await expect(page).toHaveURL(/\/settings\/email-login$/)
+  await page.getByLabel('SMTP 服务器').fill('smtp.example.com')
+  await page.getByLabel('SMTP 用户名').fill('sender@example.com')
+  await page.getByLabel('SMTP 密码 / 授权码').fill('example-credential')
+  await page.getByLabel('发件邮箱').fill('sender@example.com')
+  await page.getByLabel('发件人名称').fill('Atlas')
+  await page.getByRole('button', { name: '保存更改' }).click()
+  await expect.poll(() => requests.includes('email-smtp-saved')).toBe(true)
 })
 
 test('storage settings render real API state and open OSS binding form', async ({ page }) => {
