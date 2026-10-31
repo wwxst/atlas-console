@@ -28,16 +28,16 @@
 
 1. 准备一台 Linux 生产服务器、域名、有效的 HTTPS 证书以及安全的网络策略。建议运行 Docker Engine + Docker Compose v2；将公网流量交给独立的 TLS 反向代理（Caddy/Nginx），只转发到本机 `127.0.0.1:8088`。数据库和 Redis 没有对外发布端口。
 2. 安装器会创建专用非 root 账号 `atlas-deploy`，并将它加入 Docker 组；该组权限接近 root，因此这个账号只能用于专用生产 Runner。以 `atlas-deploy` 身份安装并运行 GitHub Actions Runner，注册到 `wwxst/atlas-console`，并添加 `atlas-production` 标签。**生产 Runner 不得执行不受信任的 PR 代码。请设置分支保护、审查工作流变更，并限制仓库写入权限。**
-3. 首次安装优先使用 [一条命令安装器](installer.md)，它会生成 `/opt/atlas/.env` 和随机密钥。手动安装时参考本目录 `env.example`，根据 `ATLAS_DB_MODE` 配置 `ATLAS_DB_URL`、`ATLAS_DB_USERNAME`、`ATLAS_DB_PASSWORD`；Docker PostgreSQL 模式还需独立的 `MYSQL_ROOT_PASSWORD` 和 `DB_PASSWORD`。只允许部署账号读取 `.env`，权限设为 `0640`，所有者 `root:atlas-deploy`，**不要提交到 GitHub**。
+3. 首次安装优先使用 [一条命令安装器](installer.md)，它会生成 `/opt/atlas/.env` 和随机密钥。手动安装时参考本目录 `env.example`，根据 `ATLAS_DB_MODE` 配置 `ATLAS_DB_URL`、`ATLAS_DB_USERNAME`、`ATLAS_DB_PASSWORD`；Docker PostgreSQL 模式还需`DB_PASSWORD`。只允许部署账号读取 `.env`，权限设为 `0640`，所有者 `root:atlas-deploy`，**不要提交到 GitHub**。
 4. 在 GitHub 仓库的 Actions 设置中允许执行工作流，创建名为 `production` 的 Environment，可选配置 required reviewers。工作流只允许从 `main` 引用执行。仓库 `main` 必须受代码审查和 CI 约束。
 5. 使用安装器时，首次构建和启动由 `install.sh` 在服务器本机完成，结束后再在宝塔配置域名反向代理与 HTTPS。手动安装模式则在 Runner 在线后，通过 GitHub Actions 页面运行 `Deploy production`。后续 GitHub Actions 更新会在 Runner 上检出同一个仓库提交，构建前后端镜像并验证健康状态。**没有 Runner 时，GitHub Actions 任务会一直排队，不能视为部署成功。**
 6. **数据库 schema 由 Flyway 版本迁移管理**：全新数据库会在后端首次启动时执行 V1 创建表和默认配置，不再通过 PostgreSQL 容器导入 `web_project.sql`。首次公网开放前必须修改默认系统管理员密码。
-7. 如果复用由旧版 `web_project.sql` 初始化的非空数据库，必须先备份并核对 schema，然后按 [后端数据库迁移指南](https://github.com/wwxst/atlas-console/blob/main/backend/docs/database-migrations.md) 临时设置 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=true` 完成一次 baseline，确认健康后恢复为 `false`。**不要对未核实的数据库启用 baseline。**
+7. 旧版 `web_project.sql` 是 MySQL 快照，不能作为 PostgreSQL 数据库直接 baseline 或启动。如果未来确有历史 MySQL 数据需要迁移，必须先备份，再将数据转换到已由 PostgreSQL Flyway 创建的目标 schema，并逐表校验；当前首次部署使用全新 PostgreSQL，不做旧库迁移。
 8. 首次访问成功后，创建一个只访问 `wwxst/atlas-console` 的 **GitHub fine-grained PAT**，仅授予仓库 Actions 的读写权限，不授予代码写入、Secrets 或 Administration 权限。把它写入服务器 `/opt/atlas/.env` 的 `ATLAS_DEPLOYMENT_GITHUB_TOKEN`，设置 `ATLAS_DEPLOYMENT_ENABLED=true`，再通过受控部署流程重启 backend 容器。这样后台的一键更新按钮才会启用。
 
 ## 数据库迁移与应用回滚边界
 
-- 新安装时，PostgreSQL 只创建空的 `web_project` 数据库；后端启动时 Flyway 执行 `V1__initial_schema.sql`。CI 和发布前验证任务都在真实 PostgreSQL 8.4 空数据库上运行相同迁移。
+- 新安装时，PostgreSQL 只创建空的 `web_project` 数据库；后端启动时 Flyway 执行 `V1__initial_schema.sql`。CI 和发布前验证任务都在真实 PostgreSQL 17 空数据库上运行相同迁移。
 - 已发布的 Flyway SQL 不可修改。后续 schema 变化只能添加新的版本文件，并优先采用向前兼容的 expand/contract 迁移。
 - 对已有数据库，默认 `ATLAS_FLYWAY_BASELINE_ON_MIGRATE=false`。只有先完成备份、确认表/列/索引/约束与 V1 相符后，才可临时打开 baseline；Flyway baseline **不会自动比较或修复完整 DDL**。
 - Flyway migration 在后端启动时运行。迁移失败会阻止后端健康检查通过，因此发布脚本不会记录新应用版本为成功；但应用镜像回滚**不会回滚已提交的数据库 DDL 或数据**。迁移必须兼容当前版本和可回滚的旧应用版本。
