@@ -92,7 +92,7 @@
         <choose>
             <when test="createdAtOrder == 'asc'">ORDER BY created_at ASC, id ASC</when>
             <when test="createdAtOrder == 'desc'">ORDER BY created_at DESC, id DESC</when>
-            <otherwise>ORDER BY id DESC</otherwise>
+            <otherwise>ORDER BY id ASC</otherwise>
         </choose>
         LIMIT #{pageSize} OFFSET #{offset}
     </select>

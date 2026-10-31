@@ -41,7 +41,7 @@ public interface SysUserMapper {
      * @param status 账号状态；null 表示不筛选
      * @param offset 从 0 开始的查询偏移量
      * @param pageSize 当前页数量
-     * @param createdAtOrder 创建时间排序方向；null 表示按 ID 倒序
+     * @param createdAtOrder 创建时间排序方向；null 表示按 ID 升序
      */
     List<SysUser> selectPageByCondition(
             @Param("keyword") String keyword,
