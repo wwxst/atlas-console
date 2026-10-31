@@ -6,45 +6,38 @@
 
 /* ===== Table ===== */
 .table {
-  table-layout: fixed;
-  min-width: 70rem;
+  table-layout: auto;
+  min-width: 76rem;
 }
 
 .table th:first-child {
-  width: 6rem;
+  width: 5.5rem;
 }
 
 .table th:nth-child(2) {
-  width: 4rem;
+  width: 3.75rem;
   text-align: center;
 }
 
-.table th:nth-child(4) {
-  width: 15%;
+.table th:nth-child(3) {
+  width: 9rem;
 }
 
-.table th:nth-child(5) {
-  width: 18%;
+.table th:nth-child(4) {
+  width: 11rem;
 }
 
 .table th:nth-child(6) {
-  width: 15%;
+  width: 11.5rem;
 }
 
 .table th:nth-child(7),
 .table th:nth-child(8) {
-  width: 7rem;
+  width: 6.5rem;
 }
 
 .table th:last-child {
-  width: 10.5rem;
-}
-
-/* Keep the action heading and its buttons aligned to the right edge. */
-.table thead th:last-child,
-.table tbody td:last-child {
-  padding-right: 1.5rem;
-  text-align: right;
+  width: 11rem;
 }
 
 .userId {
@@ -67,8 +60,20 @@
 }
 
 .contact {
+  display: block;
+  max-width: 18rem;
+  overflow: hidden;
   color: var(--atlas-color-text-secondary);
   font-size: var(--atlas-text-sm);
+  text-overflow: ellipsis;
+}
+
+.contactPhone {
+  max-width: 11rem;
+}
+
+.contactEmail {
+  max-width: 18rem;
 }
 
 /* ===== View Button ===== */
@@ -76,7 +81,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--atlas-space-xs);
-  height: 1.875rem;
+  height: 1.75rem;
   padding: 0 var(--atlas-space-sm);
   border: 0;
   border-radius: var(--atlas-radius-sm);
@@ -95,7 +100,8 @@
 .rowActions {
   display: inline-flex;
   align-items: center;
-  gap: 0.125rem;
+  justify-content: center;
+  gap: var(--atlas-space-sm);
   white-space: nowrap;
 }
 
@@ -104,7 +110,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--atlas-space-xs);
-  height: 1.875rem;
+  height: 1.75rem;
   min-width: 5.25rem;
   padding: 0 0.375rem;
   border: 0;
