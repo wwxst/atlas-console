@@ -22,7 +22,7 @@ services:
     environment:
       DB_URL: ${ATLAS_DB_URL:-jdbc:postgresql://postgres:5432/web_project}
       DB_USERNAME: ${ATLAS_DB_USERNAME:-atlas}
-      DB_PASSWORD: ${ATLAS_DB_PASSWORD:-${DB_PASSWORD:?Set DB_PASSWORD}}
+      DB_PASSWORD: ${ATLAS_DB_PASSWORD:?Set ATLAS_DB_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       # Only the statically addressed Nginx container may set X-Forwarded-For.

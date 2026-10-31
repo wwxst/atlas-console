@@ -269,12 +269,12 @@ find "$SOURCE_DIR" -type d -exec chmod 750 {} +
 find "$SOURCE_DIR" -type f -exec chmod g+r {} +
 
 if [[ "$DB_MODE" == docker ]]; then
-  DB_PASSWORD="$(openssl rand -hex 32)"
+  ATLAS_DB_PASSWORD="$(openssl rand -hex 32)"
+  POSTGRES_ADMIN_PASSWORD="$(openssl rand -hex 32)"
   ATLAS_DB_URL='jdbc:postgresql://postgres:5432/web_project'
   ATLAS_DB_USERNAME="atlas"
-  ATLAS_DB_PASSWORD="$DB_PASSWORD"
 else
-  DB_PASSWORD="$(openssl rand -hex 32)"
+  POSTGRES_ADMIN_PASSWORD=""
 fi
 
 JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
@@ -288,7 +288,7 @@ write_env ATLAS_DB_MODE "$DB_MODE"
 write_env ATLAS_DB_URL "$ATLAS_DB_URL"
 write_env ATLAS_DB_USERNAME "$ATLAS_DB_USERNAME"
 write_env ATLAS_DB_PASSWORD "$ATLAS_DB_PASSWORD"
-write_env DB_PASSWORD "$DB_PASSWORD"
+if [[ "$DB_MODE" == docker ]]; then write_env POSTGRES_ADMIN_PASSWORD "$POSTGRES_ADMIN_PASSWORD"; fi
 write_env JWT_SECRET "$JWT_SECRET"
 write_env STORAGE_ENCRYPTION_KEY "$STORAGE_ENCRYPTION_KEY"
 write_env ATLAS_FLYWAY_BASELINE_ON_MIGRATE false
