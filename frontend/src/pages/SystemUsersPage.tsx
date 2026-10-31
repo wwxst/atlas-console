@@ -110,7 +110,7 @@ export default function SystemUsersPage() {
   const pageSize = parsePageSize(searchParams.get('pageSize'))
   const page = parsePage(searchParams.get('page'))
   const orderParam = searchParams.get('createdAtOrder')
-  const createdAtOrder = orderParam === 'desc' ? 'desc' : 'asc'
+  const createdAtOrder = orderParam === 'asc' || orderParam === 'desc' ? orderParam : undefined
   const usersQuery = useQuery({
     queryKey: ['system-users', { page, pageSize, keyword, status, createdAtOrder }],
     queryFn: () => getSysUsers({
@@ -181,7 +181,10 @@ export default function SystemUsersPage() {
   }
 
   const changeCreatedAtOrder = () => {
-    updateParams({ createdAtOrder: createdAtOrder === 'asc' ? 'desc' : undefined, page: undefined })
+    updateParams({
+      createdAtOrder: createdAtOrder === undefined ? 'asc' : createdAtOrder === 'asc' ? 'desc' : undefined,
+      page: undefined,
+    })
   }
 
   const openDetails = (user: SysUser) => {
@@ -294,7 +297,7 @@ export default function SystemUsersPage() {
           {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={8}><EmptyState description="没有符合当前条件的系统用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
             <td className={styles.userNumber}>{user.id}</td>
-            <td className={styles.avatarCell}><Avatar size={32} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
+            <td className={styles.avatarCell}><Avatar size={30} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
             <td className={styles.userName}><strong>{user.nickname}</strong></td>
             <td><span className={styles.username}>{user.username}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
@@ -302,7 +305,7 @@ export default function SystemUsersPage() {
             <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
             <td><div className={styles.rowActions}>
               <button type="button" className={styles.viewButton} onClick={() => openDetails(user)}><Eye size={15} />查看</button>
-              <button type="button" className={styles.statusButton} aria-busy={statusMutation.isPending && statusMutation.variables?.id === user.id} disabled={user.id === 1 || (statusMutation.isPending && statusMutation.variables?.id === user.id)} title={user.id === 1 ? '超级管理员不允许停用' : undefined} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}><Power size={15} />{user.id === 1 ? '超级管理员' : user.status === 1 ? '停用' : '启用'}</button>
+              <button type="button" className={styles.statusButton} aria-busy={statusMutation.isPending && statusMutation.variables?.id === user.id} disabled={user.id === 1 || (statusMutation.isPending && statusMutation.variables?.id === user.id)} onClick={() => statusMutation.mutate({ id: user.id, status: user.status === 1 ? 0 : 1 })}><Power size={15} />{user.status === 1 ? '停用' : '启用'}</button>
               <button type="button" className={styles.deleteButton} disabled={user.id === 1 || deleteMutation.isPending} title={user.id === 1 ? '超级管理员不允许删除' : undefined} onClick={() => { if (window.confirm(`确定删除系统用户“${user.username}”吗？`)) deleteMutation.mutate(user.id) }}><Trash2 size={15} />{deleteMutation.isPending && deleteMutation.variables === user.id ? '删除中...' : '删除'}</button>
             </div></td>
           </tr>)}
