@@ -91,6 +91,7 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
         title: 'Atlas Deploy mock-request', requestId: 'mock-request' })
     }
     if (path === '/api/sys-user/sys-users' && method === 'GET') {
+      requests.push('system-users-order:' + (url.searchParams.get('createdAtOrder') ?? 'id-asc'))
       return reply({ page: 1, pageSize: 20, total: 2, records: [
         { id: 1, username: 'admin', nickname: '测试管理员', avatar: null,
           online: true, status: 1, createdAt: now, updatedAt: now },
@@ -181,6 +182,8 @@ test('system-user actions are centered and the root admin cannot be disabled', a
   await login(page)
   await page.goto('/system-users')
   await expect(page.locator('thead th').first()).toHaveText('编号')
+  await expect(page.getByRole('button', { name: '创建时间，按创建时间升序' })).toBeVisible()
+  expect(requests).toContain('system-users-order:id-asc')
   await expect(page.locator('thead th').nth(1)).toHaveText('头像')
   await expect(page.locator('thead th').nth(2)).toHaveText('昵称')
   await expect(page.locator('thead th').nth(5)).toHaveText('在线状态')
