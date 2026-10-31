@@ -32,7 +32,7 @@ reaped = False
 try:
     transcript = b''
     deadline = time.monotonic() + 10
-    while b'MySQL password: ' not in transcript:
+    while b'PostgreSQL password: ' not in transcript:
         remaining = deadline - time.monotonic()
         assert remaining > 0, 'Password prompt timed out'
         ready, _, _ = select.select([master], [], [], remaining)

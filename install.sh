@@ -277,7 +277,6 @@ else
   DB_PASSWORD="$(openssl rand -hex 32)"
 fi
 
-POSTGRES_ROOT_PASSWORD="$(openssl rand -hex 32)"
 JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
 STORAGE_ENCRYPTION_KEY="$(openssl rand -base64 32 | tr -d '\n')"
 
@@ -289,7 +288,6 @@ write_env ATLAS_DB_MODE "$DB_MODE"
 write_env ATLAS_DB_URL "$ATLAS_DB_URL"
 write_env ATLAS_DB_USERNAME "$ATLAS_DB_USERNAME"
 write_env ATLAS_DB_PASSWORD "$ATLAS_DB_PASSWORD"
-write_env POSTGRES_ROOT_PASSWORD "$POSTGRES_ROOT_PASSWORD"
 write_env DB_PASSWORD "$DB_PASSWORD"
 write_env JWT_SECRET "$JWT_SECRET"
 write_env STORAGE_ENCRYPTION_KEY "$STORAGE_ENCRYPTION_KEY"

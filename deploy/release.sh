@@ -228,7 +228,7 @@ fi
 # The bundled PostgreSQL image is only built when Atlas owns the database container.
 # External/Baota database mode leaves the host-managed database untouched.
 if [[ "$db_mode" == docker ]] && ! docker image inspect postgres:17-alpine >/dev/null 2>&1; then
-  compose build mysql
+  compose pull postgres
 fi
 compose build frontend backend
 
