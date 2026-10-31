@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, RotateCcw } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { LOGIN_SETTINGS_QUERY_KEY, getLoginSettings, updateLoginSettings } from '@/features/settings/api'
