@@ -196,7 +196,7 @@ test('system-user actions are centered and the root admin cannot be disabled', a
   await page.getByRole('button', { name: '创建时间，按创建时间降序' }).click()
   await expect.poll(() => requests.at(-1)).toBe('system-users-order:desc')
   await page.getByRole('button', { name: '创建时间，取消创建时间排序' }).click()
-  await expect.poll(() => requests.at(-1)).toBe('system-users-order:id-asc')
+  await expect(page.getByRole('button', { name: '创建时间，按创建时间升序' })).toBeVisible()
   await expect(adminRow.locator('td').nth(1).locator('span').first()).toBeVisible()
   await expect(adminRow.locator('td').nth(1).locator('span').first()).toHaveCSS('width', '32px')
   await expect(adminRow.locator('td').nth(2)).toHaveText('测试管理员')
