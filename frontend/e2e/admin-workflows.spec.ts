@@ -268,7 +268,7 @@ test('login settings separate master switches from SMS and SMTP provider details
   await login(page)
 
   await page.goto('/settings')
-  await expect(page.getByText('登录基础配置')).toBeVisible()
+  await expect(page.locator('section[aria-label="登录设置"]').getByText('登录基础配置')).toBeVisible()
   await expect(page.getByRole('switch', { name: '手机登录' })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByRole('switch', { name: '邮箱登录' })).toHaveAttribute('aria-checked', 'true')
   await page.getByRole('switch', { name: '邮箱登录' }).click()
