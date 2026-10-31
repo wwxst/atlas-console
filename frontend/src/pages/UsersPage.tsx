@@ -136,10 +136,10 @@ export default function UsersPage() {
           {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={9}><EmptyState description="没有符合当前条件的用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
             <td className={styles.userId}>{user.userNo}</td>
-            <td className={styles.avatarCell}><Avatar size={32} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
+            <td className={styles.avatarCell}><Avatar size={30} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
             <td className={styles.userName}><strong>{getDisplayName(user)}</strong></td>
-            <td><span className={styles.contact}>{user.phone || '未绑定'}</span></td>
-            <td><span className={styles.contact}>{user.email || '未绑定'}</span></td>
+            <td><span className={`${styles.contact} ${styles.contactPhone}`}>{user.phone || '未绑定'}</span></td>
+            <td><span className={`${styles.contact} ${styles.contactEmail}`}>{user.email || '未绑定'}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
             <td><StatusIndicator tone={user.online ? 'success' : 'offline'}>{user.online ? '在线' : '离线'}</StatusIndicator></td>
             <td><StatusIndicator tone={user.status === 1 ? 'success' : 'danger'}>{user.status === 1 ? '正常' : '已停用'}</StatusIndicator></td>
