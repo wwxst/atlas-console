@@ -110,7 +110,7 @@ export default function SystemUsersPage() {
   const pageSize = parsePageSize(searchParams.get('pageSize'))
   const page = parsePage(searchParams.get('page'))
   const orderParam = searchParams.get('createdAtOrder')
-  const createdAtOrder = orderParam === 'desc' ? 'desc' : 'asc'
+  const createdAtOrder = orderParam === 'asc' || orderParam === 'desc' ? orderParam : undefined
   const usersQuery = useQuery({
     queryKey: ['system-users', { page, pageSize, keyword, status, createdAtOrder }],
     queryFn: () => getSysUsers({
@@ -181,7 +181,10 @@ export default function SystemUsersPage() {
   }
 
   const changeCreatedAtOrder = () => {
-    updateParams({ createdAtOrder: createdAtOrder === 'asc' ? 'desc' : undefined, page: undefined })
+    updateParams({
+      createdAtOrder: createdAtOrder === undefined ? 'asc' : createdAtOrder === 'asc' ? 'desc' : undefined,
+      page: undefined,
+    })
   }
 
   const openDetails = (user: SysUser) => {
