@@ -281,7 +281,7 @@ test('login settings separate master switches from SMS and SMTP provider details
   await expect(page.getByRole('tab', { name: '阿里云配置' })).toHaveAttribute('aria-selected', 'true')
   await page.getByLabel('AccessKey ID').fill('example-access-id')
   await page.getByLabel('AccessKey Secret').fill('example-credential')
-  await page.getByLabel('短信签名').fill('Atlas')
+  await page.getByRole('tabpanel').getByLabel('短信签名').fill('Atlas')
   await page.getByLabel('短信模板 Code').fill('SMS_123456')
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('aliyun-sms-saved')).toBe(true)
