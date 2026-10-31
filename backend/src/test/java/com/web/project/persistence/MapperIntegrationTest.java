@@ -111,6 +111,7 @@ class MapperIntegrationTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void adminContactConflictsAreBusinessErrorsAndDoNotPartiallyUpdate() {
         jdbcTemplate.update("""
                 INSERT INTO user_account (id, user_no, phone, email, nickname)

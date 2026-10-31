@@ -53,14 +53,15 @@ jobs:
     outputs:
       backend_sha: ${{ steps.revision.outputs.sha }}
     services:
-      mysql:
-        image: mysql:8.4
+      postgres:
+        image: postgres:17-alpine
         env:
-          MYSQL_ROOT_PASSWORD: ci_only_password
-          MYSQL_DATABASE: web_project
-        ports: ['3306:3306']
+          POSTGRES_USER: atlas_admin
+          POSTGRES_PASSWORD: ci_only_admin_password
+          POSTGRES_DB: web_project
+        ports: ['5432:5432']
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_only_password"
+          --health-cmd="pg_isready -U atlas_admin -d web_project"
           --health-interval=10s --health-timeout=5s --health-retries=15
       redis:
         image: redis:7.4
@@ -69,10 +70,10 @@ jobs:
           --health-cmd="redis-cli ping"
           --health-interval=5s --health-timeout=3s --health-retries=10
     env:
-      DB_URL: jdbc:mysql://127.0.0.1:3306/web_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: ci_only_password
-      ATLAS_MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/web_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      DB_URL: jdbc:postgresql://127.0.0.1:5432/web_project
+      DB_USERNAME: atlas
+      DB_PASSWORD: ci_only_app_password
+      ATLAS_POSTGRES_TEST_URL: jdbc:mysql://127.0.0.1:3306/web_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
       JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
@@ -80,6 +81,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
+      - name: Create least-privileged PostgreSQL application role
+        env:
+          PGPASSWORD: ci_only_admin_password
+        run: |
+          psql -h 127.0.0.1 -U atlas_admin -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE atlas LOGIN PASSWORD 'ci_only_app_password' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+          psql -h 127.0.0.1 -U atlas_admin -d postgres -v ON_ERROR_STOP=1 \
+            -c "ALTER DATABASE web_project OWNER TO atlas"
       - name: Capture the monorepo commit under test
         id: revision
         shell: bash
