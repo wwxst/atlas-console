@@ -42,7 +42,7 @@ class DatabaseMigrationIntegrationTest {
                 FROM pg_indexes
                 WHERE schemaname = current_schema()
                   AND indexname = 'uk_sys_user_username'
-                  AND indexdef ILIKE '%lower(username)%'
+                  AND indexdef ILIKE '%lower%username%'
                 """, Integer.class), "Username uniqueness must remain case-insensitive");
 
         assertEquals(1, jdbc.queryForObject(

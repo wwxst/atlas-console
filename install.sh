@@ -271,7 +271,7 @@ find "$SOURCE_DIR" -type f -exec chmod g+r {} +
 if [[ "$DB_MODE" == docker ]]; then
   ATLAS_DB_PASSWORD="$(openssl rand -hex 32)"
   POSTGRES_ADMIN_PASSWORD="$(openssl rand -hex 32)"
-  ATLAS_DB_URL='jdbc:postgresql://postgres:5432/web_project'
+  ATLAS_DB_URL='jdbc:postgresql://postgres:5432/web_project?options=-c%20TimeZone%3DUTC'
   ATLAS_DB_USERNAME="atlas"
 else
   POSTGRES_ADMIN_PASSWORD=""

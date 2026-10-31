@@ -1,7 +1,7 @@
 -- PostgreSQL 17 draft schema for the future AI gateway.
 -- This file is for independent review only; it is not part of the active Flyway V1 migration.
 -- Keep this design separate until the AI gateway feature is implemented and reviewed.
--- The domains preserve nonnegative unsigned intent within PostgreSQL's supported numeric ranges.
+-- The domains preserve nonnegative intent within PostgreSQL's signed BIGINT / unsigned 32-bit ranges.
 
 CREATE DOMAIN ai_gateway_nonnegative_bigint AS BIGINT CHECK (VALUE >= 0);
 CREATE DOMAIN ai_gateway_nonnegative_integer AS BIGINT CHECK (VALUE BETWEEN 0 AND 4294967295);

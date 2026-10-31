@@ -25,7 +25,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 仅连接显式指定、按 web_project.sql 初始化的可丢弃 PostgreSQL 库。
+ * 仅连接显式指定、由 Flyway V1 初始化的可丢弃 PostgreSQL 库。
  */
 @EnabledIfEnvironmentVariable(named = "ATLAS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.*")
 @SpringBootTest(properties = {
