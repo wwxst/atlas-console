@@ -450,13 +450,15 @@ class UserAuthServiceImplTest {
     }
 
     @Test
-    void registrationDoesNotCreateSessionWhenInsertWritesNoRecord() {
+    void registrationDoesNotCreateSessionWhenUserNoConflictsExhaustRetries() {
         when(userAccountMapper.insert(any(UserAccount.class))).thenReturn(0);
 
-        assertThrows(IllegalStateException.class,
+        BusinessException exception = assertThrows(BusinessException.class,
                 () -> service.register(new UserRegisterDTO(
                         "13800138000", TargetType.PHONE, "123456", null
                 )));
+        assertEquals(ErrorCode.INTERNAL_SERVER_ERROR, exception.getErrorCode());
+        verify(userAccountMapper, times(5)).insert(any(UserAccount.class));
         verifyNoInteractions(authSessionService);
     }
 
