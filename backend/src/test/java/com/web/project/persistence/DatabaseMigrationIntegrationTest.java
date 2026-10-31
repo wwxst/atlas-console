@@ -9,9 +9,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@EnabledIfEnvironmentVariable(named = "ATLAS_MYSQL_TEST_URL", matches = "jdbc:mysql:.*")
+@EnabledIfEnvironmentVariable(named = "ATLAS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.*")
 @SpringBootTest(properties = {
-        "spring.datasource.url=${ATLAS_MYSQL_TEST_URL}",
+        "spring.datasource.url=${ATLAS_POSTGRES_TEST_URL}",
         "spring.flyway.enabled=true",
         "app.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 })
@@ -33,7 +33,7 @@ class DatabaseMigrationIntegrationTest {
         Integer tableCount = jdbc.queryForObject("""
                 SELECT COUNT(*)
                 FROM information_schema.tables
-                WHERE table_schema = DATABASE()
+                WHERE table_schema = current_schema()
                   AND table_name IN ('sys_user', 'user_account', 'sys_config', 'storage_space', 'storage_file')
                 """, Integer.class);
         assertEquals(5, tableCount);

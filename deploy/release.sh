@@ -20,7 +20,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # privileges. Compose resolves its schema/context from cwd even with absolute -f.
 cd "$project_root"
 compose_file="$project_root/deploy/compose.yaml"
-mysql_compose_file="$project_root/deploy/compose.mysql.yaml"
+postgres_compose_file="$project_root/deploy/compose.postgres.yaml"
 env_file="${ATLAS_ENV_FILE:-/opt/atlas/.env}"
 state_dir="${ATLAS_RELEASE_DIR:-/opt/atlas/releases}"
 # The same directory must be mounted into the backend, including isolated installs.
@@ -40,7 +40,7 @@ project_name="$(sed -n 's/^ATLAS_PROJECT_NAME=//p' "$env_file" | tail -n 1 | tr 
 project_name="${project_name:-atlas}"
 [[ "$project_name" =~ ^[a-z0-9][a-z0-9_-]{0,47}$ ]] || { echo "Invalid ATLAS_PROJECT_NAME in production .env" >&2; exit 1; }
 case "$db_mode" in
-  docker) compose_args=(-f "$compose_file" -f "$mysql_compose_file") ;;
+  docker) compose_args=(-f "$compose_file" -f "$postgres_compose_file") ;;
   external) compose_args=(-f "$compose_file") ;;
   *) echo "Invalid ATLAS_DB_MODE in production .env (expected docker or external)" >&2; exit 1 ;;
 esac
@@ -55,7 +55,7 @@ compose() {
   # installation config. Keep only the verified image tags and selected state dir.
   env -u COMPOSE_PROJECT_NAME -u ATLAS_PROJECT_NAME -u ATLAS_NETWORK_PREFIX \
     -u ATLAS_HTTP_PORT -u ATLAS_DB_URL -u ATLAS_DB_USERNAME -u ATLAS_DB_PASSWORD \
-    -u DB_PASSWORD -u MYSQL_ROOT_PASSWORD -u JWT_SECRET -u STORAGE_ENCRYPTION_KEY \
+    -u DB_PASSWORD -u POSTGRES_PASSWORD -u JWT_SECRET -u STORAGE_ENCRYPTION_KEY \
     -u ATLAS_FLYWAY_BASELINE_ON_MIGRATE -u ATLAS_DEPLOYMENT_ENABLED \
     -u ATLAS_DEPLOYMENT_GITHUB_TOKEN \
     docker compose --project-name "$project_name" --env-file "$env_file" "${compose_args[@]}" "$@"
@@ -225,9 +225,9 @@ else
   stable_back=""
 fi
 
-# The bundled MySQL image is only built when Atlas owns the database container.
+# The bundled PostgreSQL image is only built when Atlas owns the database container.
 # External/Baota database mode leaves the host-managed database untouched.
-if [[ "$db_mode" == docker ]] && ! docker image inspect atlas-mysql:flyway >/dev/null 2>&1; then
+if [[ "$db_mode" == docker ]] && ! docker image inspect postgres:17-alpine >/dev/null 2>&1; then
   compose build mysql
 fi
 compose build frontend backend

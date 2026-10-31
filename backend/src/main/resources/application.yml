@@ -12,9 +12,9 @@ spring:
       max-request-size: 3MB
 
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL:jdbc:mysql://localhost:3306/web_project?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:root}
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/web_project}
+    username: ${DB_USERNAME:atlas}
     password: ${DB_PASSWORD:123456}
 
   flyway:

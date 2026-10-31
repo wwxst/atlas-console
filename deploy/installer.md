@@ -14,14 +14,14 @@ curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh
 
 安装时会询问数据库模式：
 
-- **Docker-managed MySQL（推荐）**：自动运行私有 MySQL 8.4 和 Redis 容器；不需要在宝塔另外创建数据库，也不会把数据库端口发布到公网。全新数据库由 Flyway 自动执行 V1 创建表和默认配置。
-- **Existing MySQL（宝塔数据库）**：先在宝塔中创建一个空数据库和专用数据库用户，再在安装器输入主机、端口、库名、用户名和密码。安装器不会导入 `web_project.sql`。
+- **Docker-managed PostgreSQL（推荐）**：自动运行私有 PostgreSQL 8.4 和 Redis 容器；不需要在宝塔另外创建数据库，也不会把数据库端口发布到公网。全新数据库由 Flyway 自动执行 V1 创建表和默认配置。
+- **Existing PostgreSQL（宝塔数据库）**：先在宝塔中创建一个空数据库和专用数据库用户，再在安装器输入主机、端口、库名、用户名和密码。安装器不会导入 `web_project.sql`。
 
-宝塔 MySQL 若与 Atlas 位于同一台服务器，容器必须能够连接到宿主机的 MySQL 监听地址。常见默认设置只监听 `127.0.0.1`，Docker 容器无法直接访问；需要在宝塔/MySQL 中配置合适的监听地址，并在系统/云防火墙限制 3306 仅允许必要来源。**绝不能把 3306 对整个公网开放。** 若不熟悉 MySQL 网络授权，选择 Docker-managed MySQL 更安全、简单。
+宝塔 PostgreSQL 若与 Atlas 位于同一台服务器，容器必须能够连接到宿主机的 PostgreSQL 监听地址。常见默认设置只监听 `127.0.0.1`，Docker 容器无法直接访问；需要在宝塔/PostgreSQL 中配置合适的监听地址，并在系统/云防火墙限制 5432 仅允许必要来源。**绝不能把 5432 对整个公网开放。** 若不熟悉 PostgreSQL 网络授权，选择 Docker-managed PostgreSQL 更安全、简单。
 
-### 宝塔 MySQL 的内网连接准备
+### 宝塔 PostgreSQL 的内网连接准备
 
-以下示例用于**新建的独立空数据库**，假设为本次安装选择 `--network-prefix 172.30.82`。不要修改或导入现有业务数据库，也不要向应用提供 MySQL root 凭据。
+以下示例用于**新建的独立空数据库**，假设为本次安装选择 `--network-prefix 172.30.82`。不要修改或导入现有业务数据库，也不要向应用提供 PostgreSQL root 凭据。
 
 1. 先准备并启动 Docker（已由宝塔安装的 Docker 也可以）。在宿主机只读查看实际 host-gateway 映射：
 
@@ -32,17 +32,17 @@ curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh
 
    记录输出中的私网 IP。它通常是 Docker 默认网桥的地址，**不一定是 Atlas 的 `172.30.82.1`**；不要凭猜测填写。`host-gateway` 说明见 [Docker 官方文档](https://docs.docker.com/reference/cli/docker/container/run/#add-entries-to-container-hosts-file---add-host)。
 
-2. 在宝塔 MySQL 配置中保留本机监听并添加这个实际私网地址。例如实际解析为 `172.17.0.1`、使用 MySQL 8.4 时，可以在现有 `[mysqld]` 配置中调整为：
+2. 在宝塔 PostgreSQL 配置中保留本机监听并添加这个实际私网地址。例如实际解析为 `172.17.0.1`、使用 PostgreSQL 8.4 时，可以在现有 `[postgresd]` 配置中调整为：
 
    ```ini
    bind-address=127.0.0.1,172.17.0.1
    ```
 
-   多地址支持及限制见 [MySQL 8.4 bind_address 文档](https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_bind_address)。旧版本若不支持多地址，不要直接改成 `0.0.0.0`；选择 Docker MySQL，或由运维提供合适的私网监听。修改已有 MySQL 监听会影响其他应用，先保存配置并安排维护窗口。若监听地址属于 Docker 网桥，还应让实际 MySQL systemd 服务在 `docker.service` 后启动（针对实际服务名设置 `After=docker.service`、`Requires=docker.service`），避免重启时地址尚不存在；修改后必须演练重启。
+   多地址支持及限制见 [PostgreSQL 8.4 bind_address 文档](https://dev.postgres.com/doc/refman/8.4/en/server-system-variables.html#sysvar_bind_address)。旧版本若不支持多地址，不要直接改成 `0.0.0.0`；选择 Docker PostgreSQL，或由运维提供合适的私网监听。修改已有 PostgreSQL 监听会影响其他应用，先保存配置并安排维护窗口。若监听地址属于 Docker 网桥，还应让实际 PostgreSQL systemd 服务在 `docker.service` 后启动（针对实际服务名设置 `After=docker.service`、`Requires=docker.service`），避免重启时地址尚不存在；修改后必须演练重启。
 
-3. 系统防火墙只允许 Atlas 的 `172.30.82.0/24` 到这个私网地址的 3306；云安全组不开放 3306/33060。修改防火墙时合并现有规则，不清空规则。**规则顺序也必须正确**：若 UFW 已有拒绝 3306 的规则，追加到它后面的允许规则不会生效。先用 `sudo ufw status numbered` 检查顺序，再将精确的私网例外放在拒绝规则前，例如 `sudo ufw insert 1 allow from 172.30.82.0/24 to 172.17.0.1 port 3306 proto tcp`；必须替换为本次实际网段与宿主私网地址，保留公网拒绝规则。重复插入相同规则可能只提示已存在而不移动位置；若本次新建的精确允许项已经排在拒绝后，核实归属后仅移除此项，再插入到前方，并重新检查编号。重载后执行 `ss -ltnp '( sport = :3306 or sport = :33060 )'`，确认没有公网或全地址监听；不使用的 MySQL X Protocol 可以在核实无人使用后关闭。
+3. 系统防火墙只允许 Atlas 的 `172.30.82.0/24` 到这个私网地址的 5432；云安全组不开放 5432/54320。修改防火墙时合并现有规则，不清空规则。**规则顺序也必须正确**：若 UFW 已有拒绝 5432 的规则，追加到它后面的允许规则不会生效。先用 `sudo ufw status numbered` 检查顺序，再将精确的私网例外放在拒绝规则前，例如 `sudo ufw insert 1 allow from 172.30.82.0/24 to 172.17.0.1 port 5432 proto tcp`；必须替换为本次实际网段与宿主私网地址，保留公网拒绝规则。重复插入相同规则可能只提示已存在而不移动位置；若本次新建的精确允许项已经排在拒绝后，核实归属后仅移除此项，再插入到前方，并重新检查编号。重载后执行 `ss -ltnp '( sport = :5432 or sport = :54320 )'`，确认没有公网或全地址监听；不使用的 PostgreSQL X Protocol 可以在核实无人使用后关闭。
 
-4. 在宝塔创建专用空库和用户。若需要通过 MySQL 管理终端设置精确来源权限，以下为示例，**仅适用于新建库/新建用户**，将口令替换为本次专用口令：
+4. 在宝塔创建专用空库和用户。若需要通过 PostgreSQL 管理终端设置精确来源权限，以下为示例，**仅适用于新建库/新建用户**，将口令替换为本次专用口令：
 
    ```sql
    CREATE DATABASE atlas_external CHARACTER SET utf8mb4;
@@ -51,14 +51,14 @@ curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh
    SHOW GRANTS FOR 'atlas_external'@'172.30.82.0/255.255.255.0';
    ```
 
-   Flyway 需要在这个专用库内建表/改表权限，不需要全局权限。不要授予 `'%'` 来源或 `*.*` 权限。SQL 中的口令引号遵循 MySQL SQL 规则；安装器密码提示框则直接输入原始口令，支持单/双引号、`$`、`#`、空格和反斜线，不需要手动转义。
+   Flyway 需要在这个专用库内建表/改表权限，不需要全局权限。不要授予 `'%'` 来源或 `*.*` 权限。SQL 中的口令引号遵循 PostgreSQL SQL 规则；安装器密码提示框则直接输入原始口令，支持单/双引号、`$`、`#`、空格和反斜线，不需要手动转义。
 
-5. 运行交互安装，选择 Existing MySQL，输入 `host.docker.internal`、3306、专用库名和用户。若连接失败，保留安装目录，先排除监听、容器到宿主机防火墙和用户来源授权问题。此时安装创建的独立网络已存在，可以从该网络做真实 SQL 探测（以 `atlas-external` 为本次 project）：
+5. 运行交互安装，选择 Existing PostgreSQL，输入 `host.docker.internal`、5432、专用库名和用户。若连接失败，保留安装目录，先排除监听、容器到宿主机防火墙和用户来源授权问题。此时安装创建的独立网络已存在，可以从该网络做真实 SQL 探测（以 `atlas-external` 为本次 project）：
 
    ```bash
    docker run --rm -it --network atlas-external_default \
-     --add-host host.docker.internal:host-gateway mysql:8.4 \
-     mysql -h host.docker.internal -P 3306 -u atlas_external -p atlas_external \
+     --add-host host.docker.internal:host-gateway postgres:8.4 \
+     postgres -h host.docker.internal -P 5432 -u atlas_external -p atlas_external \
      -e 'SELECT CURRENT_USER(), DATABASE();'
    ```
 
@@ -67,10 +67,10 @@ curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh
 ## 安装器参数
 
 ```bash
-# 使用 Docker 管理 MySQL，安装稳定 main 分支
+# 使用 Docker 管理 PostgreSQL，安装稳定 main 分支
 curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh | sudo bash
 
-# 非交互安装（仅适用于 Docker-managed MySQL）
+# 非交互安装（仅适用于 Docker-managed PostgreSQL）
 curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh \
   | sudo bash -s -- --non-interactive --db-mode docker --port 8088
 
@@ -87,7 +87,7 @@ sudo bash install.sh --db-mode docker --install-dir /opt/atlas-test-docker \
 
 安装器自动安装 Docker 的路径支持 Ubuntu 和 Debian；其他发行版如果已经安装并启动 Docker Engine 与 Compose v2，也可以运行安装器。安装器不会尝试猜测未知发行版的包管理方式。
 
-默认安装目录 `/opt/atlas`、Compose project `atlas`、网段 `172.30.80.0/24`、HTTP 端口 8088。安装器在写入文件或安装依赖之前检查目录、project 的容器/卷/网络、HTTP 监听及网络冲突；发现冲突立即退出，不删除任何已有资源。同宿主的不同测试模式必须使用不同目录、project、网段和端口，以及独立空数据库。project 同时隔离 MySQL、Redis、上传卷；网络前缀自动派生可信代理地址及 Nginx 网关。不同目录或端口本身不能替代完整隔离。
+默认安装目录 `/opt/atlas`、Compose project `atlas`、网段 `172.30.80.0/24`、HTTP 端口 8088。安装器在写入文件或安装依赖之前检查目录、project 的容器/卷/网络、HTTP 监听及网络冲突；发现冲突立即退出，不删除任何已有资源。同宿主的不同测试模式必须使用不同目录、project、网段和端口，以及独立空数据库。project 同时隔离 PostgreSQL、Redis、上传卷；网络前缀自动派生可信代理地址及 Nginx 网关。不同目录或端口本身不能替代完整隔离。
 
 ## 安装完成后：在宝塔添加网站
 
@@ -98,7 +98,7 @@ Atlas 前端只绑定到宿主机回环地址 `127.0.0.1:8088`。在宝塔网站
 3. 申请/配置有效的 HTTPS 证书，并启用 HTTPS。
 4. 检查前端页面、登录和后端 API。
 
-不要把 Spring Boot 的 `8080`、MySQL 的 `3306` 或 Redis 的 `6379` 直接映射到公网。Atlas 的主机反向代理必须覆盖 `X-Forwarded-For` 为实际客户端 IP；参考 `deploy/README.md` 的可信代理说明。
+不要把 Spring Boot 的 `8080`、PostgreSQL 的 `5432` 或 Redis 的 `6379` 直接映射到公网。Atlas 的主机反向代理必须覆盖 `X-Forwarded-For` 为实际客户端 IP；参考 `deploy/README.md` 的可信代理说明。
 
 在宝塔反向代理的高级配置中，确保转发头是覆盖而不是追加客户端传入的值：
 
@@ -126,7 +126,7 @@ proxy_set_header X-Forwarded-For $remote_addr;
 
 首次安装使用当前仓库提交构建前后端镜像。Flyway 自动创建全新数据库 schema；`ATLAS_FLYWAY_BASELINE_ON_MIGRATE` 保持 `false`。安装完成后，首次公网开放前必须修改默认系统管理员密码。
 
-如果首次部署因外部 MySQL 网络/授权问题失败，安装器会保留 `.env` 和下载的代码供排查，不会删除数据卷。修复数据库连接后，可以在服务器执行：
+如果首次部署因外部 PostgreSQL 网络/授权问题失败，安装器会保留 `.env` 和下载的代码供排查，不会删除数据卷。修复数据库连接后，可以在服务器执行：
 
 ```bash
 atlas_dir=/opt/atlas # 独立安装请改为实际 --install-dir
@@ -141,7 +141,7 @@ sudo -u atlas-deploy env ATLAS_ENV_FILE="$atlas_dir/.env" ATLAS_RELEASE_DIR="$at
 
 ## 重启恢复验收
 
-安装器会启用 Docker systemd 服务；前端、后端、Redis 和 Docker MySQL 使用 `restart: unless-stopped`。先确认容器正常且未被手动停止，然后在可维护窗口重启服务器。恢复后运行：
+安装器会启用 Docker systemd 服务；前端、后端、Redis 和 Docker PostgreSQL 使用 `restart: unless-stopped`。先确认容器正常且未被手动停止，然后在可维护窗口重启服务器。恢复后运行：
 
 ```bash
 atlas_dir=/opt/atlas
@@ -150,7 +150,7 @@ sudo -u atlas-deploy docker compose --env-file "$atlas_dir/.env" \
 curl --fail --silent --output /dev/null http://127.0.0.1:8088/
 ```
 
-检查 Docker、宝塔 Nginx、外部 MySQL（若使用）的启动状态；浏览器重新登录并确认测试记录仍在。Docker MySQL 模式查看数据库详情时同时加 `-f "$atlas_dir/atlas-console/deploy/compose.mysql.yaml"`。容器自动重启策略不保证外部 MySQL或宝塔服务正常，实际验收必须覆盖整机重启。
+检查 Docker、宝塔 Nginx、外部 PostgreSQL（若使用）的启动状态；浏览器重新登录并确认测试记录仍在。Docker PostgreSQL 模式查看数据库详情时同时加 `-f "$atlas_dir/atlas-console/deploy/compose.postgres.yaml"`。容器自动重启策略不保证外部 PostgreSQL或宝塔服务正常，实际验收必须覆盖整机重启。
 
 ## 后续 GitHub 自动更新
 

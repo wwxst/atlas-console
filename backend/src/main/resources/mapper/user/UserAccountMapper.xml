@@ -162,7 +162,7 @@
             <when test="createdAtOrder == 'desc'">ORDER BY created_at DESC, id DESC</when>
             <otherwise>ORDER BY created_at DESC, id DESC</otherwise>
         </choose>
-        LIMIT #{offset}, #{pageSize}
+        LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
 </mapper>

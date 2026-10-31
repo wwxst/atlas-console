@@ -21,7 +21,7 @@
 -- 不删除、不修改任何已有数据，不含 DELETE / TRUNCATE。
 -- ============================================================
 
-INSERT IGNORE INTO user_account
+INSERT INTO user_account
     (id, user_no, phone, email, password, password_version,
      nickname, avatar, status, created_at, updated_at)
 VALUES
@@ -124,4 +124,5 @@ VALUES
 (88275670794240000, '800156', '15649925217', 'sgneman9063@example.com', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', 0, '韩伟', NULL, 1, '2026-09-01 22:16:00', '2026-09-01 22:45:00'),
 (59399649361920000, '410540', '15047952063', 'ssqwzm3842@example.com', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', 0, '韩梓涵', NULL, 1, '2026-06-14 05:53:00', '2026-06-14 23:17:00'),
 (74834352537600000, '718876', '16608849625', 'iyzjdaxp1037@example.com', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', 0, '余强', NULL, 1, '2026-07-26 20:05:00', '2026-07-28 15:48:00'),
-(76383812321280000, '358467', '17719185028', 'ptaugxzv9020@163.com', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', 0, '许晓峰', NULL, 1, '2026-07-31 02:42:00', '2026-08-01 03:41:00');
+(76383812321280000, '358467', '17719185028', 'ptaugxzv9020@163.com', '$2a$10$gqznYBmp4FWgfAFVhrpRReRv.YI0EE4Ysyy46.Ts186.SMw7HRlFm', 0, '许晓峰', NULL, 1, '2026-07-31 02:42:00', '2026-08-01 03:41:00')
+ON CONFLICT DO NOTHING;

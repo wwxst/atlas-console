@@ -25,12 +25,17 @@ if [[ "${1:-}" == image && "${2:-}" == inspect ]]; then
 fi
 if [[ "${1:-}" != compose ]]; then exit 7; fi
 [[ " $* " == *" --project-name atlas-regression "* ]] || { echo 'Incorrect explicit project namespace' >&2; exit 1; }
-[[ ! -v COMPOSE_PROJECT_NAME && ! -v ATLAS_PROJECT_NAME && ! -v ATLAS_NETWORK_PREFIX && ! -v ATLAS_HTTP_PORT && ! -v ATLAS_DB_URL ]] || { echo 'Unrelated production context leaked' >&2; exit 1; }
+[[ ! -v COMPOSE_PROJECT_NAME && ! -v ATLAS_PROJECT_NAME && ! -v ATLAS_NETWORK_PREFIX && ! -v ATLAS_HTTP_PORT && ! -v ATLAS_DB_URL && ! -v POSTGRES_PASSWORD ]] || { echo 'Unrelated production context leaked' >&2; exit 1; }
 while (($#)); do
   case "$1" in
+    pull)
+      [[ "${2:-}" == postgres ]]
+      touch "$TEST_DOCKER_DIR/images/postgres_17-alpine"
+      exit 0
+      ;;
     build)
-      if [[ "${2:-}" == mysql ]]; then
-        touch "$TEST_DOCKER_DIR/images/atlas-mysql_flyway"
+      if [[ "${2:-}" == postgres ]]; then
+        touch "$TEST_DOCKER_DIR/images/postgres_17-alpine"
       else
         touch "$TEST_DOCKER_DIR/images/$(key "atlas-console:$ATLAS_FRONTEND_TAG")"
         touch "$TEST_DOCKER_DIR/images/$(key "atlas-backend:$ATLAS_BACKEND_TAG")"

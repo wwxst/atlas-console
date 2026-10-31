@@ -25,11 +25,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 仅连接显式指定、按 web_project.sql 初始化的可丢弃 MySQL 库。
+ * 仅连接显式指定、按 web_project.sql 初始化的可丢弃 PostgreSQL 库。
  */
-@EnabledIfEnvironmentVariable(named = "ATLAS_MYSQL_TEST_URL", matches = "jdbc:mysql:.*")
+@EnabledIfEnvironmentVariable(named = "ATLAS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.*")
 @SpringBootTest(properties = {
-        "spring.datasource.url=${ATLAS_MYSQL_TEST_URL}",
+        "spring.datasource.url=${ATLAS_POSTGRES_TEST_URL}",
         "spring.flyway.enabled=true",
         "app.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 })

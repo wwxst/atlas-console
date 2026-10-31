@@ -26,7 +26,7 @@ for password in "${passwords[@]}"; do
   ENV_FILE="$work/atlas.env"
   : > "$ENV_FILE"
   write_env ATLAS_DB_MODE external
-  write_env ATLAS_DB_URL 'jdbc:mysql://host.docker.internal:3306/atlas_test'
+  write_env ATLAS_DB_URL 'jdbc:postgresql://host.docker.internal:5432/atlas_test'
   write_env ATLAS_DB_USERNAME atlas_test
   write_env ATLAS_DB_PASSWORD "$password"
   write_env DB_PASSWORD unused_test_password

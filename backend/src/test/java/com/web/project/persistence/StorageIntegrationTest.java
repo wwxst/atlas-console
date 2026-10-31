@@ -46,10 +46,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/** 仅连接显式指定的可丢弃 MySQL 库；OSS 是唯一被替换的外部边界。 */
-@EnabledIfEnvironmentVariable(named = "ATLAS_MYSQL_TEST_URL", matches = "jdbc:mysql:.*")
+/** 仅连接显式指定的可丢弃 PostgreSQL 库；OSS 是唯一被替换的外部边界。 */
+@EnabledIfEnvironmentVariable(named = "ATLAS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.*")
 @SpringBootTest(properties = {
-        "spring.datasource.url=${ATLAS_MYSQL_TEST_URL}",
+        "spring.datasource.url=${ATLAS_POSTGRES_TEST_URL}",
         "spring.flyway.enabled=true",
         "app.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
         "app.storage.encryption-key=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
@@ -159,7 +159,7 @@ class StorageIntegrationTest {
             assertEquals("", after.encryptedSecret());
             assertFalse(after.configured());
         } finally {
-            jdbc.execute("ALTER TABLE sys_config DROP CHECK chk_storage_credential_fault");
+            jdbc.execute("ALTER TABLE sys_config DROP CONSTRAINT chk_storage_credential_fault");
         }
     }
 

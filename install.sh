@@ -22,12 +22,12 @@ Usage:
 
 Options:
   --ref REF          Git branch or tag to install (default: main)
-  --db-mode MODE     docker = private MySQL container; external = existing MySQL
+  --db-mode MODE     docker = private PostgreSQL container; external = existing PostgreSQL
   --port PORT        Loopback HTTP port for the frontend (default: 8088)
   --install-dir PATH Absolute, new installation directory (default: /opt/atlas)
   --project-name NAME Unique Compose project and volume namespace (default: atlas)
   --network-prefix PREFIX Private /24 IPv4 prefix (default: 172.30.80)
-  --non-interactive  Unattended Docker-managed MySQL install
+  --non-interactive  Unattended Docker-managed PostgreSQL install
   --help             Show this help
 
 This script installs the application stack only. It does not install Baota,
@@ -112,7 +112,7 @@ preflight_install() {
     resource="$(docker volume ls --format '{{.Name}}')" || fail "Could not inspect Docker volume names."
     while read -r resource; do
       case "$resource" in
-        "${PROJECT_NAME}_mysql_data"|"${PROJECT_NAME}_redis_data"|"${PROJECT_NAME}_uploads_data")
+        "${PROJECT_NAME}_postgres_data"|"${PROJECT_NAME}_redis_data"|"${PROJECT_NAME}_uploads_data")
           fail "Volume $resource already exists, including unlabelled data. Choose another --project-name." ;;
       esac
     done <<< "$resource"
@@ -158,8 +158,8 @@ if [[ -z "$DB_MODE" ]]; then
   [[ "$NON_INTERACTIVE" != true ]] || fail "--non-interactive requires --db-mode docker."
   [[ -r /dev/tty ]] || fail "Interactive setup needs a terminal. Use --non-interactive --db-mode docker for unattended Docker install."
   printf 'Choose the database installation mode:\n'
-  printf '  1) Docker-managed MySQL (recommended; no database setup in Baota)\n'
-  printf '  2) Existing MySQL (for a database already created in Baota)\n'
+  printf '  1) Docker-managed PostgreSQL (recommended; no database setup in Baota)\n'
+  printf '  2) Existing PostgreSQL (for a database already created in Baota)\n'
   read -r -p 'Select [1]: ' db_choice < /dev/tty
   case "${db_choice:-1}" in
     1) DB_MODE="docker" ;;
@@ -175,19 +175,19 @@ fi
 # Collect and validate external database credentials before installing packages or downloading code.
 if [[ "$DB_MODE" == external ]]; then
   [[ -r /dev/tty ]] || fail "External database mode requires a terminal for secure credential entry."
-  prompt db_host "MySQL host (same-server Baota users usually configure host.docker.internal)" "host.docker.internal"
-  prompt db_port "MySQL port" "3306"
+  prompt db_host "PostgreSQL host (same-server Baota users usually configure host.docker.internal)" "host.docker.internal"
+  prompt db_port "PostgreSQL port" "5432"
   prompt db_name "Existing empty database name" "web_project"
-  prompt db_user "MySQL username" "atlas"
-  [[ "$db_host" =~ ^[A-Za-z0-9.-]+$ ]] || fail "MySQL host must be a hostname or IPv4 address."
-  [[ "$db_host" != localhost && "$db_host" != 127.0.0.1 ]] || fail "Inside Docker, localhost is the container itself. Use host.docker.internal for same-server Baota MySQL, after configuring a restricted MySQL listener."
-  valid_port "$db_port" || fail "MySQL port must be from 1024 to 65535."
+  prompt db_user "PostgreSQL username" "atlas"
+  [[ "$db_host" =~ ^[A-Za-z0-9.-]+$ ]] || fail "PostgreSQL host must be a hostname or IPv4 address."
+  [[ "$db_host" != localhost && "$db_host" != 127.0.0.1 ]] || fail "Inside Docker, localhost is the container itself. Use host.docker.internal for same-server Baota PostgreSQL, after configuring a restricted PostgreSQL listener."
+  valid_port "$db_port" || fail "PostgreSQL port must be from 1024 to 65535."
   [[ "$db_name" =~ ^[A-Za-z0-9_]+$ ]] || fail "Database name may contain only letters, digits, and underscores."
   [[ "$db_user" =~ ^[A-Za-z0-9_.@-]+$ ]] || fail "Database username contains unsupported characters."
-  IFS= read -r -s -p 'MySQL password: ' ATLAS_DB_PASSWORD < /dev/tty
+  IFS= read -r -s -p 'PostgreSQL password: ' ATLAS_DB_PASSWORD < /dev/tty
   printf '\n'
   [[ -n "$ATLAS_DB_PASSWORD" && "$ATLAS_DB_PASSWORD" != *$'\n'* && "$ATLAS_DB_PASSWORD" != *$'\r'* ]] || fail "Password must be non-empty and cannot contain newlines."
-  ATLAS_DB_URL="jdbc:mysql://$db_host:$db_port/$db_name?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai"
+  ATLAS_DB_URL="jdbc:postgresql://$db_host:$db_port/$db_name"
   ATLAS_DB_USERNAME="$db_user"
 fi
 
@@ -270,14 +270,14 @@ find "$SOURCE_DIR" -type f -exec chmod g+r {} +
 
 if [[ "$DB_MODE" == docker ]]; then
   DB_PASSWORD="$(openssl rand -hex 32)"
-  ATLAS_DB_URL='jdbc:mysql://mysql:3306/web_project?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai'
+  ATLAS_DB_URL='jdbc:postgresql://postgres:5432/web_project'
   ATLAS_DB_USERNAME="atlas"
   ATLAS_DB_PASSWORD="$DB_PASSWORD"
 else
   DB_PASSWORD="$(openssl rand -hex 32)"
 fi
 
-MYSQL_ROOT_PASSWORD="$(openssl rand -hex 32)"
+POSTGRES_ROOT_PASSWORD="$(openssl rand -hex 32)"
 JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
 STORAGE_ENCRYPTION_KEY="$(openssl rand -base64 32 | tr -d '\n')"
 
@@ -289,7 +289,7 @@ write_env ATLAS_DB_MODE "$DB_MODE"
 write_env ATLAS_DB_URL "$ATLAS_DB_URL"
 write_env ATLAS_DB_USERNAME "$ATLAS_DB_USERNAME"
 write_env ATLAS_DB_PASSWORD "$ATLAS_DB_PASSWORD"
-write_env MYSQL_ROOT_PASSWORD "$MYSQL_ROOT_PASSWORD"
+write_env POSTGRES_ROOT_PASSWORD "$POSTGRES_ROOT_PASSWORD"
 write_env DB_PASSWORD "$DB_PASSWORD"
 write_env JWT_SECRET "$JWT_SECRET"
 write_env STORAGE_ENCRYPTION_KEY "$STORAGE_ENCRYPTION_KEY"
@@ -301,7 +301,7 @@ chown root:atlas-deploy "$ENV_FILE"
 chmod 640 "$ENV_FILE"
 
 if [[ "$DB_MODE" == external ]]; then
-  warn "The existing MySQL must be reachable from Docker containers. For same-server Baota MySQL, configure its bind address and grant access only to the Atlas Docker subnet; never expose port 3306 to the public internet."
+  warn "The existing PostgreSQL must be reachable from Docker containers. For same-server Baota PostgreSQL, configure its bind address and grant access only to the Atlas Docker subnet; never expose port 5432 to the public internet."
   warn "Create an EMPTY database before continuing. Flyway will create the schema; do not import web_project.sql."
 fi
 
@@ -323,7 +323,7 @@ printf '  2. Configure HTTPS in Baota before public access.\n'
 printf '  3. Change the default Atlas administrator password before public launch.\n'
 printf '  4. Configure a dedicated GitHub Actions Runner before enabling automatic updates.\n'
 printf '\n'
-printf 'Do not expose MySQL, Redis, or Spring Boot ports directly to the public internet.\n'
+printf 'Do not expose PostgreSQL, Redis, or Spring Boot ports directly to the public internet.\n'
 }
 
 if [[ -z "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]}" == "$0" ]]; then
