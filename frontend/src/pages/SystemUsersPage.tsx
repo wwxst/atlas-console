@@ -297,7 +297,7 @@ export default function SystemUsersPage() {
           {usersQuery.isSuccess && records.length === 0 && <tr><td colSpan={8}><EmptyState description="没有符合当前条件的系统用户" /></td></tr>}
           {records.map((user) => <tr key={user.id}>
             <td className={styles.userNumber}>{user.id}</td>
-            <td className={styles.avatarCell}><Avatar size={32} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
+            <td className={styles.avatarCell}><Avatar size={30} src={user.avatar ?? undefined}>{getInitials(user)}</Avatar></td>
             <td className={styles.userName}><strong>{user.nickname}</strong></td>
             <td><span className={styles.username}>{user.username}</span></td>
             <td>{formatDateTime(user.createdAt)}</td>
