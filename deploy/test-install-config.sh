@@ -26,10 +26,11 @@ for password in "${passwords[@]}"; do
   ENV_FILE="$work/atlas.env"
   : > "$ENV_FILE"
   write_env ATLAS_DB_MODE external
-  write_env ATLAS_DB_URL 'jdbc:mysql://host.docker.internal:3306/atlas_test'
+  write_env ATLAS_DB_URL 'jdbc:postgresql://host.docker.internal:5432/atlas_test?options=-c%20TimeZone%3DUTC'
   write_env ATLAS_DB_USERNAME atlas_test
   write_env ATLAS_DB_PASSWORD "$password"
-  write_env DB_PASSWORD unused_test_password
+  admin_password="admin-bootstrap-$RANDOM-$RANDOM"
+  write_env POSTGRES_ADMIN_PASSWORD "$admin_password"
   write_env JWT_SECRET test_only_jwt_secret
   write_env STORAGE_ENCRYPTION_KEY test_only_storage_key
   write_env ATLAS_PROJECT_NAME atlas-config-test
@@ -37,6 +38,8 @@ for password in "${passwords[@]}"; do
   write_env ATLAS_RELEASE_DIR "$work/releases"
   printf '%s' "$password" > "$work/expected"
   docker compose --env-file "$ENV_FILE" -f "$root/deploy/compose.yaml" config --format json > "$work/config.json"
+  docker compose --env-file "$ENV_FILE" -f "$root/deploy/compose.yaml" \
+    -f "$root/deploy/compose.postgres.yaml" config --format json > "$work/postgres-config.json"
   python3 - "$work" <<'PY'
 import json, pathlib, sys
 work = pathlib.Path(sys.argv[1])
@@ -46,6 +49,17 @@ assert config['networks']['default']['ipam']['config'][0]['subnet'] == '172.30.9
 assert config['services']['frontend']['networks']['default']['ipv4_address'] == '172.30.91.10'
 assert config['services']['backend']['environment']['TRUSTED_PROXY_ADDRESSES'] == '172.30.91.10'
 assert any(v['source'] == str(work / 'releases') for v in config['services']['backend']['volumes'])
+postgres_config = json.loads((work / 'postgres-config.json').read_text())
+postgres = postgres_config['services']['postgres']
+backend = postgres_config['services']['backend']
+assert postgres['image'] == 'postgres:17-alpine'
+assert postgres['environment']['POSTGRES_USER'] == 'atlas_admin'
+assert postgres['environment']['POSTGRES_PASSWORD'] == 'admin-bootstrap-' + postgres['environment']['POSTGRES_PASSWORD'].split('admin-bootstrap-')[-1]
+assert postgres['environment']['ATLAS_DB_PASSWORD'] == backend['environment']['DB_PASSWORD']
+assert backend['environment']['DB_USERNAME'] == 'atlas'
+assert 'POSTGRES_ADMIN_PASSWORD' not in backend['environment']
+assert not postgres.get('ports'), 'PostgreSQL must not publish a host port'
+assert '10-create-app-role.sh' in str(postgres['volumes'])
 PY
   docker compose --env-file "$ENV_FILE" -p "atlas-env-probe-$$" -f "$work/probe.yaml" \
     run --rm --no-deps -T probe > "$work/actual"

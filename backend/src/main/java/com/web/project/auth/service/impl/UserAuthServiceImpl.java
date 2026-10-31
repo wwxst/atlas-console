@@ -23,7 +23,8 @@ import com.web.project.common.exception.BusinessException;
 import com.web.project.common.id.SnowflakeIdGenerator;
 import com.web.project.user.entity.UserAccount;
 import com.web.project.user.mapper.UserAccountMapper;
-import org.springframework.dao.DuplicateKeyException;
+import org.postgresql.util.PSQLException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,9 +41,8 @@ import java.security.SecureRandom;
 public class UserAuthServiceImpl implements UserAuthService {
 
     private static final int MAX_USER_NO_ATTEMPTS = 5;
-    private static final String USER_NO_INDEX = "uk_user_account_user_no";
-    private static final String PHONE_INDEX = "uk_user_account_phone";
-    private static final String EMAIL_INDEX = "uk_user_account_email";
+    private static final String PHONE_CONSTRAINT = "uk_user_account_phone";
+    private static final String EMAIL_CONSTRAINT = "uk_user_account_email";
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -270,41 +270,47 @@ public class UserAuthServiceImpl implements UserAuthService {
     }
 
     /**
-     * 创建账号；user_no 唯一索引冲突时重新生成，最多尝试 5 次。
+     * 创建账号。user_no 冲突由 PostgreSQL 的 ON CONFLICT DO NOTHING 转为 0 行写入，
+     * 因此重试不会中止当前事务；手机号或邮箱冲突仍映射为业务错误。
      */
     private void insertAccount(UserAccount account) {
         for (int attempt = 0; attempt < MAX_USER_NO_ATTEMPTS; attempt++) {
             account.setUserNo(generateUserNo());
 
             try {
-                if (userAccountMapper.insert(account) != 1) {
-                    throw new IllegalStateException("创建用户账号未写入预期记录");
+                int inserted = userAccountMapper.insert(account);
+                if (inserted == 1) {
+                    return;
                 }
-                return;
-            } catch (DuplicateKeyException exception) {
-                if (!isUniqueIndexConflict(exception, USER_NO_INDEX)) {
-                    if (isUniqueIndexConflict(exception, PHONE_INDEX)
-                            || isUniqueIndexConflict(exception, EMAIL_INDEX)) {
-                        throw new BusinessException(ErrorCode.TARGET_ALREADY_REGISTERED, exception);
-                    }
-                    throw exception;
+                if (inserted != 0) {
+                    throw new IllegalStateException("创建用户账号返回了非预期写入行数");
                 }
-                if (attempt == MAX_USER_NO_ATTEMPTS - 1) {
-                    throw new BusinessException(
-                            ErrorCode.INTERNAL_SERVER_ERROR,
-                            "生成用户号码失败，请稍后重试",
-                            exception
-                    );
+            } catch (DataIntegrityViolationException exception) {
+                if (isUniqueConstraintConflict(exception, PHONE_CONSTRAINT)
+                        || isUniqueConstraintConflict(exception, EMAIL_CONSTRAINT)) {
+                    throw new BusinessException(ErrorCode.TARGET_ALREADY_REGISTERED, exception);
                 }
+                throw exception;
             }
         }
+
+        throw new BusinessException(
+                ErrorCode.INTERNAL_SERVER_ERROR,
+                "生成用户号码失败，请稍后重试"
+        );
     }
 
-    private boolean isUniqueIndexConflict(DuplicateKeyException exception, String index) {
-        // 只识别 MySQL 错误末尾的索引名，重复值本身也可能包含相同文本。
-        String message = exception.getMostSpecificCause().getMessage();
-        return message != null
-                && (message.endsWith("for key '" + index + "'") || message.endsWith("." + index + "'"));
+    private boolean isUniqueConstraintConflict(
+            DataIntegrityViolationException exception,
+            String constraint
+    ) {
+        Throwable cause = exception.getMostSpecificCause();
+        if (!(cause instanceof PSQLException postgresException)
+                || !"23505".equals(postgresException.getSQLState())) {
+            return false;
+        }
+        var serverError = postgresException.getServerErrorMessage();
+        return serverError != null && constraint.equals(serverError.getConstraint());
     }
 
     private UserAccount findAccount(TargetType targetType, String target) {

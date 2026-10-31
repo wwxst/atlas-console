@@ -30,7 +30,7 @@
 
     <!--
         同一事务锁定两个渠道总开关，串行判断至少一个渠道仍然启用。
-        ORDER BY FIELD 只规定返回顺序；实际加锁顺序由 MySQL 执行计划决定。
+        ORDER BY FIELD 只规定返回顺序；显式 CASE 排序使 PostgreSQL 按稳定顺序返回并加锁。
     -->
     <select id="selectMasterSwitchesForUpdate"
             resultType="com.web.project.channel.entity.SysConfig">
@@ -38,7 +38,7 @@
         <include refid="SysConfigColumns"/>
         FROM sys_config
         WHERE config_key IN ('auth.phone.enabled', 'auth.email.enabled')
-        ORDER BY FIELD(config_key, 'auth.phone.enabled', 'auth.email.enabled')
+        ORDER BY CASE config_key WHEN 'auth.phone.enabled' THEN 1 WHEN 'auth.email.enabled' THEN 2 ELSE 3 END
         FOR UPDATE
     </select>
 
