@@ -27,8 +27,8 @@ export function IconButton({ label, children, className, ...props }: ButtonHTMLA
   return <button {...props} aria-label={label} title={label} className={[styles.iconButton, className].filter(Boolean).join(' ')}>{children}</button>
 }
 
-export function Avatar({ src, children, size = 32 }: { src?: string; children?: ReactNode; size?: 32 | 40 | 50 }) {
-  return <span className={[styles.avatar, size === 40 && styles.avatarLarge, size === 50 && styles.avatarExtraLarge].filter(Boolean).join(' ')} aria-hidden="true">{src ? <img src={src} alt="" /> : children ?? <User size={size >= 40 ? 22 : 18} />}</span>
+export function Avatar({ src, children, size = 32 }: { src?: string; children?: ReactNode; size?: 30 | 32 | 40 | 50 }) {
+  return <span className={[styles.avatar, size === 30 && styles.avatarCompact, size === 40 && styles.avatarLarge, size === 50 && styles.avatarExtraLarge].filter(Boolean).join(' ')} aria-hidden="true">{src ? <img src={src} alt="" /> : children ?? <User size={size >= 40 ? 22 : 18} />}</span>
 }
 
 export function DataTable({ children, className, ...props }: TableHTMLAttributes<HTMLTableElement>) {
