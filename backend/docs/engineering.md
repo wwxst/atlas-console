@@ -82,36 +82,36 @@ $env:JAVA_HOME = 'C:\Users\ww\.jdks\temurin-25.0.4.1'
 - `ContactNormalizerTest` 和 `PasswordPolicyTest`：联系方式规范化与密码长度、UTF-8 字节边界。
 - `SensitiveDataLoggingTest`：敏感对象及响应容器的打印不暴露凭据或完整联系方式，Token 的 JSON 契约不变。
 - `VerificationCodeStoreFailureTest`：Redis 无返回结果时抛出异常，不转换为频率限制、零计数或验证码错误。
-- `MapperIntegrationTest`：在显式指定的可丢弃 MySQL 库上验证字段映射、写入行数、重复更新、列表不读取密码及渠道更新失败的事务回滚。设置 `ATLAS_MYSQL_TEST_URL` 后执行，未设置时跳过。
-- `AuthConcurrencyIntegrationTest`：在真实 Redis 和 MySQL 上同时竞争同一验证码、发送锁、每日计数、联系方式唯一索引和渠道开关；对成功数量与最终数据作断言。设置 `ATLAS_MYSQL_TEST_URL` 后执行，未设置时跳过。
+- `MapperIntegrationTest`：在显式指定的可丢弃 PostgreSQL 库上验证字段映射、写入行数、重复更新、列表不读取密码及渠道更新失败的事务回滚。设置 `ATLAS_POSTGRES_TEST_URL` 后执行，未设置时跳过。
+- `AuthConcurrencyIntegrationTest`：在真实 Redis 和 PostgreSQL 上同时竞争同一验证码、发送锁、每日计数、联系方式唯一索引和渠道开关；对成功数量与最终数据作断言。设置 `ATLAS_POSTGRES_TEST_URL` 后执行，未设置时跳过。
 - `WebProjectApplicationTests`：Spring 上下文装配；不等同于数据库连通性或业务接口验收。
 
 `mvnw.cmd verify` 中的会话与验证码测试需要本机真实 Redis；缺少 Redis 时这些测试跳过，其余测试仍会执行。
 
-涉及数据库结构或查询的修改，需要单独在可丢弃的 MySQL 测试库验证；不得将 mock 测试通过当作真实数据库验证。
+涉及数据库结构或查询的修改，需要单独在可丢弃的 PostgreSQL 测试库验证；不得将 mock 测试通过当作真实数据库验证。
 
-MySQL 集成测试先建立空的、可丢弃的独立数据库，再设置 `ATLAS_MYSQL_TEST_URL` 为该库的 JDBC URL；Spring Boot 测试上下文会通过 Flyway 执行版本迁移。使用现有 `DB_USERNAME`、`DB_PASSWORD` 配置测试凭据。只连接可丢弃库，测试会修改配置数据。
+PostgreSQL 集成测试先建立空的、可丢弃的独立数据库，再设置 `ATLAS_POSTGRES_TEST_URL` 为该库的 JDBC URL；Spring Boot 测试上下文会通过 Flyway 执行版本迁移。使用现有 `DB_USERNAME`、`DB_PASSWORD` 配置测试凭据。只连接可丢弃库，测试会修改配置数据。
 
 ### 当前工具能力与验收边界
 
 `pom.xml` 使用 JaCoCo 0.8.15 支持 JDK 25；`mvnw.cmd verify` 生成 `target/site/jacoco/index.html` 和 `jacoco.xml`，不设置统一覆盖率百分比门槛，也不排除业务代码。JaCoCo 自身过滤编译器/Lombok 生成的部分代码，统计以报告中的可分析代码为准。Maven 成功只证明该次构建和测试，不能代替完整门禁。
 
-Windows 本机完整测试入口为 `scripts/verify_backend.py`，仅使用 Python 标准库。需要 Python 3、JDK 25、本机 MySQL（测试账号须能建库/删库）和 Redis 可执行文件。在 `backend` 目录执行：
+Windows 本机完整测试入口为 `scripts/verify_backend.py`，仅使用 Python 标准库。需要 Python 3、JDK 25、本机 PostgreSQL 17、psql 客户端和 Redis 可执行文件。在 `backend` 目录执行。测试账号分为应用角色（`DB_USERNAME`/`DB_PASSWORD`）和有权创建/删除临时数据库的管理角色（`POSTGRES_ADMIN_USERNAME`/`POSTGRES_ADMIN_PASSWORD`）：
 
 ```powershell
 python scripts/verify_backend.py `
   --java-home C:/Users/ww/.jdks/temurin-25.0.4.1 `
-  --mysql-client D:/Develop/sofe/Mysql/bin/mysql.exe `
+  --PostgreSQL-client D:/Develop/sofe/Mysql/bin/PostgreSQL.exe `
   --redis-server D:/Develop/sofe/Redis/redis-server.exe
 ```
 
-路径按本机安装位置调整；MySQL 地址可通过 `--db-host`、`--db-port` 指定，账号和密码沿用 `DB_USERNAME`、`DB_PASSWORD`。脚本自行生成独立数据库和 JWT 密钥、启动私有 Redis 与实际打包应用，不使用现有业务库或 Redis 数据；结束后删除本次创建的库并关闭自己的进程。MySQL 服务是已有本机服务，不会被停止；容量结论因此只用于本机基线。
+路径按本机安装位置调整；PostgreSQL 地址可通过 `--db-host`、`--db-port` 指定，管理角色名可通过 `--db-admin-username` 指定。应用角色必须已存在，管理角色必须有 CREATEDB/删除临时库的权限。脚本自行生成独立数据库和 JWT 密钥、启动私有 Redis 与实际打包应用，不使用现有业务库或 Redis 数据；结束后删除本次创建的库并关闭自己的进程。PostgreSQL 服务是已有本机服务，不会被停止；容量结论因此只用于本机基线。
 
 脚本执行 `clean verify`，拒绝必需集成测试跳过，再通过真实 HTTP 验证注册、两类账号登录/续期/退出、权限、渠道、个人资料、密码版本、换绑、管理端编辑普通用户及错误路径。普通用户注册后的资料 ID 必须是与数据库一致的字符串；管理端编辑与过滤列表使用 `9007199254740993` 验证超出 JavaScript 安全整数范围时仍精确返回字符串 ID。并发检查在 HTTP 层验证验证码登录、发送和注册各 16 个请求的结果分布，以及两个管理员编辑请求争用同一联系方式时仅一个成功。故障检查验证无效渠道配置、Redis 中断及恢复，并扫描本次敏感值是否进入应用日志。验证码从私有 Redis 读取，只用于验证开发发送实现，不代表真实短信/邮件送达。
 
 默认性能基线分别重启应用执行 `control` 和 `protected` 两轮：前者将并行密码校验上限设为 100000，后者设为 8；两轮都将每 IP 和每账号的登录次数上限设为 1000000000，以观察并行密码校验限制。每轮先预热 20 次资料查询，再执行混合请求（约 40% 查询资料、40% 续期、20% 密码登录）和纯密码登录两种模式，各自以 1、8、24、48 个并发工作线程持续 10 秒，共 16 个负载阶段；`--seconds` 可将每阶段时长设为 1～60 秒。每阶段清空私有 Redis 并重新登录后开始计量。
 
-负载阶段将成功业务响应和业务码为 `42901` 的 HTTP 429 记为预期结果；每阶段须实际发出请求，HTTP 5xx、超时和其他非预期响应合计须为零，且结束后的续期及资料查询正常。脚本记录各状态数量、总吞吐量、全部响应及成功响应的 P95/P99、各操作的延迟、登录保护指标、Java CPU 时间和阶段结束时工作集、线程数、Redis 内存、MySQL 连接数。受控拒绝计入总吞吐量，不能将总吞吐量当作成功业务吞吐量。该短时基线不设响应时间 SLA 或最低成功吞吐量，不等同于长时间稳定性、超载极限或生产容量验收。
+负载阶段将成功业务响应和业务码为 `42901` 的 HTTP 429 记为预期结果；每阶段须实际发出请求，HTTP 5xx、超时和其他非预期响应合计须为零，且结束后的续期及资料查询正常。脚本记录各状态数量、总吞吐量、全部响应及成功响应的 P95/P99、各操作的延迟、登录保护指标、Java CPU 时间和阶段结束时工作集、线程数、Redis 内存、PostgreSQL 活跃会话数。受控拒绝计入总吞吐量，不能将总吞吐量当作成功业务吞吐量。该短时基线不设响应时间 SLA 或最低成功吞吐量，不等同于长时间稳定性、超载极限或生产容量验收。
 
 结果与日志位于 `target/quality-gate/`。脚本在停止应用前从 JaCoCo TCP agent 拉取 HTTP 执行数据，追加到测试覆盖率后生成合并报告。它只执行自动验证，4 次规范检查与 3 次 Review 仍须实际完成并记录；不能把脚本成功等同于完成审查。
 
@@ -131,7 +131,7 @@ python scripts/verify_backend.py `
 
 Snowflake 节点标识通过 `ID_GENERATOR_DATACENTER_ID`、`ID_GENERATOR_WORKER_ID` 配置，取值均为 0～31，默认均为 0。多实例部署必须为每个实例分配唯一的组合；普通用户主键由该节点生成后写入数据库，不依赖自增主键。
 
-MySQL Connector/J 使用默认的 `useAffectedRows=false`，UPDATE 返回匹配行数，重复提交相同值也返回 1。自定义 `DB_URL` 时保持该语义；Service 用它区分“记录存在”与“记录已消失”。JWT issuer 不得为空，Access/Refresh 有效期均至少为 1 秒，无效配置在启动时拒绝。
+PostgreSQL Connector/J 使用默认的 `PostgreSQL UPDATE 行数语义`，UPDATE 返回匹配行数，重复提交相同值也返回 1。自定义 `DB_URL` 时保持该语义；Service 用它区分“记录存在”与“记录已消失”。JWT issuer 不得为空，Access/Refresh 有效期均至少为 1 秒，无效配置在启动时拒绝。
 
 ## 错误处理约定
 

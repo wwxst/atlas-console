@@ -75,4 +75,4 @@ src/main/resources/mapper/
 
 ## 数据库
 
-数据库结构和初始数据由 Flyway 版本迁移管理，详见[数据库迁移指南](docs/database-migrations.md)。``web_project.sql` 是历史 MySQL 快照，不再用于安装；全新数据库统一由 PostgreSQL Flyway 迁移创建。
+数据库结构和初始数据由 Flyway 版本迁移管理，详见[数据库迁移指南](docs/database-migrations.md)。`web_project.sql` 是历史 MySQL 快照，不再用于安装；全新数据库统一由 PostgreSQL Flyway 迁移创建。
