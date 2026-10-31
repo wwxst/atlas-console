@@ -21,6 +21,8 @@ import com.web.project.user.entity.UserAccount;
 import com.web.project.user.mapper.UserAccountMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.ServerErrorMessage;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -171,9 +173,8 @@ class UserAuthServiceImplTest {
     @Test
     void registerMapsContactConflictToAlreadyRegistered() {
         when(userAccountMapper.selectByPhone(any())).thenReturn(null);
-        doThrow(new DuplicateKeyException("insert failed", new java.sql.SQLException(
-                "ERROR: duplicate key value violates unique constraint \"uk_user_account_phone\"", "23505")))
-                .when(userAccountMapper).insert(any(UserAccount.class));
+        doThrow(postgresUniqueViolation("uk_user_account_phone"))
+                .when(userAccountMapper).insert(any(UserAccount.class));                .when(userAccountMapper).insert(any(UserAccount.class));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -187,11 +188,8 @@ class UserAuthServiceImplTest {
 
     @Test
     void contactValueContainingUserNoIndexDoesNotTriggerNumberRetries() {
-        DuplicateKeyException duplicate = new DuplicateKeyException("insert failed",
-                new java.sql.SQLException(
-                        "ERROR: duplicate key value violates unique constraint \"uk_user_account_email\"",
-                        "23505"));
-        doThrow(duplicate).when(userAccountMapper).insert(any(UserAccount.class));
+        DuplicateKeyException duplicate = postgresUniqueViolation("uk_user_account_email");
+        doThrow(duplicate).when(userAccountMapper).insert(any(UserAccount.class));        doThrow(duplicate).when(userAccountMapper).insert(any(UserAccount.class));
 
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> service.register(new UserRegisterDTO(
@@ -472,5 +470,12 @@ class UserAuthServiceImplTest {
                         "13800138000", TargetType.PHONE, "123456", null
                 ))));
         verifyNoInteractions(authSessionService);
+    }
+
+    private static DuplicateKeyException postgresUniqueViolation(String constraint) {
+        ServerErrorMessage error = new ServerErrorMessage(
+                "SERROR\0VERROR\0C23505\0MVerletzung der eindeutigen Beschränkung\0n" + constraint + "\0"
+        );
+        return new DuplicateKeyException("insert failed", new PSQLException(error));
     }
 }

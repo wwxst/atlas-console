@@ -23,9 +23,8 @@ import com.web.project.common.exception.BusinessException;
 import com.web.project.common.id.SnowflakeIdGenerator;
 import com.web.project.user.entity.UserAccount;
 import com.web.project.user.mapper.UserAccountMapper;
+import org.postgresql.util.PSQLException;
 import org.springframework.dao.DataIntegrityViolationException;
-
-import java.sql.SQLException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -306,12 +305,12 @@ public class UserAuthServiceImpl implements UserAuthService {
             String constraint
     ) {
         Throwable cause = exception.getMostSpecificCause();
-        if (!(cause instanceof SQLException sqlException)
-                || !"23505".equals(sqlException.getSQLState())) {
+        if (!(cause instanceof PSQLException postgresException)
+                || !"23505".equals(postgresException.getSQLState())) {
             return false;
         }
-        String message = cause.getMessage();
-        return message != null && message.contains("unique constraint \"" + constraint + "\"");
+        var serverError = postgresException.getServerErrorMessage();
+        return serverError != null && constraint.equals(serverError.getConstraint());
     }
 
     private UserAccount findAccount(TargetType targetType, String target) {

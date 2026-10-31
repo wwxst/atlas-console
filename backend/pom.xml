@@ -76,7 +76,6 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <!-- Spring Boot 4 requires its dedicated Flyway starter for auto-configuration. -->
