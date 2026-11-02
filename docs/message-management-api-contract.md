@@ -1,6 +1,6 @@
 # Message management frontend API contract
 
-This document describes the API contract for two independent frontend pages and sidebar entries: **SMS interface** manages provider credentials and reusable SMS templates; **Message management** manages business notification scenarios and channel settings. The pages are intentionally separate while sharing the SMS template data model. The frontend is implemented first, and the API endpoints below are expected to be added in the backend follow-up.
+This document describes the API contract for SMS configuration embedded as a tab in the **Login settings** page and the independent **Message management** page. Login settings contains provider credentials and reusable SMS templates; Message management configures business notification scenarios and delivery channels. Both areas share the SMS template data model. The frontend is implemented first, and the API endpoints below are expected to be added in the backend follow-up.
 
 All endpoints are under `/api` and use the standard response envelope:
 
