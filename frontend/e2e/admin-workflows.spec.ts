@@ -310,6 +310,9 @@ test('login settings stay on one page and SMS settings share a three-tab page', 
   await expect(page.getByText('暂无短信模板，请先登记已在服务商控制台创建的模板')).toBeVisible()
   await messageTabs.getByRole('tab', { name: '消息通知管理' }).click()
   await expect(page.getByRole('tab', { name: '会员通知' })).toBeVisible()
+  await page.goto('/settings/sms-templates')
+  await expect(page).toHaveURL(/\/settings\/messages\?panel=templates/)
+  await expect(page.getByRole('heading', { name: '短信模板管理' })).toBeVisible()
 
   await page.goto('/settings')
   await loginTabs.getByRole('tab', { name: '邮箱登录配置' }).click()
