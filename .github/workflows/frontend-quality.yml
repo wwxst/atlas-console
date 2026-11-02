@@ -70,7 +70,7 @@ jobs:
           ATLAS_RELEASE_DIR: /opt/atlas/releases
           ATLAS_DEPLOYMENT_AGENT_TOKEN: ci_only_agent_token_012345678901234567890123456789012345678901234567890123456789
         run: |
-          printf 'ATLAS_DB_PASSWORD=%s\nPOSTGRES_ADMIN_PASSWORD=%s\nJWT_SECRET=%s\nSTORAGE_ENCRYPTION_KEY=%s\n' "$ATLAS_DB_PASSWORD" "$POSTGRES_ADMIN_PASSWORD" "$JWT_SECRET" "$STORAGE_ENCRYPTION_KEY" > /tmp/atlas-ci.env
+          printf 'ATLAS_DB_PASSWORD=%s\nPOSTGRES_ADMIN_PASSWORD=%s\nJWT_SECRET=%s\nSTORAGE_ENCRYPTION_KEY=%s\nATLAS_INSTALL_ROOT=%s\nATLAS_RELEASE_DIR=%s\nATLAS_DEPLOYMENT_AGENT_TOKEN=%s\n' "$ATLAS_DB_PASSWORD" "$POSTGRES_ADMIN_PASSWORD" "$JWT_SECRET" "$STORAGE_ENCRYPTION_KEY" "$ATLAS_INSTALL_ROOT" "$ATLAS_RELEASE_DIR" "$ATLAS_DEPLOYMENT_AGENT_TOKEN" > /tmp/atlas-ci.env
           docker compose --env-file /tmp/atlas-ci.env -f atlas-console/deploy/compose.yaml -f atlas-console/deploy/compose.postgres.yaml config --quiet
       - name: Build frontend image from the isolated frontend project context
         run: docker compose --env-file /tmp/atlas-ci.env -f atlas-console/deploy/compose.yaml -f atlas-console/deploy/compose.postgres.yaml build frontend updater
