@@ -69,7 +69,7 @@
 
 - 每次登录或注册生成新的 `sessionId`，会话写入 `auth:session:{accountType}:{sessionId}`，TTL 为 Refresh Token 有效期。
 - Refresh Token 在同一个 Session 生命周期内保持不变，不做轮换。
-- 退出登录删除当前 Redis Session；已签发的 Access Token 和 Refresh Token 在后续请求中立即失效（已经通过鉴权的并发在途请求不被追溯中断）。所有受保护请求均检查会话是否仍存在；Redis 不可用时不能绕过校验。
+- 退出登录删除当前 Redis Session；已签发的 Access Token 和 Refresh Token 在后续受保护请求中立即失效（已经通过鉴权的并发在途请求不被追溯中断）。Logout 路由只跳过资源服务器的会话检查，控制器仍验证 Access Token 签名、issuer、有效期和账号类型，因此同一未过期 Token 重复退出仍返回成功；其他受保护请求均检查 Redis 会话，Redis 不可用时不能绕过校验。
 - 修改或重置密码会递增 `password_version`，旧 Refresh Token 因版本不一致无法续期。
 
 ### 超级管理员
@@ -146,6 +146,7 @@ Refresh Token 无效、过期或会话已失效统一返回 `40104`。
 ```http
 POST /api/sys-user/auth/logout
 Authorization: Bearer <accessToken>
+请求必须携带当前系统用户的有效 Access Token。Session 已删除时，使用同一个未过期 Token 重复调用仍返回成功；Refresh Token、普通用户 Token 和无效/过期 Token 均拒绝。
 ```
 
 无请求体。删除当前会话，接口保持幂等。成功响应 `data` 为 `null`。
@@ -636,6 +637,7 @@ Content-Type: application/json
 ```http
 POST /api/user/auth/logout
 Authorization: Bearer <accessToken>
+请求必须携带当前普通用户的有效 Access Token。Session 已删除时，使用同一个未过期 Token 重复调用仍返回成功；Refresh Token、系统用户 Token 和无效/过期 Token 均拒绝。
 ```
 
 无请求体，删除当前会话，接口保持幂等。
