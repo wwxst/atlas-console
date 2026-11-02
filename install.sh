@@ -30,8 +30,9 @@ Options:
   --non-interactive  Unattended Docker-managed PostgreSQL install
   --help             Show this help
 
-This script installs the application stack only. It does not install Baota,
-configure a public firewall, issue TLS certificates, or register a GitHub Runner.
+This script installs the application stack and a private local update agent.
+It does not install Baota, configure a public firewall, or issue TLS certificates.
+Customer updates use public GitHub Releases; no GitHub PAT or Actions Runner is needed.
 USAGE
 }
 
