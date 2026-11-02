@@ -8,6 +8,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17-alpine
@@ -20,13 +21,6 @@ jobs:
         options: >-
           --health-cmd="pg_isready -U atlas_admin -d web_project"
           --health-interval=10s --health-timeout=5s --health-retries=15
-      redis:
-        image: redis:7.4
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=5s --health-timeout=3s --health-retries=10
     env:
       DB_URL: jdbc:postgresql://127.0.0.1:5432/web_project?options=-c%20TimeZone%3DUTC
       DB_USERNAME: atlas
@@ -53,15 +47,27 @@ jobs:
           java-version: '25'
           cache: maven
           cache-dependency-path: backend/pom.xml
-      - name: Verify Flyway creates a fresh schema and integration tests pass
+      - name: Install PostgreSQL and Redis clients
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client redis-server
+      - name: Run full backend quality gate
         working-directory: backend
+        env:
+          POSTGRES_ADMIN_USERNAME: atlas_admin
+          POSTGRES_ADMIN_PASSWORD: ci_only_admin_password
         run: |
           chmod +x ./mvnw
-          ./mvnw -B -ntp clean verify
+          python3 scripts/verify_backend.py \
+            --java-home "$JAVA_HOME" \
+            --postgres-client "$(command -v psql)" \
+            --redis-server "$(command -v redis-server)"
       - name: Upload coverage results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-jacoco
-          path: backend/target/site/jacoco/
+          path: |
+            backend/target/site/jacoco/
+            backend/target/quality-gate/
           if-no-files-found: ignore
