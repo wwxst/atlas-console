@@ -36,6 +36,9 @@ for password in "${passwords[@]}"; do
   write_env ATLAS_PROJECT_NAME atlas-config-test
   write_env ATLAS_NETWORK_PREFIX 172.30.91
   write_env ATLAS_RELEASE_DIR "$work/releases"
+  write_env ATLAS_INSTALL_ROOT "$work"
+  write_env ATLAS_DEPLOYMENT_ENABLED true
+  write_env ATLAS_DEPLOYMENT_AGENT_TOKEN "$(printf 'a%.0s' {1..64})"
   printf '%s' "$password" > "$work/expected"
   docker compose --env-file "$ENV_FILE" -f "$root/deploy/compose.yaml" config --format json > "$work/config.json"
   docker compose --env-file "$ENV_FILE" -f "$root/deploy/compose.yaml" \

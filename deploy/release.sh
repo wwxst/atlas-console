@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Transactional application-image deployment, one-step and historical rollback.
+# Transactional customer deployment, one-step and historical rollback.
+# The isolated updater downloads a public GitHub Release; this script only builds and activates it.
 # This does NOT reverse database migrations or restore persistent data.
 set -Eeuo pipefail
 umask 077
@@ -57,7 +58,8 @@ compose() {
     -u ATLAS_HTTP_PORT -u ATLAS_DB_URL -u ATLAS_DB_USERNAME \
     -u DB_PASSWORD -u ATLAS_DB_PASSWORD -u POSTGRES_PASSWORD -u POSTGRES_ADMIN_PASSWORD -u JWT_SECRET -u STORAGE_ENCRYPTION_KEY \
     -u ATLAS_FLYWAY_BASELINE_ON_MIGRATE -u ATLAS_DEPLOYMENT_ENABLED \
-    -u ATLAS_DEPLOYMENT_GITHUB_TOKEN \
+    -u ATLAS_DEPLOYMENT_AGENT_TOKEN \
+    -u ATLAS_DEPLOYMENT_AGENT_URL -u ATLAS_INSTALL_ROOT \
     docker compose --project-name "$project_name" --env-file "$env_file" "${compose_args[@]}" "$@"
 }
 
@@ -112,6 +114,7 @@ archive_release() {
 assert_images() {
   docker image inspect "atlas-console:$ATLAS_FRONTEND_TAG" >/dev/null || return 1
   docker image inspect "atlas-backend:$ATLAS_BACKEND_TAG" >/dev/null || return 1
+  docker image inspect "atlas-updater:$ATLAS_BACKEND_TAG" >/dev/null || return 1
 }
 
 check_site() {
@@ -230,7 +233,7 @@ fi
 if [[ "$db_mode" == docker ]] && ! docker image inspect postgres:17-alpine >/dev/null 2>&1; then
   compose pull postgres
 fi
-compose build frontend backend
+compose build frontend backend updater
 
 if ! activate; then
   echo "Deployment failed health verification" >&2

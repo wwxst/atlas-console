@@ -1,5 +1,5 @@
-# Production compose stack. Execute from a GitHub Actions runner registered
-# on the intended server. Never commit real .env files or publish DB/Redis ports.
+# Customer production Compose stack. Updates are executed by a private local agent;
+# no GitHub Runner or customer GitHub token is required. Never publish DB/Redis ports.
 name: ${ATLAS_PROJECT_NAME:-atlas}
 services:
   redis:
@@ -13,6 +13,27 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  updater:
+    build:
+      context: ./updater
+    image: atlas-updater:${ATLAS_BACKEND_TAG:-local}
+    restart: unless-stopped
+    environment:
+      ATLAS_INSTALL_ROOT: ${ATLAS_INSTALL_ROOT:-/opt/atlas}
+      ATLAS_ENV_FILE: ${ATLAS_INSTALL_ROOT:-/opt/atlas}/.env
+      ATLAS_RELEASE_DIR: ${ATLAS_RELEASE_DIR:-/opt/atlas/releases}
+      ATLAS_PROJECT_NAME: ${ATLAS_PROJECT_NAME:-atlas}
+      ATLAS_DEPLOYMENT_AGENT_TOKEN: ${ATLAS_DEPLOYMENT_AGENT_TOKEN:?Set ATLAS_DEPLOYMENT_AGENT_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${ATLAS_INSTALL_ROOT:-/opt/atlas}:${ATLAS_INSTALL_ROOT:-/opt/atlas}
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
   backend:
     build:
@@ -32,8 +53,9 @@ services:
       # Set true only for a backed-up, schema-verified legacy DB with no Flyway history.
       ATLAS_FLYWAY_BASELINE_ON_MIGRATE: ${ATLAS_FLYWAY_BASELINE_ON_MIGRATE:-false}
       UPLOAD_DIR: /data/uploads
-      ATLAS_DEPLOYMENT_ENABLED: ${ATLAS_DEPLOYMENT_ENABLED:-false}
-      ATLAS_DEPLOYMENT_GITHUB_TOKEN: ${ATLAS_DEPLOYMENT_GITHUB_TOKEN:-}
+      ATLAS_DEPLOYMENT_ENABLED: ${ATLAS_DEPLOYMENT_ENABLED:-true}
+      ATLAS_DEPLOYMENT_AGENT_URL: http://updater:8090
+      ATLAS_DEPLOYMENT_AGENT_TOKEN: ${ATLAS_DEPLOYMENT_AGENT_TOKEN:?Set ATLAS_DEPLOYMENT_AGENT_TOKEN}
     volumes:
       - uploads_data:/data/uploads
       - ${ATLAS_RELEASE_DIR:-/opt/atlas/releases}:/var/lib/atlas/releases:ro
@@ -41,6 +63,8 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       redis:
+        condition: service_healthy
+      updater:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "test \"$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/sys-user/auth/me)\" = 401"]
