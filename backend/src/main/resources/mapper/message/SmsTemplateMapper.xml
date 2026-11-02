@@ -43,7 +43,7 @@
     </select>
 
     <insert id="insert" parameterType="com.web.project.message.entity.SmsTemplate"
-            useGeneratedKeys="true" keyProperty="id">
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
         INSERT INTO sms_template (
             provider, name, template_code, kind, content, variables_json, review_status, enabled
         ) VALUES (
