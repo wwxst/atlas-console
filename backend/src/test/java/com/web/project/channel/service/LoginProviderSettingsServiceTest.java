@@ -151,6 +151,33 @@ class LoginProviderSettingsServiceTest {
     }
 
     @Test
+    void unsupportedPersistedTencentRegionIsNotReportedAsConfigured() {
+        values.put("auth.sms.tencent.secret-id", "secret-id");
+        values.put("auth.sms.tencent.secret-key", cipher.encrypt("secret-key"));
+        values.put("auth.sms.tencent.sdk-app-id", "1400000000");
+        values.put("auth.sms.tencent.sign-name", "Atlas");
+        values.put("auth.sms.tencent.login-template-id", "100001");
+        values.put("auth.sms.tencent.region", "invalid-region");
+
+        assertFalse(service.getTencentSmsSettings().configured());
+        assertThrows(BusinessException.class, service::getTencentSmsConfigForSending);
+    }
+
+    @Test
+    void invalidPersistedSmtpPortIsNotReportedAsConfigured() {
+        values.put("auth.email.smtp.host", "smtp.example.com");
+        values.put("auth.email.smtp.port", "65536");
+        values.put("auth.email.smtp.username", "sender@example.com");
+        values.put("auth.email.smtp.password", cipher.encrypt("smtp-password"));
+        values.put("auth.email.smtp.from-address", "no-reply@example.com");
+        values.put("auth.email.smtp.from-name", "Atlas");
+        values.put("auth.email.smtp.security", "SSL");
+
+        assertFalse(service.getEmailLoginSettings().configured());
+        assertThrows(BusinessException.class, service::getEmailSmtpConfigForSending);
+    }
+
+    @Test
     void cannotSendWhenProviderIsNotConfigured() {
         BusinessException sms = assertThrows(BusinessException.class,
                 service::getAliyunSmsConfigForSending);
