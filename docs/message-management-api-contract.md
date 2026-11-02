@@ -77,9 +77,7 @@ interface MessageNotification {
   description: string
   channels: {
     siteMessage: boolean
-    officialAccount: boolean
     sms: boolean
-    enterpriseWechat: boolean
   }
   siteMessageTitle: string
   siteMessageContent: string
@@ -92,7 +90,7 @@ interface MessageNotification {
 - `smsTemplateId` references the Atlas local SMS template record ID, not the provider template code.
 - SMS template choices must be approved, enabled, and match the currently selected SMS provider in login base settings.
 - `smsVariableMappings` maps each provider-template variable to a business data field name.
-- `officialAccount` and `enterpriseWechat` switches are displayed now; their provider-specific template editors are intentionally marked as pending integration.
+- Atlas currently supports only the in-app message and SMS notification channels. Official-account and enterprise-WeChat channels are not part of this system and are not exposed by the frontend contract.
 
 ### Endpoints
 

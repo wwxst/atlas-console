@@ -6,7 +6,7 @@ export type SmsTemplateProvider = 'aliyun' | 'tencent'
 export type SmsTemplateKind = 'verification' | 'notification' | 'marketing'
 export type SmsTemplateReviewStatus = 'pending' | 'approved' | 'rejected'
 export type MessageCategory = 'member' | 'platform' | 'custom'
-export type MessageChannel = 'siteMessage' | 'officialAccount' | 'sms' | 'enterpriseWechat'
+export type MessageChannel = 'siteMessage' | 'sms'
 
 export interface SmsTemplate {
   id: number
@@ -43,9 +43,7 @@ export interface SmsTemplateInput {
 
 export interface MessageChannels {
   siteMessage: boolean
-  officialAccount: boolean
   sms: boolean
-  enterpriseWechat: boolean
 }
 
 export interface MessageNotification {
