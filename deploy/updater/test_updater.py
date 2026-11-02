@@ -81,7 +81,7 @@ class ReleaseDiscoveryTests(unittest.TestCase):
                  patch.object(server, "urlopen", return_value=Response()):
                 release, error = server.fetch_latest_release(force=True)
                 self.assertIsNone(release)
-                self.assertEqual("GitHub 暂时无法提供版本信息", error)
+                self.assertEqual("无法连接 GitHub 版本发布服务", error)
 
 
 class StatusTests(unittest.TestCase):
@@ -118,6 +118,7 @@ class StatusTests(unittest.TestCase):
             with patch.object(server, "ROOT", root), \
                  patch.object(server, "ENV_FILE", root / ".env"), \
                  patch.object(server, "RELEASE_DIR", release_dir), \
+                 patch.object(server, "STATE_FILE", release_dir / "status.json"), \
                  patch.object(server, "PROJECT", "atlas-customer"), \
                  patch.object(server.subprocess, "run", return_value=type("Result", (), {
                      "returncode": 0, "stdout": "worker-id", "stderr": ""
