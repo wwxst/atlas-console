@@ -26,7 +26,7 @@ public interface SysConfigMapper {
     /**
      * 锁定手机号和邮箱两个渠道总开关，供渠道配置更新事务使用。
      *
-     * 两个渠道更新共用这组行锁；返回顺序不代表 MySQL 的加锁顺序。
+     * 两个渠道更新共用这组行锁；PostgreSQL 按查询中的 CASE 排序稳定获取行锁。
      *
      * @return 手机号、邮箱两个总开关配置项
      */
