@@ -30,11 +30,11 @@ class ReleaseValidationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "current.env"
             front, back = "a" * 40, "b" * 40
-            path.write_text(f"frontend=git-{front}\\nbackend=git-{back}\\n", encoding="utf-8")
+            path.write_text(f"frontend=git-{front}\nbackend=git-{back}\n", encoding="utf-8")
             self.assertEqual(front + "_" + back, server.read_manifest(path))
-            path.write_text(f"frontend=git-{front}\\nbackend=git-{back}\\nextra=1\\n", encoding="utf-8")
+            path.write_text(f"frontend=git-{front}\nbackend=git-{back}\nextra=1\n", encoding="utf-8")
             self.assertIsNone(server.read_manifest(path))
-            path.write_text("frontend=git-../current\\nbackend=git-" + back + "\\n", encoding="utf-8")
+            path.write_text("frontend=git-../current\nbackend=git-" + back + "\n", encoding="utf-8")
             self.assertIsNone(server.read_manifest(path))
 
 
@@ -53,7 +53,7 @@ class ReleaseDiscoveryTests(unittest.TestCase):
                 }).encode()
 
         with tempfile.TemporaryDirectory() as directory:
-            with patch.object(server, "CACHE_FILE", Path(directory) / "latest.json"), \\
+            with patch.object(server, "CACHE_FILE", Path(directory) / "latest.json"), \
                  patch.object(server, "urlopen", return_value=Response()) as fetch:
                 release, error = server.fetch_latest_release(force=True)
                 self.assertIsNone(error)
@@ -77,7 +77,7 @@ class ReleaseDiscoveryTests(unittest.TestCase):
                 }).encode()
 
         with tempfile.TemporaryDirectory() as directory:
-            with patch.object(server, "CACHE_FILE", Path(directory) / "latest.json"), \\
+            with patch.object(server, "CACHE_FILE", Path(directory) / "latest.json"), \
                  patch.object(server, "urlopen", return_value=Response()):
                 release, error = server.fetch_latest_release(force=True)
                 self.assertIsNone(release)
@@ -92,13 +92,13 @@ class StatusTests(unittest.TestCase):
             release_dir.mkdir()
             front = back = "a" * 40
             (release_dir / "current.env").write_text(
-                f"frontend=git-{front}\\nbackend=git-{back}\\n", encoding="utf-8")
+                f"frontend=git-{front}\nbackend=git-{back}\n", encoding="utf-8")
             (release_dir / "versions").mkdir()
             (release_dir / "versions" / (front + "_" + back + ".json")).write_text(
                 json.dumps({"version": "0.1.0"}), encoding="utf-8")
-            with patch.object(server, "RELEASE_DIR", release_dir), \\
-                 patch.object(server, "STATE_FILE", release_dir / "status.json"), \\
-                 patch.object(server, "TOKEN", "x" * 64), \\
+            with patch.object(server, "RELEASE_DIR", release_dir), \
+                 patch.object(server, "STATE_FILE", release_dir / "status.json"), \
+                 patch.object(server, "TOKEN", "x" * 64), \
                  patch.object(server, "fetch_latest_release", return_value=({
                      "version": "0.1.1", "url": "https://github.com/wwxst/atlas-console/releases/tag/v0.1.1",
                      "name": "Atlas 0.1.1", "body": "Release notes", "publishedAt": None,
@@ -115,10 +115,10 @@ class StatusTests(unittest.TestCase):
             root = Path(directory)
             release_dir = root / "releases"
             release_dir.mkdir()
-            with patch.object(server, "ROOT", root), \\
-                 patch.object(server, "ENV_FILE", root / ".env"), \\
-                 patch.object(server, "RELEASE_DIR", release_dir), \\
-                 patch.object(server, "PROJECT", "atlas-customer"), \\
+            with patch.object(server, "ROOT", root), \
+                 patch.object(server, "ENV_FILE", root / ".env"), \
+                 patch.object(server, "RELEASE_DIR", release_dir), \
+                 patch.object(server, "PROJECT", "atlas-customer"), \
                  patch.object(server.subprocess, "run", return_value=type("Result", (), {
                      "returncode": 0, "stdout": "worker-id", "stderr": ""
                  })()) as run:
