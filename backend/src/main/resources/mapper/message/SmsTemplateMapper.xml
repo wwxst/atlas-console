@@ -20,6 +20,13 @@
         </where>
     </sql>
 
+    <select id="selectById" resultType="com.web.project.message.entity.SmsTemplate">
+        SELECT id, provider, name, template_code, kind, content, variables_json,
+               review_status, enabled, updated_at
+        FROM sms_template
+        WHERE id = #{id}
+    </select>
+
     <select id="count" resultType="long">
         SELECT COUNT(*)
         FROM sms_template
