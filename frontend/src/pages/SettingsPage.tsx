@@ -157,7 +157,7 @@ export default function SettingsPage() {
               <label><input type="radio" name="smsProvider" value="aliyun" checked={current.smsProvider === 'aliyun'} onChange={() => change({ smsProvider: 'aliyun' })} />阿里云短信</label>
               <label><input type="radio" name="smsProvider" value="tencent" checked={current.smsProvider === 'tencent'} onChange={() => change({ smsProvider: 'tencent' })} />腾讯云短信</label>
             </div>
-            <p className={styles.helperText}>选择用于发送手机登录验证码的短信平台。服务商密钥和登录验证码模板在“短信服务商配置”中填写；业务通知模板在“短信模板管理”中独立维护。</p>
+            <p className={styles.helperText}>选择用于发送手机登录验证码的短信平台。服务商密钥和登录验证码模板在“短信与消息配置”的“短信服务商配置”标签中填写；业务通知模板在“短信模板管理”标签中维护。</p>
           </fieldset>
 
           <div className={styles.loginSettingRow}>
