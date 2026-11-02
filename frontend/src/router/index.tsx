@@ -6,7 +6,9 @@ import PlaceholderPage from '@/pages/PlaceholderPage'
 import SystemUsersPage from '@/pages/SystemUsersPage'
 import UsersPage from '@/pages/UsersPage'
 import SettingsPage from '@/pages/SettingsPage'
-import StorageSettingsPage from '@/pages/StorageSettingsPage'\nimport SmsTemplatesPage from '@/pages/SmsTemplatesPage'\nimport MessageManagementPage from '@/pages/MessageManagementPage'
+import StorageSettingsPage from '@/pages/StorageSettingsPage'
+import SmsTemplatesPage from '@/pages/SmsTemplatesPage'
+import MessageManagementPage from '@/pages/MessageManagementPage'
 import RequireAdmin from './RequireAdmin'
 
 function LegacyPhoneLoginRedirect() {
@@ -29,7 +31,9 @@ export default function AppRouter() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/phone-login" element={<LegacyPhoneLoginRedirect />} />
         <Route path="/settings/email-login" element={<Navigate to="/settings?section=email" replace />} />
-        <Route path="/settings/sms-templates" element={<SmsTemplatesPage />} />\n        <Route path="/settings/messages" element={<MessageManagementPage />} />\n        <Route path="/settings/storage" element={<StorageSettingsPage />} />
+        <Route path="/settings/sms-templates" element={<SmsTemplatesPage />} />
+        <Route path="/settings/messages" element={<MessageManagementPage />} />
+        <Route path="/settings/storage" element={<StorageSettingsPage />} />
       </Route>
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
