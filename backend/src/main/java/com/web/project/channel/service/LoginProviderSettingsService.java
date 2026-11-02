@@ -76,7 +76,12 @@ public class LoginProviderSettingsService {
 
     @Transactional
     public LoginSettingsVO updateLoginSettings(LoginSettingsUpdateDTO dto) {
-        Map<String, String> values = loadValuesForUpdate(List.of(PHONE_ENABLED, EMAIL_ENABLED, SMS_PROVIDER));
+        Map<String, String> switches = sysConfigMapper.selectMasterSwitchesForUpdate().stream()
+                .collect(Collectors.toMap(SysConfig::getConfigKey, SysConfig::getConfigValue));
+        required(switches, PHONE_ENABLED);
+        required(switches, EMAIL_ENABLED);
+        // Lock the provider row only after the two master switches, matching the existing channel-update lock order.
+        required(loadValuesForUpdate(List.of(SMS_PROVIDER)), SMS_PROVIDER);
         if (!dto.phoneLoginEnabled() && !dto.emailLoginEnabled()) {
             throw new BusinessException(ErrorCode.CANNOT_DISABLE_ALL_CHANNELS);
         }
