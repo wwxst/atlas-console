@@ -783,7 +783,9 @@ class BackendGate:
         self.report["login_rate_limit"] = counts
 
     def pressure(self):
-        # The preceding login-rate-limit check flushes Redis; create fresh sessions before warmup.
+        # Isolate each pressure mode from the preceding rate-limit and pressure windows.
+        redis_command(self.redis_port, "FLUSHDB")
+        # Create fresh admin and user sessions after clearing the Redis rate-limit counters.
         admin_pair = self.check("pressure warmup admin login", "POST", "/api/sys-user/auth/login",
                                 {"username": "admin", "password": "123456"})
         self.sensitive.extend(admin_pair.values())
