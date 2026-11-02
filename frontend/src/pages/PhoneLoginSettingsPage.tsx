@@ -28,7 +28,7 @@ const emptyTencent: TencentSmsSettingsUpdate = {
   secretId: '', secretKey: '', sdkAppId: '', signName: '', templateId: '', region: 'ap-guangzhou',
 }
 
-export default function PhoneLoginSettingsPage() {
+export default function PhoneLoginSettingsPage({ active = true }: { active?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab: TabKey = searchParams.get('tab') === 'tencent' ? 'tencent' : 'aliyun'
   const queryClient = useQueryClient()
@@ -39,14 +39,14 @@ export default function PhoneLoginSettingsPage() {
   const aliyunQuery = useQuery({
     queryKey: ALIYUN_SMS_SETTINGS_QUERY_KEY,
     queryFn: getAliyunSmsSettings,
-    enabled: activeTab === 'aliyun',
+    enabled: active && activeTab === 'aliyun',
     retry: false,
     refetchOnWindowFocus: false,
   })
   const tencentQuery = useQuery({
     queryKey: TENCENT_SMS_SETTINGS_QUERY_KEY,
     queryFn: getTencentSmsSettings,
-    enabled: activeTab === 'tencent',
+    enabled: active && activeTab === 'tencent',
     retry: false,
     refetchOnWindowFocus: false,
   })

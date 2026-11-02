@@ -263,12 +263,15 @@ test('system-user actions are centered and the root admin cannot be disabled', a
   await expect(page.getByText('编号：1')).toBeVisible()
 })
 
-test('login settings separate master switches from SMS and SMTP provider details', async ({ page }) => {
+test('login settings stay on one page with three tabs and retain provider configuration forms', async ({ page }) => {
   const requests = await installMockApi(page)
   await login(page)
 
   await page.goto('/settings')
-  await expect(page.locator('section[aria-label="登录设置"]').getByText('登录基础配置')).toBeVisible()
+  const loginTabs = page.locator('section[aria-label="登录配置"]')
+  await expect(page.getByRole('button', { name: '登录配置', exact: true })).toBeVisible()
+  await expect(page.locator('#settings-navigation').getByRole('button')).toHaveCount(2)
+  await expect(loginTabs.getByRole('tab', { name: '登录基础配置' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('switch', { name: '手机登录' })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByRole('switch', { name: '邮箱登录' })).toHaveAttribute('aria-checked', 'true')
   await page.getByRole('switch', { name: '邮箱登录' }).click()
@@ -276,8 +279,8 @@ test('login settings separate master switches from SMS and SMTP provider details
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('login-settings:true:false:tencent')).toBe(true)
 
-  await page.getByRole('button', { name: '手机登录配置' }).click()
-  await expect(page).toHaveURL(/\/settings\/phone-login$/)
+  await loginTabs.getByRole('tab', { name: '手机登录配置' }).click()
+  await expect(page).toHaveURL(/\/settings\?section=phone/)
   await expect(page.getByRole('tab', { name: '阿里云配置' })).toHaveAttribute('aria-selected', 'true')
   await page.getByLabel('AccessKey ID').fill('example-access-id')
   await page.getByLabel('AccessKey Secret').fill('example-credential')
@@ -295,8 +298,8 @@ test('login settings separate master switches from SMS and SMTP provider details
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('tencent-sms-saved')).toBe(true)
 
-  await page.getByRole('button', { name: '邮箱登录配置' }).click()
-  await expect(page).toHaveURL(/\/settings\/email-login$/)
+  await loginTabs.getByRole('tab', { name: '邮箱登录配置' }).click()
+  await expect(page).toHaveURL(/\/settings\?section=email/)
   await page.getByLabel('SMTP 服务器').fill('smtp.example.com')
   await page.getByLabel('SMTP 用户名').fill('sender@example.com')
   await page.getByLabel('SMTP 密码 / 授权码').fill('example-credential')
@@ -304,6 +307,11 @@ test('login settings separate master switches from SMS and SMTP provider details
   await page.getByLabel('发件人名称').fill('Atlas')
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('email-smtp-saved')).toBe(true)
+
+  await page.goto('/settings/phone-login')
+  await expect(page).toHaveURL(/\/settings\?section=phone/)
+  await page.goto('/settings/email-login')
+  await expect(page).toHaveURL(/\/settings\?section=email/)
 })
 
 test('storage settings render real API state and open OSS binding form', async ({ page }) => {
