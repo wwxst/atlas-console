@@ -57,7 +57,8 @@ compose() {
     -u ATLAS_HTTP_PORT -u ATLAS_DB_URL -u ATLAS_DB_USERNAME \
     -u DB_PASSWORD -u ATLAS_DB_PASSWORD -u POSTGRES_PASSWORD -u POSTGRES_ADMIN_PASSWORD -u JWT_SECRET -u STORAGE_ENCRYPTION_KEY \
     -u ATLAS_FLYWAY_BASELINE_ON_MIGRATE -u ATLAS_DEPLOYMENT_ENABLED \
-    -u ATLAS_DEPLOYMENT_GITHUB_TOKEN \
+    -u ATLAS_DEPLOYMENT_GITHUB_TOKEN -u ATLAS_DEPLOYMENT_AGENT_TOKEN \
+    -u ATLAS_DEPLOYMENT_AGENT_URL -u ATLAS_INSTALL_ROOT \
     docker compose --project-name "$project_name" --env-file "$env_file" "${compose_args[@]}" "$@"
 }
 
@@ -230,7 +231,7 @@ fi
 if [[ "$db_mode" == docker ]] && ! docker image inspect postgres:17-alpine >/dev/null 2>&1; then
   compose pull postgres
 fi
-compose build frontend backend
+compose build frontend backend updater
 
 if ! activate; then
   echo "Deployment failed health verification" >&2
