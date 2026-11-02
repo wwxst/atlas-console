@@ -95,9 +95,9 @@ PostgreSQL 集成测试先建立空的、可丢弃的独立数据库，再设置
 
 ### 当前工具能力与验收边界
 
-`pom.xml` 使用 JaCoCo 0.8.15 支持 JDK 25；`mvnw.cmd verify` 生成 `target/site/jacoco/index.html` 和 `jacoco.xml`，不设置统一覆盖率百分比门槛，也不排除业务代码。JaCoCo 自身过滤编译器/Lombok 生成的部分代码，统计以报告中的可分析代码为准。Maven 成功只证明该次构建和测试，不能代替完整门禁。
+`pom.xml` 使用 JaCoCo 0.8.15 支持 JDK 25；Windows 执行 `mvnw.cmd verify`，Linux 执行 `./mvnw verify`，均生成 `target/site/jacoco/index.html` 和 `jacoco.xml`，不设置统一覆盖率百分比门槛，也不排除业务代码。JaCoCo 自身过滤编译器/Lombok 生成的部分代码，统计以报告中的可分析代码为准。Maven 成功只证明该次构建和测试，不能代替完整门禁。
 
-Windows 本机完整测试入口为 `scripts/verify_backend.py`，仅使用 Python 标准库。需要 Python 3、JDK 25、本机 PostgreSQL 17、psql 客户端和 Redis 可执行文件。在 `backend` 目录执行。测试账号分为应用角色（`DB_USERNAME`/`DB_PASSWORD`）和数据库管理角色（`POSTGRES_ADMIN_USERNAME`/`POSTGRES_ADMIN_PASSWORD`）；管理角色必须能创建/删除数据库，并能将临时库所有权交给应用角色。
+`scripts/verify_backend.py` 是 Windows/Linux 通用的完整测试入口，仅使用 Python 标准库。需要 Python 3、JDK 25、PostgreSQL 17、psql 客户端和 Redis Server。在 `backend` 目录执行。测试账号分为应用角色（`DB_USERNAME`/`DB_PASSWORD`）和数据库管理角色（`POSTGRES_ADMIN_USERNAME`/`POSTGRES_ADMIN_PASSWORD`）；管理角色必须能创建/删除数据库，并能将临时库所有权交给应用角色。Windows 通过 PowerShell 采集 Java 进程指标，Linux 通过 `/proc` 采集相同指标。GitHub Actions 的 Backend quality 工作流使用 PostgreSQL 17 服务容器和本机私有 Redis 进程执行该脚本。
 
 ```powershell
 $env:DB_USERNAME = 'atlas'
@@ -108,6 +108,19 @@ python scripts/verify_backend.py `
   --java-home C:/Users/ww/.jdks/temurin-25.0.4.1 `
   --postgres-client 'C:/Program Files/PostgreSQL/17/bin/psql.exe' `
   --redis-server D:/Develop/sofe/Redis/redis-server.exe
+```
+
+Linux/macOS 之外的 Linux CI 或本机环境可在安装 PostgreSQL 客户端和 Redis Server 后执行：
+
+```bash
+export DB_USERNAME=atlas
+export DB_PASSWORD='应用角色密码'
+export POSTGRES_ADMIN_USERNAME=postgres
+export POSTGRES_ADMIN_PASSWORD='数据库管理角色密码'
+python3 scripts/verify_backend.py \
+  --java-home "$JAVA_HOME" \
+  --postgres-client "$(command -v psql)" \
+  --redis-server "$(command -v redis-server)"
 ```
 
 路径按本机安装位置调整；PostgreSQL 地址可通过 `--db-host`、`--db-port` 指定，管理角色名可通过 `--db-admin-username` 指定。应用角色必须已存在。脚本自行生成独立数据库和 JWT 密钥、启动私有 Redis 与实际打包应用，不使用现有业务库或 Redis 数据；结束后删除本次创建的库并关闭自己的进程。PostgreSQL 服务是已有本机服务，不会被停止；容量结论因此只用于本机基线。
