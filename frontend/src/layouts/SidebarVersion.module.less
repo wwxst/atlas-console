@@ -287,3 +287,23 @@
   outline: 2px solid var(--atlas-color-brand);
   outline-offset: 2px;
 }
+
+.releaseNotes {
+  border: 1px solid var(--atlas-color-border);
+  border-radius: var(--atlas-radius-sm);
+  padding: var(--atlas-space-sm);
+  color: var(--atlas-color-text-secondary);
+  font-size: var(--atlas-text-xs);
+}
+
+.releaseNotes summary {
+  color: var(--atlas-color-brand);
+  cursor: pointer;
+}
+
+.releaseNotes p {
+  max-height: 8rem;
+  margin: var(--atlas-space-sm) 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+}
