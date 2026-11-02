@@ -115,7 +115,7 @@ export default function MessageManagementPage({ active = true }: { active?: bool
     queryKey: ['sms-templates', 'approved-for-notifications'],
     queryFn: () => getSmsTemplates({ page: 1, pageSize: 100, reviewStatus: 'approved' }),
     retry: false,
-    enabled: drawerOpen && detailTab === 'sms',
+    enabled: active && drawerOpen && detailTab === 'sms',
   })
 
   const saveMutation = useMutation({
