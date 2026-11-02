@@ -69,9 +69,11 @@ app:
 
 
   deployment:
-    # Never enabled until a production server, self-hosted runner and GitHub token exist.
+    # Customer installs use a private local updater agent and public GitHub Releases.
+    # No GitHub PAT or self-hosted Actions Runner is required.
     enabled: ${ATLAS_DEPLOYMENT_ENABLED:false}
-    github-token: ${ATLAS_DEPLOYMENT_GITHUB_TOKEN:}
+    agent-url: ${ATLAS_DEPLOYMENT_AGENT_URL:http://updater:8090}
+    agent-token: ${ATLAS_DEPLOYMENT_AGENT_TOKEN:}
     state-directory: ${ATLAS_DEPLOYMENT_STATE_DIR:/var/lib/atlas/releases}
 
   jwt:
