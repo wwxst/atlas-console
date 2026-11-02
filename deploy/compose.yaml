@@ -17,7 +17,7 @@ services:
   updater:
     build:
       context: ./updater
-    image: atlas-updater:local
+    image: atlas-updater:${ATLAS_BACKEND_TAG:-local}
     restart: unless-stopped
     environment:
       ATLAS_INSTALL_ROOT: ${ATLAS_INSTALL_ROOT:-/opt/atlas}
