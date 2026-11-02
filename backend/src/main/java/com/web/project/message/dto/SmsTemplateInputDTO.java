@@ -22,7 +22,15 @@ public record SmsTemplateInputDTO(
         @NotBlank(message = "请输入模板内容") @Size(max = 1000)
         String content,
         @NotNull(message = "模板变量不能为空") @Size(max = 20)
-        List<@NotBlank @Size(max = 50) @Pattern(regexp = "[A-Za-z_][A-Za-z0-9_]{0,49}", message = "模板变量只能包含英文字母、数字和下划线且不能以数字开头") String> variables,
+        List<
+                @NotBlank
+                @Size(max = 50)
+                @Pattern(
+                        regexp = "[A-Za-z_][A-Za-z0-9_]{0,49}",
+                        message = "模板变量只能包含英文字母、数字和下划线且不能以数字开头"
+                )
+                String
+        > variables,
         @NotBlank(message = "请选择审核状态")
         @Pattern(regexp = "pending|approved|rejected", message = "审核状态不正确")
         String reviewStatus,
