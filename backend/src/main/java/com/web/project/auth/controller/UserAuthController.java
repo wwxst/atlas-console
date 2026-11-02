@@ -11,6 +11,7 @@ import com.web.project.auth.protection.ClientIpResolver;
 import com.web.project.auth.protection.LoginRateLimiter;
 import com.web.project.auth.util.ContactNormalizer;
 import com.web.project.auth.util.JwtClaims;
+import com.web.project.auth.util.LogoutTokenResolver;
 import com.web.project.auth.vo.AccessTokenVO;
 import com.web.project.auth.vo.TokenPairVO;
 import com.web.project.common.result.Result;
@@ -21,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,16 +39,27 @@ public class UserAuthController {
     private final UserAuthService userAuthService;
     private final LoginRateLimiter loginRateLimiter;
     private final ClientIpResolver clientIpResolver;
+    private final LogoutTokenResolver logoutTokenResolver;
 
     @Autowired
     public UserAuthController(
             UserAuthService userAuthService,
             LoginRateLimiter loginRateLimiter,
-            ClientIpResolver clientIpResolver
+            ClientIpResolver clientIpResolver,
+            LogoutTokenResolver logoutTokenResolver
     ) {
         this.userAuthService = userAuthService;
         this.loginRateLimiter = loginRateLimiter;
         this.clientIpResolver = clientIpResolver;
+        this.logoutTokenResolver = logoutTokenResolver;
+    }
+
+    public UserAuthController(
+            UserAuthService userAuthService,
+            LoginRateLimiter loginRateLimiter,
+            ClientIpResolver clientIpResolver
+    ) {
+        this(userAuthService, loginRateLimiter, clientIpResolver, null);
     }
 
     public UserAuthController(UserAuthService userAuthService, LoginRateLimiter loginRateLimiter) {
@@ -112,8 +125,13 @@ public class UserAuthController {
      * 退出登录，删除当前会话。
      */
     @PostMapping("/logout")
-    public Result<Void> logout(@AuthenticationPrincipal Jwt jwt) {
-        userAuthService.logout(JwtClaims.sessionId(jwt));
+    public Result<Void> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        if (logoutTokenResolver == null) {
+            throw new IllegalStateException("Logout token resolver is unavailable");
+        }
+        userAuthService.logout(logoutTokenResolver.resolveSessionId(authorization, AccountType.USER));
         return Result.success();
     }
 

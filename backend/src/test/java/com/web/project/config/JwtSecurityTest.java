@@ -162,6 +162,39 @@ class JwtSecurityTest {
     }
 
     @Test
+    void logoutIsIdempotentForSignedAccessTokensAndKeepsAccountTypesIsolated() throws Exception {
+        String adminToken = adminAccessToken();
+        String userToken = userAccessToken();
+
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mvc.perform(post("/api/sys-user/auth/logout")
+                            .header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(200));
+            mvc.perform(post("/api/user/auth/logout")
+                            .header("Authorization", "Bearer " + userToken))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(200));
+        }
+
+        verify(authSessionStore, times(2)).delete(AccountType.SYS_USER, "session-admin");
+        verify(authSessionStore, times(2)).delete(AccountType.USER, "session-user");
+    }
+
+    @Test
+    void logoutRequiresSignedUnexpiredAccessTokenForTheMatchingAccountType() throws Exception {
+        mvc.perform(post("/api/sys-user/auth/logout"))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value(40102));
+        mvc.perform(post("/api/sys-user/auth/logout")
+                        .header("Authorization", "Bearer " + userAccessToken()))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value(40102));
+        mvc.perform(post("/api/user/auth/logout")
+                        .header("Authorization", "Bearer " + tokens.createRefreshToken(
+                                AccountType.USER, 2L, "session-user", 0L)))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value(40102));
+
+        verify(authSessionStore, never()).delete(any(), anyString());
+    }
+
+    @Test
     void disabledAdminAccessTokenIsRejectedImmediately() throws Exception {
         sysUserMapper.selectById(1L).setStatus(0);
 

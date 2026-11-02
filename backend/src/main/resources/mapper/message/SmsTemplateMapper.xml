@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.web.project.message.mapper.SmsTemplateMapper">
+
+    <sql id="Filters">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    LOWER(name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                    OR LOWER(template_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+                )
+            </if>
+            <if test="provider != null and provider != ''">AND provider = #{provider}</if>
+            <if test="kind != null and kind != ''">AND kind = #{kind}</if>
+            <if test="reviewStatus != null and reviewStatus != ''">AND review_status = #{reviewStatus}</if>
+        </where>
+    </sql>
+
+    <select id="selectById" resultType="com.web.project.message.entity.SmsTemplate">
+        SELECT id, provider, name, template_code, kind, content, variables_json,
+               review_status, enabled, updated_at
+        FROM sms_template
+        WHERE id = #{id}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM sms_template
+        <include refid="Filters"/>
+    </select>
+
+    <select id="selectPage" resultType="com.web.project.message.entity.SmsTemplate">
+        SELECT id, provider, name, template_code, kind, content, variables_json,
+               review_status, enabled, updated_at
+        FROM sms_template
+        <include refid="Filters"/>
+        ORDER BY updated_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <insert id="insert" parameterType="com.web.project.message.entity.SmsTemplate"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO sms_template (
+            provider, name, template_code, kind, content, variables_json, review_status, enabled
+        ) VALUES (
+            #{provider}, #{name}, #{templateCode}, #{kind}, #{content}, #{variablesJson}, #{reviewStatus}, #{enabled}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.web.project.message.entity.SmsTemplate">
+        UPDATE sms_template
+        SET provider = #{provider},
+            name = #{name},
+            template_code = #{templateCode},
+            kind = #{kind},
+            content = #{content},
+            variables_json = #{variablesJson},
+            review_status = #{reviewStatus},
+            enabled = #{enabled}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sms_template WHERE id = #{id}
+    </delete>
+</mapper>

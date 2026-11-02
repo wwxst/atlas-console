@@ -81,7 +81,8 @@ class BackendGate:
                         REDIS_PORT=str(self.redis_port), REDIS_DATABASE="0", REDIS_PASSWORD="",
                         JWT_SECRET=base64.b64encode(secrets.token_bytes(32)).decode(),
                         UPLOAD_DIR=str(self.workspace / "uploads"),
-                        STORAGE_ENCRYPTION_KEY=base64.b64encode(secrets.token_bytes(32)).decode())
+                        STORAGE_ENCRYPTION_KEY=base64.b64encode(secrets.token_bytes(32)).decode(),
+                        AUTH_CODE_SENDER="dev")
         self.env["PGPASSWORD"] = self.env.get("DB_PASSWORD", "123456")
         self.redis = None
         self.app = None
@@ -149,8 +150,9 @@ class BackendGate:
 
     def maven(self, *goals, log_name):
         log_path = self.workspace / log_name
+        wrapper_name = "mvnw.cmd" if os.name == "nt" else "mvnw"
         with log_path.open("w", encoding="utf-8") as log:
-            result = subprocess.run([str(ROOT / "mvnw.cmd"), *goals], cwd=ROOT, env=self.env,
+            result = subprocess.run([str(ROOT / wrapper_name), *goals], cwd=ROOT, env=self.env,
                                     stdout=log, stderr=subprocess.STDOUT, timeout=240, creationflags=NO_WINDOW)
         require(result.returncode == 0, f"Maven failed; inspect {log_path}")
 
@@ -199,7 +201,8 @@ class BackendGate:
         agent = (Path.home() / ".m2/repository/org/jacoco/org.jacoco.agent/0.8.15/"
                  "org.jacoco.agent-0.8.15-runtime.jar")
         require(agent.is_file(), "JaCoCo agent was not resolved by Maven")
-        command = [str(self.args.java_home / "bin/java.exe"),
+        java_name = "java.exe" if os.name == "nt" else "java"
+        command = [str(self.args.java_home / "bin" / java_name),
                    f"-javaagent:{agent}=output=tcpserver,address=127.0.0.1,port={self.coverage_port}",
                    "-jar", str(ROOT / "target/backend-0.0.1-SNAPSHOT.jar"),
                    f"--server.port={self.http_port}", "--server.address=127.0.0.1",
@@ -260,12 +263,18 @@ class BackendGate:
         for channel in ("phone", "email"):
             self.check("channel update", "PUT", "/api/sys-user/auth-channels/" + channel,
                        {"enabled": True, "codeEnabled": True}, self.sys_token)
+        self.provider_settings_checks()
+        self.sms_template_checks()
         self.channel_checks()
         self.storage_checks()
-        self.check("system logout", "POST", "/api/sys-user/auth/logout", {}, self.sys_token)
-        self.check("idempotent system logout", "POST", "/api/sys-user/auth/logout", {}, self.sys_token)
+        logout_pair = self.check("dedicated logout session login", "POST", "/api/sys-user/auth/login",
+                                  {"username": "admin", "password": "123456"})
+        self.sensitive.extend(logout_pair.values())
+        logout_access = logout_pair["accessToken"]
+        self.check("system logout", "POST", "/api/sys-user/auth/logout", {}, logout_access)
+        self.check("idempotent system logout", "POST", "/api/sys-user/auth/logout", {}, logout_access)
         self.check("system logout blocks refresh", "POST", "/api/sys-user/auth/refresh",
-                   {"refreshToken": sys_pair["refreshToken"]}, status=401, code=40104)
+                   {"refreshToken": logout_pair["refreshToken"]}, status=401, code=40104)
         self.sql("INSERT INTO sys_user (username,password,nickname) "
                  "SELECT 'quality-system',password,'quality' FROM sys_user WHERE username='admin'")
         system_id = int(self.sql("SELECT id FROM sys_user WHERE username='quality-system'"))
@@ -328,6 +337,7 @@ class BackendGate:
         self.list_checks()
         self.admin_user_edit_checks(token, sys_pair["refreshToken"])
         self.admin_user_status_checks(pair, sys_pair["refreshToken"])
+        token = self.user_pair["accessToken"]
         self.check("role isolation", "GET", "/api/sys-user/users", token=token, status=403, code=40301)
         self.check("profile update", "PUT", "/api/user/me", {"nickname": "quality", "avatar": None}, token)
         self.check("idempotent profile", "PUT", "/api/user/me", {"nickname": "quality", "avatar": None}, token)
@@ -395,8 +405,8 @@ class BackendGate:
         self.check("idempotent logout", "POST", "/api/user/auth/logout", {}, no_password_pair["accessToken"])
         self.check("logout blocks refresh", "POST", "/api/user/auth/refresh",
                    {"refreshToken": no_password_pair["refreshToken"]}, status=401, code=40104)
-        self.check("access remains valid until expiry", "GET", "/api/user/me",
-                   token=no_password_pair["accessToken"])
+        self.check("logout revokes access immediately", "GET", "/api/user/me",
+                   token=no_password_pair["accessToken"], status=401, code=40102)
         self.sql("DELETE FROM user_account WHERE id=" + str(int(profile["id"])))
         self.check("deleted user profile", "GET", "/api/user/me", token=phone_pair["accessToken"],
                    status=401, code=40102)
@@ -408,7 +418,7 @@ class BackendGate:
         user_id = profile["id"]
         require(isinstance(user_id, str), "Status target ID must be a JSON string")
         path = f"/api/sys-user/users/{user_id}/status"
-        protected_query = ("SELECT user_no,phone,email,nickname,password,password_version,avatar,created_at "
+        protected_query = ("SELECT user_no,phone,email,nickname,password,avatar,created_at "
                            f"FROM user_account WHERE id={int(user_id)}")
         before = self.sql(protected_query)
         for name, token, status, code in (
@@ -423,7 +433,7 @@ class BackendGate:
                    {"status": 0}, self.sys_token, status=400, code=40000)
         self.check("admin disables user", "PATCH", path, {"status": 0}, self.sys_token)
         self.check("disabled profile after admin action", "GET", "/api/user/me", token=pair["accessToken"],
-                   status=403, code=40303)
+                   status=401, code=40102)
         self.check("disabled refresh after admin action", "POST", "/api/user/auth/refresh",
                    {"refreshToken": pair["refreshToken"]}, status=401, code=40104)
         self.check("disabled password login after admin action", "POST", "/api/user/auth/login",
@@ -449,8 +459,9 @@ class BackendGate:
             require(any(row["id"] == user_id and row["status"] == user_status for row in listed["records"]),
                     "Status change missing from filtered list")
             self.report["scenarios"].append({"name": f"8 concurrent status={user_status} writes", "passed": True})
-        self.check("enabled profile restored", "GET", "/api/user/me", token=pair["accessToken"])
-        self.login(self.email, self.password)
+        self.check("old profile token remains revoked after reenable", "GET", "/api/user/me",
+                   token=pair["accessToken"], status=401, code=40102)
+        self.user_pair = self.login(self.email, self.password)
 
     def admin_user_edit_checks(self, user_token, refresh_token):
         suffix = uuid.uuid4().hex[:12]
@@ -502,7 +513,7 @@ class BackendGate:
         self.check("admin edit duplicate email", "PUT", path,
                    {"nickname": "should-not-change", "phone": phone, "email": second_email},
                    self.sys_token, status=400, code=40017)
-        require(self.sql("SELECT nickname,email FROM user_account WHERE id=" + str(first_id)) == "edited\t" + new_email,
+        require(self.sql("SELECT nickname,email FROM user_account WHERE id=" + str(first_id)) == "edited|" + new_email,
                 "Contact conflict partially changed user")
         self.check("admin can keep only phone", "PUT", path,
                    {"nickname": "edited", "phone": " " + phone + " ", "email": None}, self.sys_token)
@@ -527,6 +538,93 @@ class BackendGate:
                          + str(second_id) + ") AND phone IS NULL AND email IS NULL") == "0",
                 "Concurrent admin edits removed all login contacts")
         self.report["scenarios"].append({"name": "concurrent admin contact edits: one winner", "passed": True})
+
+    def provider_settings_checks(self):
+        settings = self.check("login settings", "GET", "/api/sys-user/login-settings", token=self.sys_token)
+        require(settings == {"phoneLoginEnabled": True, "emailLoginEnabled": True, "smsProvider": "aliyun"},
+                "Login settings do not match the persisted channel configuration")
+        updated = self.check("update login settings", "PUT", "/api/sys-user/login-settings",
+                             {"phoneLoginEnabled": True, "emailLoginEnabled": True, "smsProvider": "tencent"},
+                             self.sys_token)
+        require(updated["smsProvider"] == "tencent", "SMS provider selection was not persisted")
+        self.check("reject disabling all login channels", "PUT", "/api/sys-user/login-settings",
+                   {"phoneLoginEnabled": False, "emailLoginEnabled": False, "smsProvider": "aliyun"},
+                   self.sys_token, status=400, code=40018)
+
+        aliyun_secret = "aliyun-secret-" + secrets.token_hex(8)
+        self.sensitive.append(aliyun_secret)
+        aliyun = self.check("save Aliyun SMS settings", "PUT", "/api/sys-user/login-providers/sms/aliyun",
+                            {"accessKeyId": "quality-aliyun-id", "accessKeySecret": aliyun_secret,
+                             "signName": "Atlas", "templateCode": "SMS_QUALITY"},
+                            self.sys_token)
+        require(aliyun["configured"] and aliyun["accessKeySecretConfigured"],
+                "Aliyun SMS settings were not marked configured")
+        require("accessKeySecret" not in aliyun, "Aliyun secret was returned by the settings API")
+        self.check("read Aliyun SMS settings", "GET", "/api/sys-user/login-providers/sms/aliyun",
+                   token=self.sys_token)
+
+        tencent_secret = "tencent-secret-" + secrets.token_hex(8)
+        self.sensitive.append(tencent_secret)
+        tencent = self.check("save Tencent SMS settings", "PUT", "/api/sys-user/login-providers/sms/tencent",
+                             {"secretId": "quality-tencent-id", "secretKey": tencent_secret,
+                              "sdkAppId": "1400000000", "signName": "Atlas",
+                              "templateId": "100001", "region": "ap-guangzhou"},
+                             self.sys_token)
+        require(tencent["configured"] and tencent["secretKeyConfigured"],
+                "Tencent SMS settings were not marked configured")
+        require("secretKey" not in tencent, "Tencent secret was returned by the settings API")
+        self.check("read Tencent SMS settings", "GET", "/api/sys-user/login-providers/sms/tencent",
+                   token=self.sys_token)
+
+        smtp_password = "smtp-password-" + secrets.token_hex(8)
+        self.sensitive.append(smtp_password)
+        email = self.check("save SMTP settings", "PUT", "/api/sys-user/login-providers/email",
+                           {"host": "smtp.example.com", "port": 465, "username": "sender@example.com",
+                            "password": smtp_password, "fromAddress": "no-reply@example.com",
+                            "fromName": "Atlas", "security": "SSL"},
+                           self.sys_token)
+        require(email["configured"] and email["passwordConfigured"],
+                "SMTP settings were not marked configured")
+        require("password" not in email, "SMTP password was returned by the settings API")
+        self.check("read SMTP settings", "GET", "/api/sys-user/login-providers/email",
+                   token=self.sys_token)
+
+    def sms_template_checks(self):
+        template_code = "SMS_QUALITY_" + uuid.uuid4().hex[:8]
+        created = self.check("create SMS template", "POST", "/api/sys-user/sms-templates",
+                             {"provider": "aliyun", "name": "质量门禁验证码模板",
+                              "templateCode": template_code, "kind": "verification",
+                              "content": "验证码：${code}", "variables": ["code"],
+                              "reviewStatus": "approved", "enabled": True},
+                             self.sys_token)
+        template_id = created["id"]
+        require(created["variables"] == ["code"], "SMS template variables were not persisted")
+        listed = self.check("filter SMS templates", "GET",
+                            "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun"
+                            "&kind=verification&reviewStatus=approved",
+                            token=self.sys_token)
+        require(listed["total"] == 1 and listed["records"][0]["id"] == template_id,
+                "SMS template filter did not return the created template")
+        updated = self.check("update SMS template", "PUT", f"/api/sys-user/sms-templates/{template_id}",
+                             {"provider": "aliyun", "name": "质量门禁验证码模板已更新",
+                              "templateCode": template_code, "kind": "verification",
+                              "content": "验证码：${code}", "variables": ["code"],
+                              "reviewStatus": "approved", "enabled": False},
+                             self.sys_token)
+        require(updated["name"].endswith("已更新") and not updated["enabled"],
+                "SMS template update was not persisted")
+        self.check("reject duplicate SMS template ID", "POST", "/api/sys-user/sms-templates",
+                   {"provider": "aliyun", "name": "重复模板", "templateCode": template_code,
+                    "kind": "verification", "content": "验证码：${code}", "variables": ["code"],
+                    "reviewStatus": "pending", "enabled": True},
+                   self.sys_token, status=400, code=40000)
+        self.check("delete SMS template", "DELETE", f"/api/sys-user/sms-templates/{template_id}",
+                   {}, self.sys_token)
+        listed_after_delete = self.check("SMS template deleted", "GET",
+                                         "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun"
+                                         "&kind=verification",
+                                         token=self.sys_token)
+        require(listed_after_delete["total"] == 0, "Deleted SMS template remained in the registry")
 
     def channel_checks(self):
         path = "/api/sys-user/auth-channels/"
@@ -572,7 +670,7 @@ class BackendGate:
         self.sql("UPDATE user_account SET status=0 WHERE email='" + email + "'")
         try:
             self.check("disabled user profile", "GET", "/api/user/me", token=pair["accessToken"],
-                       status=403, code=40303)
+                       status=401, code=40102)
             self.check("disabled user refresh", "POST", "/api/user/auth/refresh",
                        {"refreshToken": pair["refreshToken"]}, status=401, code=40104)
             self.check("disabled user login", "POST", "/api/user/auth/login",
@@ -641,12 +739,26 @@ class BackendGate:
                    {"target": target, "targetType": "EMAIL", "scene": "REGISTER"}, status=400, code=40013)
 
     def process_metrics(self):
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             f"Get-Process -Id {self.app.pid} | Select-Object CPU,WorkingSet64,@{{Name='Threads';Expression={{$_.Threads.Count}}}} | ConvertTo-Json -Compress"],
-            text=True, capture_output=True, timeout=10, creationflags=NO_WINDOW)
-        require(result.returncode == 0, "Cannot collect Java process resource metrics")
-        return json.loads(result.stdout)
+        if os.name == "nt":
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"Get-Process -Id {self.app.pid} | Select-Object CPU,WorkingSet64,@{{Name='Threads';Expression={{$_.Threads.Count}}}} | ConvertTo-Json -Compress"],
+                text=True, capture_output=True, timeout=10, creationflags=NO_WINDOW)
+            require(result.returncode == 0, "Cannot collect Java process resource metrics")
+            return json.loads(result.stdout)
+
+        stat_path = Path("/proc") / str(self.app.pid) / "stat"
+        require(stat_path.is_file(), "Linux process metrics require readable /proc")
+        fields = stat_path.read_text(encoding="utf-8").rsplit(")", 1)[1].split()
+        require(len(fields) > 21, "Linux returned incomplete Java process metrics")
+        clock_ticks = os.sysconf("SC_CLK_TCK")
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        cpu_ticks = int(fields[11]) + int(fields[12])
+        return {
+            "CPU": cpu_ticks / clock_ticks,
+            "WorkingSet64": max(0, int(fields[21])) * page_size,
+            "Threads": int(fields[17]),
+        }
 
     def login_rate_limit_checks(self):
         redis_command(self.redis_port, "FLUSHDB")
@@ -671,6 +783,14 @@ class BackendGate:
         self.report["login_rate_limit"] = counts
 
     def pressure(self):
+        # Isolate each pressure mode from the preceding rate-limit and pressure windows.
+        redis_command(self.redis_port, "FLUSHDB")
+        # Create fresh admin and user sessions after clearing the Redis rate-limit counters.
+        admin_pair = self.check("pressure warmup admin login", "POST", "/api/sys-user/auth/login",
+                                {"username": "admin", "password": "123456"})
+        self.sensitive.extend(admin_pair.values())
+        self.sys_token = admin_pair["accessToken"]
+        self.user_pair = self.login(self.email, self.password)
         # Baseline contract fixed before load: zero unexpected errors and a working recovery probe.
         self.report["baseline_contract"] = {"workers": [1, 8, 24, 48], "seconds_per_stage": self.args.seconds,
                                             "operation_mix": "40% profile, 40% refresh, 20% password login",
@@ -685,6 +805,10 @@ class BackendGate:
         def run_stage(workers, mode):
             # Each stage uses a fresh private Redis session and rate-limit window.
             redis_command(self.redis_port, "FLUSHDB")
+            admin_pair = self.check("pressure stage admin login", "POST", "/api/sys-user/auth/login",
+                                    {"username": "admin", "password": "123456"})
+            self.sensitive.extend(admin_pair.values())
+            self.sys_token = admin_pair["accessToken"]
             self.user_pair = self.login(self.email, self.password)
             access_token = self.user_pair["accessToken"]
             refresh_token = self.user_pair["refreshToken"]
@@ -818,7 +942,7 @@ class BackendGate:
                    {"refreshToken": self.user_pair["refreshToken"]}, status=500, code=50000)
         self.start_redis()
         self.user_pair = self.login(self.email, self.password)
-        self.check("Redis recovery", "GET", "/api/user/me", token=token)
+        self.check("Redis recovery", "GET", "/api/user/me", token=self.user_pair["accessToken"])
         text = (self.workspace / "application.log").read_text(encoding="utf-8", errors="replace")
         require(not any(value in text for value in self.sensitive), "Application log exposed a sensitive value")
         self.report["log_sensitive_scan"] = "passed"

@@ -82,6 +82,25 @@ public class JwtConfig {
     }
 
     /**
+     * Logout verifies a signed, unexpired Access Token but deliberately does not
+     * require a live Redis session, so replaying logout with the same token is safe.
+     */
+    @Bean
+    public LogoutTokenDecoder logoutTokenDecoder(
+            SecretKey jwtSecretKey,
+            JwtProperties jwtProperties
+    ) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder
+                .withSecretKey(jwtSecretKey)
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(jwtProperties.issuer()),
+                new TokenTypeValidator(TokenType.ACCESS)));
+        return new LogoutTokenDecoder(decoder);
+    }
+
+    /**
      * 独立的 Refresh Token 校验入口。
      *
      * 只接受 tokenType=refresh 的 Token，供 Refresh 接口使用。

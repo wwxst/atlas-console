@@ -49,6 +49,7 @@ app:
     datacenter-id: ${ID_GENERATOR_DATACENTER_ID:0}
     worker-id: ${ID_GENERATOR_WORKER_ID:0}
   auth:
+    code-sender: ${AUTH_CODE_SENDER:provider}
     login-protection:
       # BCrypt 同时校验上限；超出后立即返回429，不排队等待。
       max-concurrent-password-checks: 8

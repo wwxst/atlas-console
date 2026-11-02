@@ -2,6 +2,7 @@ package com.web.project.auth.code;
 
 import com.web.project.auth.model.TargetType;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "app.auth", name = "code-sender", havingValue = "dev")
 public class DevCodeSender implements CodeSender {
 
     @Override

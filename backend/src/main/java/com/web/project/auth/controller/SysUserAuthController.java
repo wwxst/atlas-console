@@ -7,6 +7,7 @@ import com.web.project.auth.protection.ClientIpResolver;
 import com.web.project.auth.protection.LoginProtectionMetrics;
 import com.web.project.auth.protection.LoginRateLimiter;
 import com.web.project.auth.util.JwtClaims;
+import com.web.project.auth.util.LogoutTokenResolver;
 import com.web.project.auth.vo.AccessTokenVO;
 import com.web.project.auth.vo.SysUserInfoVO;
 import com.web.project.auth.vo.TokenPairVO;
@@ -30,6 +31,7 @@ public class SysUserAuthController {
     private final SysUserAuthService sysUserAuthService;
     private final LoginRateLimiter loginRateLimiter;
     private final ClientIpResolver clientIpResolver;
+    private final LogoutTokenResolver logoutTokenResolver;
     private final LoginProtectionMetrics loginProtectionMetrics;
 
     @Autowired
@@ -37,12 +39,23 @@ public class SysUserAuthController {
             SysUserAuthService sysUserAuthService,
             LoginRateLimiter loginRateLimiter,
             LoginProtectionMetrics loginProtectionMetrics,
-            ClientIpResolver clientIpResolver
+            ClientIpResolver clientIpResolver,
+            LogoutTokenResolver logoutTokenResolver
     ) {
         this.sysUserAuthService = sysUserAuthService;
         this.loginRateLimiter = loginRateLimiter;
         this.loginProtectionMetrics = loginProtectionMetrics;
         this.clientIpResolver = clientIpResolver;
+        this.logoutTokenResolver = logoutTokenResolver;
+    }
+
+    public SysUserAuthController(
+            SysUserAuthService sysUserAuthService,
+            LoginRateLimiter loginRateLimiter,
+            LoginProtectionMetrics loginProtectionMetrics,
+            ClientIpResolver clientIpResolver
+    ) {
+        this(sysUserAuthService, loginRateLimiter, loginProtectionMetrics, clientIpResolver, null);
     }
 
     public SysUserAuthController(
@@ -97,8 +110,14 @@ public class SysUserAuthController {
      * 退出登录，删除当前会话。
      */
     @PostMapping("/logout")
-    public Result<Void> logout(@AuthenticationPrincipal Jwt jwt) {
-        sysUserAuthService.logout(JwtClaims.sessionId(jwt));
+    public Result<Void> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        if (logoutTokenResolver == null) {
+            throw new IllegalStateException("Logout token resolver is unavailable");
+        }
+        sysUserAuthService.logout(logoutTokenResolver.resolveSessionId(authorization,
+                com.web.project.auth.model.AccountType.SYS_USER));
         return Result.success();
     }
 

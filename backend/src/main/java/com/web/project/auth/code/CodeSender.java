@@ -5,7 +5,7 @@ import com.web.project.auth.model.TargetType;
 /**
  * 验证码发送接口。
  *
- * 当前由开发环境实现模拟发送；真实短信和邮件供应商尚未接入。
+ * 生产默认通过已配置的 SMTP 或短信服务商发送；仅显式设置 AUTH_CODE_SENDER=dev 时使用模拟实现。
  */
 public interface CodeSender {
 

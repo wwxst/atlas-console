@@ -8,7 +8,7 @@
 
 ## 当前业务范围
 
-包含系统用户与普通用户两类账号的完整认证链路：系统用户以用户名和密码登录，并支持系统用户的查询、新增、编辑、启停用、密码重置和删除；普通用户以手机号或邮箱注册、登录，并支持验证码、忘记密码、登录态修改密码、个人资料和联系方式换绑；系统用户可管理手机号、邮箱两个认证渠道的开关，并直接编辑普通用户昵称、手机号和邮箱（包括禁用账号，至少保留一种联系方式）。当前实现不包含普通用户前端。后续开发以该范围为准，新增业务需有明确需求。
+包含系统用户与普通用户两类账号的完整认证链路：系统用户以用户名和密码登录，并支持系统用户的查询、新增、编辑、启停用、密码重置和删除；普通用户以手机号或邮箱注册、登录，并支持验证码、忘记密码、登录态修改密码、个人资料和联系方式换绑；系统用户可管理手机号、邮箱两个认证渠道的开关，并直接编辑普通用户昵称、手机号和邮箱（包括禁用账号，至少保留一种联系方式）。登录验证码通过可配置的 SMTP、阿里云短信或腾讯云短信服务商发送；系统用户可维护服务商配置和短信模板。当前实现不包含普通用户前端和业务消息通知后端。后续开发以该范围为准，新增业务需有明确需求。
 
 系统用户接口使用 `/api/sys-user/**`，普通用户接口使用 `/api/user/**`。接口路径、请求参数和响应结构以[接口文档](api.md)为准，README 只保留接口速览。
 
@@ -82,6 +82,7 @@ $env:JAVA_HOME = 'C:\Users\ww\.jdks\temurin-25.0.4.1'
 - `ContactNormalizerTest` 和 `PasswordPolicyTest`：联系方式规范化与密码长度、UTF-8 字节边界。
 - `SensitiveDataLoggingTest`：敏感对象及响应容器的打印不暴露凭据或完整联系方式，Token 的 JSON 契约不变。
 - `VerificationCodeStoreFailureTest`：Redis 无返回结果时抛出异常，不转换为频率限制、零计数或验证码错误。
+- 登录服务商配置和短信模板测试：验证密钥加密、查询不回传明文、留空更新保留密钥、短信模板 CRUD、供应商签名请求构造及 SMTP 加密模式与超时配置。
 - `MapperIntegrationTest`：在显式指定的可丢弃 PostgreSQL 库上验证字段映射、写入行数、重复更新、列表不读取密码及渠道更新失败的事务回滚。设置 `ATLAS_POSTGRES_TEST_URL` 后执行，未设置时跳过。
 - `AuthConcurrencyIntegrationTest`：在真实 Redis 和 PostgreSQL 上同时竞争同一验证码、发送锁、每日计数、联系方式唯一索引和渠道开关；对成功数量与最终数据作断言。设置 `ATLAS_POSTGRES_TEST_URL` 后执行，未设置时跳过。
 - `WebProjectApplicationTests`：Spring 上下文装配；不等同于数据库连通性或业务接口验收。
@@ -94,9 +95,9 @@ PostgreSQL 集成测试先建立空的、可丢弃的独立数据库，再设置
 
 ### 当前工具能力与验收边界
 
-`pom.xml` 使用 JaCoCo 0.8.15 支持 JDK 25；`mvnw.cmd verify` 生成 `target/site/jacoco/index.html` 和 `jacoco.xml`，不设置统一覆盖率百分比门槛，也不排除业务代码。JaCoCo 自身过滤编译器/Lombok 生成的部分代码，统计以报告中的可分析代码为准。Maven 成功只证明该次构建和测试，不能代替完整门禁。
+`pom.xml` 使用 JaCoCo 0.8.15 支持 JDK 25；Windows 执行 `mvnw.cmd verify`，Linux 执行 `./mvnw verify`，均生成 `target/site/jacoco/index.html` 和 `jacoco.xml`，不设置统一覆盖率百分比门槛，也不排除业务代码。JaCoCo 自身过滤编译器/Lombok 生成的部分代码，统计以报告中的可分析代码为准。Maven 成功只证明该次构建和测试，不能代替完整门禁。
 
-Windows 本机完整测试入口为 `scripts/verify_backend.py`，仅使用 Python 标准库。需要 Python 3、JDK 25、本机 PostgreSQL 17、psql 客户端和 Redis 可执行文件。在 `backend` 目录执行。测试账号分为应用角色（`DB_USERNAME`/`DB_PASSWORD`）和数据库管理角色（`POSTGRES_ADMIN_USERNAME`/`POSTGRES_ADMIN_PASSWORD`）；管理角色必须能创建/删除数据库，并能将临时库所有权交给应用角色。
+`scripts/verify_backend.py` 是 Windows/Linux 通用的完整测试入口，仅使用 Python 标准库。需要 Python 3、JDK 25、PostgreSQL 17、psql 客户端和 Redis Server。在 `backend` 目录执行。测试账号分为应用角色（`DB_USERNAME`/`DB_PASSWORD`）和数据库管理角色（`POSTGRES_ADMIN_USERNAME`/`POSTGRES_ADMIN_PASSWORD`）；管理角色必须能创建/删除数据库，并能将临时库所有权交给应用角色。Windows 通过 PowerShell 采集 Java 进程指标，Linux 通过 `/proc` 采集相同指标。GitHub Actions 的 Backend quality 工作流使用 PostgreSQL 17 服务容器和本机私有 Redis 进程执行该脚本。
 
 ```powershell
 $env:DB_USERNAME = 'atlas'
@@ -107,6 +108,20 @@ python scripts/verify_backend.py `
   --java-home C:/Users/ww/.jdks/temurin-25.0.4.1 `
   --postgres-client 'C:/Program Files/PostgreSQL/17/bin/psql.exe' `
   --redis-server D:/Develop/sofe/Redis/redis-server.exe
+```
+
+Linux CI 或 Linux 本机环境可在安装 PostgreSQL 客户端和 Redis Server 后执行：
+
+```bash
+export DB_USERNAME=atlas
+export DB_PASSWORD='应用角色密码'
+export POSTGRES_ADMIN_USERNAME=postgres
+export POSTGRES_ADMIN_PASSWORD='数据库管理角色密码'
+chmod +x ./mvnw
+python3 scripts/verify_backend.py \
+  --java-home "$JAVA_HOME" \
+  --postgres-client "$(command -v psql)" \
+  --redis-server "$(command -v redis-server)"
 ```
 
 路径按本机安装位置调整；PostgreSQL 地址可通过 `--db-host`、`--db-port` 指定，管理角色名可通过 `--db-admin-username` 指定。应用角色必须已存在。脚本自行生成独立数据库和 JWT 密钥、启动私有 Redis 与实际打包应用，不使用现有业务库或 Redis 数据；结束后删除本次创建的库并关闭自己的进程。PostgreSQL 服务是已有本机服务，不会被停止；容量结论因此只用于本机基线。

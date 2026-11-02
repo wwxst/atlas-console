@@ -1,6 +1,6 @@
 # Message management frontend API contract
 
-This document describes the API contract for SMS configuration embedded as a tab in the **Login settings** page and the independent **Message management** page. Login settings contains provider credentials and reusable SMS templates; Message management configures business notification scenarios and delivery channels. Both areas share the SMS template data model. The frontend is implemented first, and the API endpoints below are expected to be added in the backend follow-up.
+This document describes the API contract for SMS configuration embedded as a tab in the **Login settings** page and the independent **Message management** page. SMTP and Aliyun/Tencent SMS provider settings, plus SMS template CRUD, are implemented in the backend. Business notification scenario APIs remain a frontend contract and are not implemented in this backend phase.
 
 All endpoints are under `/api` and use the standard response envelope:
 
@@ -33,7 +33,7 @@ interface SmsTemplate {
 
 - `id` is the Atlas local template record ID.
 - `templateCode` is the template identifier issued by Aliyun or Tencent.
-- Only templates with `reviewStatus = approved` and `enabled = true` may be selected by business notifications.
+- Business notification selection should only offer templates with `reviewStatus = approved` and `enabled = true`; the notification API and this reference check are not part of the current backend implementation.
 - Template registration records a template already created in the provider console. It does not submit a provider-side template application.
 
 ### Endpoints
@@ -43,7 +43,7 @@ interface SmsTemplate {
 | GET | `/sys-user/sms-templates` | Paged list; query: `page`, `pageSize`, `keyword`, `provider`, `kind`, `reviewStatus` |
 | POST | `/sys-user/sms-templates` | Create a local template record |
 | PUT | `/sys-user/sms-templates/{id}` | Update a local template record |
-| DELETE | `/sys-user/sms-templates/{id}` | Delete a template not referenced by a notification |
+| DELETE | `/sys-user/sms-templates/{id}` | Delete a local template record |
 
 List response data uses the existing `PageResult<T>` shape: `total`, `page`, `pageSize`, `records`.
 
@@ -105,4 +105,4 @@ Create/update request body is the `MessageNotification` model without `id` and `
 
 ## Compatibility note: phone-login verification template
 
-The existing Aliyun `templateCode` and Tencent `templateId` fields on the SMS provider configuration remain the **phone-login verification template** for the current authentication sender. They are labelled explicitly as such in the UI and are separate from the reusable business SMS template library above. A later backend migration can move phone-login verification onto the same template registry without conflating the two concerns.
+The existing Aliyun `templateCode` and Tencent `templateId` fields on the SMS provider configuration are the **phone-login verification templates** used by the authentication sender. They remain separate from the reusable SMS template registry, which is maintained for future business notification scenarios.
