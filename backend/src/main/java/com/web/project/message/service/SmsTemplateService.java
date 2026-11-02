@@ -88,7 +88,7 @@ public class SmsTemplateService {
         template.setTemplateCode(dto.templateCode().trim());
         template.setKind(dto.kind());
         template.setContent(dto.content().trim());
-        template.setVariablesJson(writeVariables(dto.variables()));
+        template.setVariablesJson(writeVariables(normalizeVariables(dto.variables())));
         template.setReviewStatus(dto.reviewStatus());
         template.setEnabled(dto.enabled());
         return template;
@@ -100,6 +100,17 @@ public class SmsTemplateService {
                 template.getTemplateCode(), template.getKind(), template.getContent(),
                 readVariables(template.getVariablesJson()), template.getReviewStatus(),
                 template.isEnabled(), template.getUpdatedAt());
+    }
+
+    private List<String> normalizeVariables(List<String> variables) {
+        if (variables == null) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "短信模板变量不能为空");
+        }
+        List<String> normalized = variables.stream().map(String::trim).toList();
+        if (normalized.stream().distinct().count() != normalized.size()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "短信模板变量不能重复");
+        }
+        return normalized;
     }
 
     private String writeVariables(List<String> variables) {
