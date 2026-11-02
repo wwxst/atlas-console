@@ -18,7 +18,7 @@ ENV_FILE = Path(os.environ.get("ATLAS_ENV_FILE", str(ROOT / ".env"))).resolve()
 RELEASE_DIR = Path(os.environ.get("ATLAS_RELEASE_DIR", str(ROOT / "releases"))).resolve()
 REPO_URL = os.environ.get("ATLAS_REPO_URL", "https://github.com/wwxst/atlas-console.git")
 API = os.environ.get("ATLAS_GITHUB_API", "https://api.github.com/repos/wwxst/atlas-console")
-TAG_RE = re.compile(r"^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
+TAG_RE = re.compile(r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 RELEASE_ID_RE = re.compile(r"^[0-9a-f]{40}_[0-9a-f]{40}$")
 STATE_FILE = RELEASE_DIR / "updater-status.json"
@@ -106,7 +106,7 @@ def run():
     stage = work_root / request_id
     payload = read_json(STATE_FILE, {})
     payload.update({"state": "in_progress", "conclusion": None, "message": "正在下载并验证正式版本",
-                    "logFile": str(log_path), "workerContainer": os.environ.get("HOSTNAME")})
+                    "logFile": str(log_path)})
     write_json(STATE_FILE, payload)
 
     try:
