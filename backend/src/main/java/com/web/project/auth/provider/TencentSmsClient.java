@@ -68,7 +68,6 @@ public class TencentSmsClient {
                     .timeout(java.time.Duration.ofSeconds(5))
                     .header("Authorization", authorization)
                     .header("Content-Type", CONTENT_TYPE)
-                    .header("Host", HOST)
                     .header("X-TC-Action", ACTION)
                     .header("X-TC-Version", VERSION)
                     .header("X-TC-Timestamp", String.valueOf(timestamp))
