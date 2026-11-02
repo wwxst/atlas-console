@@ -25,7 +25,7 @@ API = "https://api.github.com/repos/wwxst/atlas-console"
 STATE_FILE = RELEASE_DIR / "updater-status.json"
 CACHE_FILE = RELEASE_DIR / "latest-release-cache.json"
 WORKER_IMAGE = "atlas-updater:local"
-TAG_RE = re.compile(r"^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
+TAG_RE = re.compile(r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 RELEASE_ID_RE = re.compile(r"^[0-9a-f]{40}_[0-9a-f]{40}$")
 LOCK = threading.Lock()
@@ -86,7 +86,7 @@ def current_version():
     # is immutable installation context until the first managed release.
     package = read_json(ROOT / "atlas-console" / "frontend" / "package.json", {})
     version = package.get("version") if isinstance(package, dict) else None
-    if isinstance(version, str) and re.fullmatch(r"\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?", version):
+    if isinstance(version, str) and re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version):
         if release_id:
             write_json(RELEASE_DIR / "versions" / (release_id + ".json"),
                        {"version": version, "tag": "v" + version, "releaseUrl": None})
@@ -225,8 +225,6 @@ def start_worker(operation: str, tag: str | None = None, release_id: str | None 
                             "message": "无法启动更新执行器", "finishedAt": time.time()})
             write_json(STATE_FILE, payload)
             raise RuntimeError("无法启动服务器更新执行器")
-        payload["message"] = "更新任务已启动"
-        write_json(STATE_FILE, payload)
         return payload
 
 
