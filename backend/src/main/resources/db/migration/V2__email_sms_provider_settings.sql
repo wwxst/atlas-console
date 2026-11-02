@@ -1,5 +1,6 @@
 -- Real SMTP and SMS provider settings plus the SMS template registry.
 -- Secrets are AES-GCM ciphertext in sys_config; plaintext is never returned by API.
+ALTER TABLE sys_config ALTER COLUMN config_value TYPE TEXT;
 
 INSERT INTO sys_config (config_key, config_value, description)
 VALUES
