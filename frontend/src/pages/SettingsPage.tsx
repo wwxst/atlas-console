@@ -2,24 +2,25 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { LOGIN_SETTINGS_QUERY_KEY, getLoginSettings, updateLoginSettings } from '@/features/settings/api'
 import type { LoginSettings } from '@/features/settings/api'
 import { AppButton, Toast } from '@ui/index'
 import EmailLoginSettingsPage from './EmailLoginSettingsPage'
+import SmsInterfacePage from './SmsInterfacePage'
 import styles from './SettingsPage.module.less'
 
 const tabs = [
   { key: 'basic', label: '登录基础配置' },
+  { key: 'sms', label: '短信配置' },
   { key: 'email', label: '邮箱登录配置' },
 ] as const
 type LoginSettingsTab = typeof tabs[number]['key']
 
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const navigate = useNavigate()
   const section = searchParams.get('section')
-  const activeTab: LoginSettingsTab = section === 'email' ? 'email' : 'basic'
+  const activeTab: LoginSettingsTab = section === 'email' ? 'email' : section === 'sms' ? 'sms' : 'basic'
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState<LoginSettings | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
@@ -50,12 +51,11 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (section !== 'phone') return
-    const providerTab = searchParams.get('tab')
-    navigate({
-      pathname: '/settings/sms-interface',
-      search: providerTab === 'tencent' ? '?tab=tencent' : '',
-    }, { replace: true })
-  }, [section, searchParams, navigate])
+    const next = new URLSearchParams(searchParams)
+    next.set('section', 'sms')
+    next.delete('panel')
+    setSearchParams(next, { replace: true })
+  }, [section, searchParams, setSearchParams])
 
   const saved = settingsQuery.data
   const current = draft ?? saved
@@ -80,8 +80,17 @@ export default function SettingsPage() {
 
   const selectTab = (key: LoginSettingsTab) => {
     const next = new URLSearchParams(searchParams)
-    if (key === 'basic') next.delete('section')
-    else next.set('section', key)
+    if (key === 'basic') {
+      next.delete('section')
+      next.delete('panel')
+      next.delete('tab')
+    } else {
+      next.set('section', key)
+      if (key !== 'sms') {
+        next.delete('panel')
+        next.delete('tab')
+      }
+    }
     setSearchParams(next, { replace: true })
   }
 
@@ -157,7 +166,7 @@ export default function SettingsPage() {
               <label><input type="radio" name="smsProvider" value="aliyun" checked={current.smsProvider === 'aliyun'} onChange={() => change({ smsProvider: 'aliyun' })} />阿里云短信</label>
               <label><input type="radio" name="smsProvider" value="tencent" checked={current.smsProvider === 'tencent'} onChange={() => change({ smsProvider: 'tencent' })} />腾讯云短信</label>
             </div>
-            <p className={styles.helperText}>选择用于发送手机登录验证码的短信平台。服务商密钥和登录验证码模板在“短信接口”的“短信服务商配置”中填写；业务通知模板在“短信接口”的“短信模板管理”中维护。</p>
+            <p className={styles.helperText}>选择用于发送手机登录验证码的短信平台。服务商密钥、登录验证码模板和业务通知模板统一在上方“短信配置”标签中维护。</p>
           </fieldset>
 
           <div className={styles.loginSettingRow}>
@@ -187,6 +196,16 @@ export default function SettingsPage() {
           </AppButton>
         </div>
       </form>}
+    </section>
+
+    <section
+      id="login-settings-panel-sms"
+      role="tabpanel"
+      aria-labelledby="login-settings-tab-sms"
+      tabIndex={0}
+      hidden={activeTab !== 'sms'}
+    >
+      <SmsInterfacePage active={activeTab === 'sms'} />
     </section>
 
     <section

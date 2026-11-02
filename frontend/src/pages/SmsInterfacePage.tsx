@@ -11,7 +11,7 @@ const tabs = [
 
 type PanelKey = typeof tabs[number]['key']
 
-export default function SmsInterfacePage() {
+export default function SmsInterfacePage({ active = true }: { active?: boolean }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const panel = searchParams.get('panel')
   const activePanel: PanelKey = panel === 'templates' ? 'templates' : 'provider'
@@ -38,12 +38,12 @@ export default function SmsInterfacePage() {
 
   return <div className={styles.page}>
     <header className={styles.header}>
-      <h1>短信接口</h1>
-      <p>配置短信服务商接入信息，并统一登记和管理各平台短信模板。</p>
+      <h1>短信配置</h1>
+      <p>配置手机登录短信服务商，并统一登记和管理各平台短信模板。</p>
     </header>
 
-    <section className={styles.tabSection} aria-label="短信接口">
-      <div className={styles.tabs} role="tablist" aria-label="短信接口配置分类">
+    <section className={styles.tabSection} aria-label="短信配置">
+      <div className={styles.tabs} role="tablist" aria-label="短信配置分类">
         {tabs.map((tab, index) => <button
           key={tab.key}
           id={'sms-interface-tab-' + tab.key}
@@ -60,10 +60,10 @@ export default function SmsInterfacePage() {
     </section>
 
     <section id="sms-interface-panel-provider" role="tabpanel" aria-labelledby="sms-interface-tab-provider" tabIndex={0} hidden={activePanel !== 'provider'}>
-      <PhoneLoginSettingsPage active={activePanel === 'provider'} />
+      <PhoneLoginSettingsPage active={active && activePanel === 'provider'} />
     </section>
     <section id="sms-interface-panel-templates" role="tabpanel" aria-labelledby="sms-interface-tab-templates" tabIndex={0} hidden={activePanel !== 'templates'}>
-      <SmsTemplatesPage active={activePanel === 'templates'} />
+      <SmsTemplatesPage active={active && activePanel === 'templates'} />
     </section>
   </div>
 }

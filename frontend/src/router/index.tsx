@@ -7,7 +7,6 @@ import SystemUsersPage from '@/pages/SystemUsersPage'
 import UsersPage from '@/pages/UsersPage'
 import SettingsPage from '@/pages/SettingsPage'
 import StorageSettingsPage from '@/pages/StorageSettingsPage'
-import SmsInterfacePage from '@/pages/SmsInterfacePage'
 import MessageManagementPage from '@/pages/MessageManagementPage'
 import RequireAdmin from './RequireAdmin'
 
@@ -16,7 +15,16 @@ function LegacyPhoneLoginRedirect() {
   const nextSearchParams = new URLSearchParams(searchParams)
   nextSearchParams.delete('section')
   nextSearchParams.delete('panel')
-  return <Navigate to={{ pathname: '/settings/sms-interface', search: `?${nextSearchParams.toString()}` }} replace />
+  nextSearchParams.set('section', 'sms')
+  return <Navigate to={{ pathname: '/settings', search: `?${nextSearchParams.toString()}` }} replace />
+}
+
+function LegacySmsRedirect({ templates = false }: { templates?: boolean }) {
+  const [searchParams] = useSearchParams()
+  const nextSearchParams = new URLSearchParams(searchParams)
+  nextSearchParams.set('section', 'sms')
+  if (templates) nextSearchParams.set('panel', 'templates')
+  return <Navigate to={{ pathname: '/settings', search: `?${nextSearchParams.toString()}` }} replace />
 }
 
 export default function AppRouter() {
@@ -32,8 +40,8 @@ export default function AppRouter() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/phone-login" element={<LegacyPhoneLoginRedirect />} />
         <Route path="/settings/email-login" element={<Navigate to="/settings?section=email" replace />} />
-        <Route path="/settings/sms-templates" element={<Navigate to="/settings/sms-interface?panel=templates" replace />} />
-        <Route path="/settings/sms-interface" element={<SmsInterfacePage />} />
+        <Route path="/settings/sms-templates" element={<LegacySmsRedirect templates />} />
+        <Route path="/settings/sms-interface" element={<LegacySmsRedirect />} />
         <Route path="/settings/messages" element={<MessageManagementPage />} />
         <Route path="/settings/storage" element={<StorageSettingsPage />} />
       </Route>
