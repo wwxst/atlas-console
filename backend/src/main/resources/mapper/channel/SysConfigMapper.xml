@@ -59,8 +59,7 @@
     <!-- 更新单个配置项的值 -->
     <update id="updateValue">
         UPDATE sys_config
-        SET config_value = #{value},
-            updated_at = LOCALTIMESTAMP
+        SET config_value = #{value}
         WHERE config_key = #{key}
     </update>
 
