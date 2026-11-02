@@ -199,16 +199,6 @@ export default function SettingsPage() {
     </section>
 
     <section
-      id="login-settings-panel-email"
-      role="tabpanel"
-      aria-labelledby="login-settings-tab-email"
-      tabIndex={0}
-      hidden={activeTab !== 'email'}
-    >
-      <EmailLoginSettingsPage active={activeTab === 'email'} />
-    </section>
-
-    <section
       id="login-settings-panel-sms"
       role="tabpanel"
       aria-labelledby="login-settings-tab-sms"
@@ -216,6 +206,16 @@ export default function SettingsPage() {
       hidden={activeTab !== 'sms'}
     >
       <SmsInterfacePage active={activeTab === 'sms'} />
+    </section>
+
+    <section
+      id="login-settings-panel-email"
+      role="tabpanel"
+      aria-labelledby="login-settings-tab-email"
+      tabIndex={0}
+      hidden={activeTab !== 'email'}
+    >
+      <EmailLoginSettingsPage active={activeTab === 'email'} />
     </section>
 
     <Toast open={Boolean(successMessage)}>{successMessage}</Toast>
