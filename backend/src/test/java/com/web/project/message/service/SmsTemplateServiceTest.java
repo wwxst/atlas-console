@@ -73,6 +73,16 @@ class SmsTemplateServiceTest {
     }
 
     @Test
+    void duplicateTemplateVariablesAreRejectedBeforeDatabaseWrite() {
+        SmsTemplateInputDTO duplicateVariables = new SmsTemplateInputDTO(
+                "aliyun", "login", "SMS_100", "verification",
+                "验证码：${code}", List.of("code", "code"), "approved", true);
+
+        assertThrows(BusinessException.class, () -> service.create(duplicateVariables));
+        verify(mapper, never()).insert(any());
+    }
+
+    @Test
     void updateAndDeleteRejectMissingTemplate() {
         when(mapper.update(any())).thenReturn(0);
         when(mapper.deleteById(99L)).thenReturn(0);
