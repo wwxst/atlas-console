@@ -94,6 +94,20 @@ def current_version():
     return None
 
 
+def is_newer_release(candidate: str | None, installed: str | None) -> bool:
+    """Only upgrade stable SemVer; never downgrade a customer installation."""
+    if candidate is None or TAG_RE.fullmatch("v" + candidate) is None:
+        return False
+    if installed is None:
+        return True
+    if TAG_RE.fullmatch("v" + installed) is None:
+        return False
+    if "-" in candidate or "-" in installed:
+        # Prereleases are not offered by /releases/latest.
+        return False
+    return tuple(map(int, candidate.split("."))) > tuple(map(int, installed.split(".")))
+
+
 def fetch_latest_release(force=False):
     cached = read_json(CACHE_FILE, {})
     if not force and isinstance(cached, dict) and time.time() - cached.get("fetchedAt", 0) < 300:
@@ -155,7 +169,7 @@ def status_payload():
     latest, check_error = fetch_latest_release()
     current = current_version()
     latest_version = latest.get("version") if latest else None
-    update_available = bool(latest_version and current != latest_version)
+    update_available = is_newer_release(latest_version, current)
     state = saved.get("state", "idle")
     if not latest and state == "idle":
         state = "no_release" if check_error == "GitHub 尚未发布正式版本" else "release_unavailable"
@@ -277,8 +291,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not latest:
                     return self.respond(409, {"message": error or "没有可用的正式版本"})
                 current = current_version()
-                if current == latest["version"]:
-                    return self.respond(409, {"message": "当前已经是最新版本"})
+                if not is_newer_release(latest["version"], current):
+                    return self.respond(409, {"message": "当前已经是最新版本或当前版本高于发布版本"})
                 operation = "deploy"
                 tag, release_id = latest["tag"], None
             elif self.path == "/api/rollback":
