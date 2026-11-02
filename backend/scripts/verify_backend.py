@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import math
 import struct
+import sys
 import zlib
 import os
 from pathlib import Path
