@@ -7,7 +7,8 @@
 - 系统用户使用用户名和密码登录；普通用户使用手机号或邮箱注册、登录。
 - 两类账号共用 Access/Refresh Token、Session、Refresh、Logout 和 JWT 校验。
 - 普通用户支持验证码、忘记密码、登录态修改密码、个人资料和联系方式换绑。
-- 系统用户可查询和修改手机号、邮箱两个认证渠道的开关。
+- 系统用户可查询和修改手机号、邮箱登录开关，并配置 SMTP 邮箱验证码、阿里云/腾讯云短信验证码服务商。
+- 支持短信模板登记、筛选、编辑和删除；服务商密钥采用 AES-GCM 加密存储，查询不回传明文。
 - 系统用户分页查询系统用户和普通用户列表，可按关键词、状态筛选，并可直接编辑普通用户昵称、手机号和邮箱。
 - BCrypt 密码验证、JWT 认证及 `SCOPE_admin` / `SCOPE_user` 权限隔离。
 - 本地/阿里云 OSS 存储配置、现有 Bucket 绑定管理及统一系统用户头像上传、访问和清理。
@@ -30,6 +31,12 @@
 | PATCH | `/api/sys-user/users/{id}/status` | `SCOPE_admin` | 启用或停用普通用户 |
 | GET | `/api/sys-user/auth-channels` | `SCOPE_admin` | 查询渠道配置 |
 | PUT | `/api/sys-user/auth-channels/{channel}` | `SCOPE_admin` | 修改渠道配置 |
+| GET/PUT | `/api/sys-user/login-settings` | `SCOPE_admin` | 查询或更新登录方式与默认短信服务商 |
+| GET/PUT | `/api/sys-user/login-providers/sms/aliyun` | `SCOPE_admin` | 阿里云短信配置 |
+| GET/PUT | `/api/sys-user/login-providers/sms/tencent` | `SCOPE_admin` | 腾讯云短信配置 |
+| GET/PUT | `/api/sys-user/login-providers/email` | `SCOPE_admin` | SMTP 邮箱配置 |
+| GET/POST | `/api/sys-user/sms-templates` | `SCOPE_admin` | 查询或登记短信模板 |
+| PUT/DELETE | `/api/sys-user/sms-templates/{id}` | `SCOPE_admin` | 修改或删除短信模板 |
 | POST | `/api/user/auth/send-code` | 公开 | 发送验证码 |
 | POST | `/api/user/auth/register` | 公开 | 普通用户注册（双 Token） |
 | POST | `/api/user/auth/login` | 公开 | 普通用户密码或验证码登录 |
@@ -64,14 +71,14 @@ src/main/resources/mapper/
 ## 启动
 
 1. 使用 IntelliJ IDEA 为项目配置的 JDK，具体步骤见[后端工程规范](docs/engineering.md)。
-2. 准备 PostgreSQL 和 Redis，并创建空的 `web_project` 数据库。应用启动时 Flyway 会执行 `src/main/resources/db/migration/V1__initial_schema.sql`，创建 5 张业务表并写入初始系统账号和配置；新安装不再手动导入 `web_project.sql`。首次对外开放前必须修改默认系统管理员密码。
+2. 准备 PostgreSQL 和 Redis，并创建空的 `web_project` 数据库。应用启动时 Flyway 会依次执行 V1、V2 迁移，创建账号、存储和短信模板表，并写入初始系统账号、登录渠道及服务商配置；新安装不再手动导入 `web_project.sql`。首次对外开放前必须修改默认系统管理员密码。
 3. 数据库连接可通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 指定；Redis 连接可通过 `REDIS_HOST`、`REDIS_PORT`、`REDIS_DATABASE`、`REDIS_PASSWORD` 指定，默认连接 `localhost:6379` 的 0 号库。
 4. 本地开发可以直接启动，`src/main/resources/application.yml` 已提供本地 JWT 默认密钥；需要替换密钥时，在 IDEA 启动配置或 Maven Runner 中设置 `JWT_SECRET`。
 5. 运行 `WebProjectApplication`，或在 Maven 面板执行 `spring-boot:run`。默认地址为 `http://localhost:8080`。
 
 密钥生成方法及构建验证命令见[后端工程规范](docs/engineering.md)。
 
-本地上传目录用 `UPLOAD_DIR` 指定，默认 `uploads`。接入 OSS 前设置 `STORAGE_ENCRYPTION_KEY` 为 Base64 编码的32字节随机密钥，并长期保留该密钥；更换后已保存的 OSS Secret 不能解密，需要重新保存凭据。通过存储设置页面保存一套凭据、绑定或同步已有 Bucket、选定仅允许公共读（PublicRead）的默认空间，再保存全局阿里云存储方式。详细行为见[存储数据库设计](docs/存储数据库设计.md)。
+本地上传目录用 `UPLOAD_DIR` 指定，默认 `uploads`。OSS、SMTP 和短信服务商凭据共用 `STORAGE_ENCRYPTION_KEY`（Base64 编码的32字节随机密钥）进行 AES-GCM 加密，必须长期保留；更换后原凭据无法解密，需要重新保存。生产环境默认 `AUTH_CODE_SENDER=provider`，仅本地联调可显式设置 `AUTH_CODE_SENDER=dev` 使用模拟验证码发送。通过存储设置页面保存一套凭据、绑定或同步已有 Bucket、选定仅允许公共读（PublicRead）的默认空间，再保存全局阿里云存储方式。详细行为见[存储数据库设计](docs/存储数据库设计.md)。
 
 ## 数据库
 
