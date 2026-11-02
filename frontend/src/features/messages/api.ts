@@ -64,8 +64,8 @@ export type MessageNotificationInput = Omit<MessageNotification, 'id' | 'updated
 
 const basePath = '/sys-user'
 
-// These endpoints define the frontend contract for the SMS template library and
-// business notification settings. The backend implementation is a separate step.
+// SMS template endpoints are implemented by the backend. Business notification
+// endpoints remain a frontend contract and are not part of the current backend phase.
 export async function getSmsTemplates(query: SmsTemplateQuery): Promise<PageResult<SmsTemplate>> {
   return requireApiData((await http.get<ApiResult<PageResult<SmsTemplate>>>(`${basePath}/sms-templates`, { params: query })).data)
 }
