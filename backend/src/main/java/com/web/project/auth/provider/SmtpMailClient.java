@@ -15,7 +15,7 @@ import java.util.Properties;
 @Component
 public class SmtpMailClient {
 
-    public void send(EmailSmtpConfig config, String target, String code) {
+    JavaMailSenderImpl createSender(EmailSmtpConfig config) {
         JavaMailSenderImpl sender = new JavaMailSenderImpl();
         sender.setHost(config.host());
         sender.setPort(config.port());
@@ -36,7 +36,11 @@ public class SmtpMailClient {
             properties.put("mail.smtp.starttls.enable", "true");
             properties.put("mail.smtp.starttls.required", "true");
         }
+        return sender;
+    }
 
+    public void send(EmailSmtpConfig config, String target, String code) {
+        JavaMailSenderImpl sender = createSender(config);
         try {
             MimeMessage message = sender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
