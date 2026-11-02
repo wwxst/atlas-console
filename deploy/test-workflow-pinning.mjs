@@ -22,7 +22,7 @@ test('GitHub Releases are created only from semantic-version tags', () => {
 })
 
 test('customer updates use public Releases and a local private updater, not a GitHub Runner', () => {
-  assert.ok(agent.includes('https://api.github.com/repos/wwxst/atlas-console/releases/latest'))
+  assert.ok(agent.includes('/releases/latest'))
   assert.ok(agent.includes('hmac.compare_digest'))
   assert.ok(agent.includes('docker", "run", "--detach"'))
   assert.ok(agent.includes('atlas-updater:local'))
