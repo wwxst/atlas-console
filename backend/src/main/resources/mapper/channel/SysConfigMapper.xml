@@ -28,6 +28,20 @@
         ORDER BY config_key
     </select>
 
+    <!-- 按配置键升序锁定配置项，避免并发配置更新采用不同加锁顺序。 -->
+    <select id="selectByKeysForUpdate"
+            resultType="com.web.project.channel.entity.SysConfig">
+        SELECT
+        <include refid="SysConfigColumns"/>
+        FROM sys_config
+        WHERE config_key IN
+        <foreach collection="keys" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+        ORDER BY config_key
+        FOR UPDATE
+    </select>
+
     <!--
         同一事务锁定两个渠道总开关，串行判断至少一个渠道仍然启用。
         ORDER BY FIELD 只规定返回顺序；显式 CASE 排序使 PostgreSQL 按稳定顺序返回并加锁。
