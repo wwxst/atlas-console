@@ -150,7 +150,7 @@ export default function MessageManagementPage({ active = true }: { active?: bool
 
   const templates = (templatesQuery.data?.records ?? []).filter((item: SmsTemplate) =>
     item.enabled && item.reviewStatus === 'approved' &&
-    (!loginSettingsQuery.data || item.provider === loginSettingsQuery.data.smsProvider),
+    Boolean(loginSettingsQuery.data && item.provider === loginSettingsQuery.data.smsProvider),
   )
   const selectedTemplate = templates.find((item) => item.id === draft?.smsTemplateId)
 
@@ -203,7 +203,7 @@ export default function MessageManagementPage({ active = true }: { active?: bool
     saveMutation.mutate({ id: editingId, input: draft })
   }
   const toggleChannel = (item: MessageNotification, channel: MessageChannel, next: boolean) => {
-    if (channel === 'sms' && next && !item.smsTemplateId) {
+    if (channel === 'sms' && next) {
       openEditor(item)
       setDetailTab('sms')
       return
