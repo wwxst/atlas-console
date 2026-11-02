@@ -25,7 +25,7 @@ test('customer updates use public Releases and a local private updater, not a Gi
   assert.ok(agent.includes('/releases/latest'))
   assert.ok(agent.includes('hmac.compare_digest'))
   assert.ok(agent.includes('docker", "run", "--detach"'))
-  assert.ok(agent.includes('atlas-updater:local'))
+  assert.ok(agent.includes('atlas-updater:git-'))
   assert.ok(agent.includes('atlas-update-worker-'))
   assert.ok(!agent.includes('Authorization: token'))
   assert.ok(!agent.includes('shell=True'))
