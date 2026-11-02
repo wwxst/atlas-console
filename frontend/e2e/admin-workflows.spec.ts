@@ -310,6 +310,10 @@ test('login settings stay on one page with three tabs and retain provider config
 
   await page.goto('/settings/phone-login')
   await expect(page).toHaveURL(/\/settings\?section=phone/)
+  await page.goto('/settings/phone-login?tab=tencent')
+  await expect(page).toHaveURL(/\/settings\?tab=tencent&section=phone/)
+  await expect(loginTabs.getByRole('tab', { name: '手机登录配置' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('tab', { name: '腾讯云配置' })).toHaveAttribute('aria-selected', 'true')
   await page.goto('/settings/email-login')
   await expect(page).toHaveURL(/\/settings\?section=email/)
 })
