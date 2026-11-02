@@ -376,23 +376,24 @@ test('storage settings render real API state and open OSS binding form', async (
   await expect(page.getByText('仅支持公共读：访客可查看图片，上传和删除必须通过后台授权。禁止公共读写。')).toBeVisible()
 })
 
-test('version panel keeps one-click update disabled until production is configured', async ({ page }) => {
+test('version panel disables update when the local agent has not been initialized', async ({ page }) => {
   const requests = await installMockApi(page)
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
-  await expect(page.getByText('尚未配置生产服务器，暂不能执行更新')).toBeVisible()
-  await expect(page.getByRole('button', { name: '一键自动更新' })).toBeDisabled()
+  await expect(page.getByText('本机更新执行器尚未初始化')).toBeVisible()
+  await expect(page.getByRole('button', { name: '已是最新版本' })).toBeDisabled()
   expect(requests).not.toContain('deployment-requested')
 })
 
-test('root administrator may request a verified GitHub deployment', async ({ page }) => {
+test('root administrator can update to the latest official GitHub Release', async ({ page }) => {
   const requests = await installMockApi(page, true)
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
-  await expect(page.getByText('尚无部署记录')).toBeVisible()
-  page.once('dialog', async (dialog) => { await dialog.accept() })
-  await page.getByRole('button', { name: '一键自动更新' }).click()
-  await expect(page.getByText('正在等待或执行 GitHub Actions 部署')).toBeVisible()
+  await expect(page.getByText('发现可用的新版本')).toBeVisible()
+  await expect(page.getByText('当前版本：v0.1.0 · 最新版本：v0.1.1')).toBeVisible()
+  page.once('dialog', async dialog => { await dialog.accept() })
+  await page.getByRole('button', { name: '一键更新至 v0.1.1' }).click()
+  await expect(page.getByText('正在下载正式版本、构建镜像并检查服务健康状态')).toBeVisible()
   await expect(page.getByRole('button', { name: '更新执行中' })).toBeDisabled()
   expect(requests).toContain('deployment-requested')
 })
@@ -405,7 +406,7 @@ test('rollback stays disabled without a previous release', async ({ page }) => {
   await expect(page.getByText('没有可回滚的上一版本')).toBeVisible()
 })
 
-test('super-admin can request rollback to the previous recorded release', async ({ page }) => {
+test('super-admin can request local rollback to the previous recorded release', async ({ page }) => {
   const requests = await installMockApi(page, true, true)
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
@@ -416,14 +417,16 @@ test('super-admin can request rollback to the previous recorded release', async 
   expect(requests).toContain('rollback-requested')
 })
 
-test('super-admin sees historical version pairs and can select a non-previous release', async ({ page }) => {
+test('super-admin sees human-readable release versions and can restore an archived one', async ({ page }) => {
   const requests = await installMockApi(page, true, true, true)
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
-  await expect(page.getByRole('region', { name: '历史版本' })).toBeVisible()
-  await expect(page.getByText('前端 cccccccc · 后端 dddddddd')).toBeVisible()
-  await expect(page.getByText('前端 eeeeeeee · 后端 ffffffff')).toBeVisible()
   const region = page.getByRole('region', { name: '历史版本' })
+  await expect(region).toBeVisible()
+  await expect(region.getByText('当前版本 · v0.1.0')).toBeVisible()
+  await expect(region.getByText('v0.0.8')).toBeVisible()
+  await expect(region.getByText('前后端提交 cccccccc')).toBeVisible()
+  await expect(region.getByText('前后端提交 eeeeeeee')).toBeVisible()
   await expect(region.getByRole('button', { name: '当前' })).toBeDisabled()
   const choices = region.getByRole('button', { name: '回滚到此版本' })
   await expect(choices).toHaveCount(2)
@@ -433,38 +436,37 @@ test('super-admin sees historical version pairs and can select a non-previous re
   expect(requests).toContain('historical-rollback:' + 'e'.repeat(40) + '_' + 'f'.repeat(40))
 })
 
-test('history shows an empty state until the first production deployment', async ({ page }) => {
+test('history shows a placeholder before the first customer release', async ({ page }) => {
   await installMockApi(page, true, false, false)
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
   await expect(page.getByText('暂无部署记录，首次上线后将开始记录历史版本。')).toBeVisible()
 })
 
-test('missing GitHub execution terminates waiting and can be recovered manually', async ({ page }) => {
-  const requests = await installMockApi(page, true, true, false, 'missing')
+test('no published GitHub Release does not allow an update', async ({ page }) => {
+  const requests = await installMockApi(page, true, false, false, 'no-release')
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
-  page.once('dialog', async dialog => { await dialog.accept() })
-  await page.getByRole('button', { name: '一键自动更新' }).click()
-  await expect(page.getByText('等待超过 5 分钟，仍未找到本次执行记录，请核实后恢复')).toBeVisible()
-  await expect(page.getByRole('button', { name: '需先恢复状态' })).toBeDisabled()
-  page.once('dialog', async dialog => { await dialog.accept() })
-  await page.getByRole('button', { name: '核实并恢复更新状态' }).click()
-  await expect(page.getByText('尚无部署记录')).toBeVisible()
-  await expect(page.getByRole('button', { name: '一键自动更新' })).toBeEnabled()
-  expect(requests).toContain('recovery-requested')
+  await expect(page.getByText('GitHub 尚未发布正式版本').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: '已是最新版本' })).toBeDisabled()
+  expect(requests).not.toContain('deployment-requested')
 })
 
-test('stalled GitHub execution remains protected from unsafe recovery', async ({ page }) => {
-  const requests = await installMockApi(page, true, true, false, 'stalled')
+test('a customer already on the latest release cannot update again', async ({ page }) => {
+  const requests = await installMockApi(page, true, false, false, 'up-to-date')
   await login(page)
   await page.getByRole('button', { name: '版本与更新' }).click()
-  page.once('dialog', async dialog => { await dialog.accept() })
-  await page.getByRole('button', { name: '一键自动更新' }).click()
-  await expect(page.getByText('任务超过 1 小时仍未结束，请检查 GitHub Runner 或取消后恢复')).toBeVisible()
-  page.once('dialog', async dialog => { await dialog.accept() })
-  await page.getByRole('button', { name: '核实并恢复更新状态' }).click()
-  await expect(page.getByText('GitHub 仍有排队或运行中的任务').first()).toBeVisible()
-  await expect(page.getByRole('button', { name: '需先恢复状态' })).toBeDisabled()
-  expect(requests).toContain('recovery-requested')
+  await expect(page.getByText('当前已是最新正式版本')).toBeVisible()
+  await expect(page.getByRole('button', { name: '已是最新版本' })).toBeDisabled()
+  expect(requests).not.toContain('deployment-requested')
+})
+
+test('release notes and official GitHub release link are visible to the administrator', async ({ page }) => {
+  await installMockApi(page, true)
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await page.getByText('查看 v0.1.1 更新内容').click()
+  await expect(page.getByText('修复登录问题并优化系统更新')).toBeVisible()
+  await expect(page.getByRole('link', { name: '查看 GitHub 发布说明' }))
+    .toHaveAttribute('href', 'https://github.com/wwxst/atlas-console/releases/tag/v0.1.1')
 })
