@@ -4,9 +4,8 @@ const userId = '9007199254740993'
 const now = '2026-10-01T12:00:00'
 
 async function installMockApi(page: Page, deploymentReady = false, previousRelease = false,
-  releaseHistory = false, scenario: 'normal' | 'missing' | 'stalled' = 'normal') {
+  releaseHistory = false, scenario: 'normal' | 'no-release' | 'up-to-date' = 'normal') {
   let deploymentRequested = false
-  let recoveryCompleted = false
   let nickname = '测试用户'
   let status = 1
   let systemUserStatus = 1
@@ -36,28 +35,29 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
       return reply({ id: 1, username: 'admin', nickname: '测试管理员' })
     }
     if (path === '/api/sys-user/deployment' && method === 'GET') {
-      const needsRecovery = deploymentRequested && !recoveryCompleted && scenario !== 'normal'
-      return reply({ configured: deploymentReady,
-        state: !deploymentReady ? 'not_configured' : recoveryCompleted ? 'not_started'
-          : needsRecovery ? scenario === 'missing' ? 'timed_out' : 'stalled'
-          : deploymentRequested ? 'queued' : 'not_started',
+      const noRelease = scenario === 'no-release'
+      const upToDate = scenario === 'up-to-date'
+      const releaseUrl = 'https://github.com/wwxst/atlas-console/releases/tag/v0.1.1'
+      return reply({
+        configured: deploymentReady,
+        state: !deploymentReady ? 'not_configured'
+          : deploymentRequested ? 'in_progress' : noRelease ? 'no_release' : 'idle',
         conclusion: null,
-        runUrl: deploymentRequested ? 'https://github.com/wwxst/atlas-console/actions/runs/123' : null,
-        title: deploymentRequested ? 'Atlas deploy mock-request' : null,
-        requestId: deploymentRequested && !recoveryCompleted ? 'mock-request' : null,
-        runId: deploymentRequested && scenario === 'stalled' ? 123 : null,
-        recoveryAvailable: needsRecovery, rollbackAvailable: previousRelease })
-    }
-    if (path === '/api/sys-user/deployment/recover' && method === 'POST') {
-      requests.push('recovery-requested')
-      if (scenario === 'stalled') {
-        return route.fulfill({ status: 200, contentType: 'application/json',
-          body: JSON.stringify({ code: 400, msg: 'GitHub 仍有排队或运行中的任务', data: null }) })
-      }
-      recoveryCompleted = true
-      return reply({ configured: true, state: 'not_started', conclusion: null,
-        runUrl: null, title: null, requestId: null, runId: null,
-        recoveryAvailable: false, rollbackAvailable: previousRelease })
+        runUrl: noRelease ? null : releaseUrl,
+        title: noRelease ? null : 'Atlas Console v0.1.1',
+        requestId: deploymentRequested ? 'mock-request' : null,
+        runId: null,
+        recoveryAvailable: false,
+        rollbackAvailable: previousRelease,
+        currentVersion: upToDate ? '0.1.1' : '0.1.0',
+        latestVersion: noRelease ? null : '0.1.1',
+        latestReleaseUrl: noRelease ? null : releaseUrl,
+        releaseNotes: noRelease ? null : '修复登录问题并优化系统更新',
+        publishedAt: '2026-11-02T12:00:00Z',
+        updateAvailable: deploymentReady && !noRelease && !upToDate,
+        releaseCheckError: noRelease ? 'GitHub 尚未发布正式版本' : null,
+        message: deploymentRequested ? '更新任务已启动' : null,
+      })
     }
     if (path === '/api/sys-user/deployment/history' && method === 'GET') {
       const a = 'a'.repeat(40)
@@ -67,32 +67,30 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
       const e = 'e'.repeat(40)
       const f = 'f'.repeat(40)
       return reply(releaseHistory ? [
-        { releaseId: c + '_' + d, frontendSha: c, backendSha: d, deployedAt: '2026-10-28T10:00:00Z', current: true },
-        { releaseId: a + '_' + b, frontendSha: a, backendSha: b, deployedAt: '2026-10-27T10:00:00Z', current: false },
-        { releaseId: e + '_' + f, frontendSha: e, backendSha: f, deployedAt: '2026-10-26T10:00:00Z', current: false },
+        { releaseId: c + '_' + d, version: 'v0.1.0', frontendSha: c, backendSha: d, deployedAt: '2026-10-28T10:00:00Z', current: true },
+        { releaseId: a + '_' + b, version: 'v0.0.9', frontendSha: a, backendSha: b, deployedAt: '2026-10-27T10:00:00Z', current: false },
+        { releaseId: e + '_' + f, version: 'v0.0.8', frontendSha: e, backendSha: f, deployedAt: '2026-10-26T10:00:00Z', current: false },
       ] : [])
     }
     if (path === '/api/sys-user/deployment/rollback/history' && method === 'POST') {
       const data = route.request().postDataJSON() as { releaseId: string }
       deploymentRequested = true
       requests.push('historical-rollback:' + data.releaseId)
-      return reply({ configured: true, state: 'requested', conclusion: null,
-        runUrl: 'https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml',
-        title: 'Atlas rollback-history mock-request', requestId: 'mock-request', rollbackAvailable: true })
+      return reply({ configured: true, state: 'in_progress', conclusion: null,
+        title: '回滚历史版本', requestId: 'mock-request', rollbackAvailable: true })
     }
     if (path === '/api/sys-user/deployment/rollback' && method === 'POST') {
       deploymentRequested = true
       requests.push('rollback-requested')
-      return reply({ configured: true, state: 'requested', conclusion: null,
-        runUrl: 'https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml',
-        title: 'Atlas rollback mock-request', requestId: 'mock-request', rollbackAvailable: true })
+      return reply({ configured: true, state: 'in_progress', conclusion: null,
+        title: '回滚上一版本', requestId: 'mock-request', rollbackAvailable: true })
     }
     if (path === '/api/sys-user/deployment' && method === 'POST') {
       deploymentRequested = true
       requests.push('deployment-requested')
-      return reply({ configured: true, state: 'requested', conclusion: null,
-        runUrl: 'https://github.com/wwxst/atlas-console/actions/workflows/deploy-production.yml',
-        title: 'Atlas Deploy mock-request', requestId: 'mock-request' })
+      return reply({ configured: true, state: 'in_progress', conclusion: null,
+        title: '正在安装 v0.1.1', requestId: 'mock-request', updateAvailable: true,
+        currentVersion: '0.1.0', latestVersion: '0.1.1' })
     }
     if (path === '/api/sys-user/sys-users' && method === 'GET') {
       requests.push('system-users-order:' + (url.searchParams.get('createdAtOrder') ?? 'id-asc'))
