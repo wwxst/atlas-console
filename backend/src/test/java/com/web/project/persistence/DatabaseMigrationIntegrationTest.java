@@ -28,15 +28,20 @@ class DatabaseMigrationIntegrationTest {
         flyway.validate();
 
         assertNotNull(flyway.info().current());
-        assertEquals("2", flyway.info().current().getVersion().getVersion());
+        assertEquals("3", flyway.info().current().getVersion().getVersion());
 
         Integer tableCount = jdbc.queryForObject("""
                 SELECT COUNT(*)
                 FROM information_schema.tables
                 WHERE table_schema = current_schema()
-                  AND table_name IN ('sys_user', 'user_account', 'sys_config', 'storage_space', 'storage_file', 'sms_template')
+                  AND table_name IN ('sys_user', 'user_account', 'sys_config', 'storage_space', 'storage_file', 'sms_template', 'message_notification')
                 """, Integer.class);
-        assertEquals(6, tableCount);
+        assertEquals(7, tableCount);
+        assertEquals(4, jdbc.queryForObject("SELECT COUNT(*) FROM message_notification", Integer.class),
+                "V3 must seed the four supported notification scenarios");
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM message_notification WHERE site_message_enabled OR sms_enabled",
+                Integer.class), "Notification channels must remain disabled until configured");
         assertEquals(1, jdbc.queryForObject("""
                 SELECT COUNT(*)
                 FROM pg_constraint c
