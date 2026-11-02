@@ -383,6 +383,121 @@ Content-Type: application/json
 
 手机和邮箱总开关不能同时关闭，否则返回 `40018`。
 
+## 邮箱与短信登录服务商配置
+
+以下接口均要求 `SCOPE_admin`。配置保存在 `sys_config`；SMTP 密码、阿里云 AccessKey Secret 和腾讯云 SecretKey 使用 `STORAGE_ENCRYPTION_KEY` 对应的 AES-256-GCM 密钥加密。查询接口只返回 `passwordConfigured`、`accessKeySecretConfigured` 或 `secretKeyConfigured`，不会返回密钥明文。更新时密钥字段留空表示保留已有密钥；首次配置必须填写。
+
+### 登录方式与短信服务商选择
+
+```http
+GET /api/sys-user/login-settings
+PUT /api/sys-user/login-settings
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+响应与请求字段：
+
+```json
+{
+  "phoneLoginEnabled": true,
+  "emailLoginEnabled": true,
+  "smsProvider": "aliyun"
+}
+```
+
+`smsProvider` 取 `aliyun` 或 `tencent`。两个登录总开关不能同时关闭；更新时在同一数据库事务中锁定并更新，验证码开关保持原值。
+
+### 阿里云短信配置
+
+```http
+GET /api/sys-user/login-providers/sms/aliyun
+PUT /api/sys-user/login-providers/sms/aliyun
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+PUT 请求：
+
+```json
+{
+  "accessKeyId": "your-access-key-id",
+  "accessKeySecret": "your-access-key-secret",
+  "signName": "Atlas",
+  "templateCode": "SMS_123456"
+}
+```
+
+GET 响应字段为 `accessKeyId`、`signName`、`templateCode`、`accessKeySecretConfigured`、`configured`。Secret 不回传。短信发送使用阿里云 Dysmsapi `SendSms` RPC API，验证码作为 `code` 模板变量传入。
+
+### 腾讯云短信配置
+
+```http
+GET /api/sys-user/login-providers/sms/tencent
+PUT /api/sys-user/login-providers/sms/tencent
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+PUT 请求：
+
+```json
+{
+  "secretId": "your-secret-id",
+  "secretKey": "your-secret-key",
+  "sdkAppId": "1400000000",
+  "signName": "Atlas",
+  "templateId": "100001",
+  "region": "ap-guangzhou"
+}
+```
+
+`region` 当前允许 `ap-guangzhou`、`ap-shanghai`、`ap-beijing`、`ap-chengdu`、`ap-hongkong`、`ap-singapore`。GET 响应字段为 `secretId`、`sdkAppId`、`signName`、`templateId`、`region`、`secretKeyConfigured`、`configured`。SecretKey 不回传。短信发送使用腾讯云 SMS `SendSms` API 和 TC3-HMAC-SHA256 签名。
+
+### SMTP 邮箱配置
+
+```http
+GET /api/sys-user/login-providers/email
+PUT /api/sys-user/login-providers/email
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+PUT 请求：
+
+```json
+{
+  "host": "smtp.example.com",
+  "port": 465,
+  "username": "sender@example.com",
+  "password": "smtp-app-password",
+  "fromAddress": "no-reply@example.com",
+  "fromName": "Atlas",
+  "security": "SSL"
+}
+```
+
+`security` 取 `SSL`、`STARTTLS` 或 `NONE`。GET 响应字段为 `host`、`port`、`username`、`fromAddress`、`fromName`、`security`、`passwordConfigured`、`configured`，不回传密码。SMTP 连接、读取和写入超时均为 5 秒。
+
+### 短信模板登记
+
+以下接口均要求 `SCOPE_admin`，模板必须先在阿里云或腾讯云控制台创建；这里仅登记本地模板资料，不向服务商提交审核。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/sys-user/sms-templates?page=1&pageSize=20` | 分页查询；支持 `keyword`、`provider`、`kind`、`reviewStatus` 筛选 |
+| POST | `/api/sys-user/sms-templates` | 登记模板 |
+| PUT | `/api/sys-user/sms-templates/{id}` | 修改模板 |
+| DELETE | `/api/sys-user/sms-templates/{id}` | 删除本地模板登记 |
+
+模板字段为 `id`、`provider`、`name`、`templateCode`、`kind`、`content`、`variables`、`reviewStatus`、`enabled`、`updatedAt`。模板 ID 由 PostgreSQL 生成；同一服务商的 `templateCode` 唯一。类型分别为 `provider=aliyun|tencent`、`kind=verification|notification|marketing`、`reviewStatus=pending|approved|rejected`。
+
+### 验证码发送实现
+
+普通用户 `POST /api/user/auth/send-code` 继续执行既有渠道开关、场景资格、60 秒发送锁、每日 10 次上限、5 分钟有效期及错误 5 次失效规则。手机号验证码通过当前选定的短信服务商发送；邮箱验证码通过 SMTP 发送。服务商未配置或发送失败时接口返回服务器错误，不会伪装成发送成功。
+
+生产默认使用真实服务商发送。仅在显式设置环境变量 `AUTH_CODE_SENDER=dev` 时使用不发送外部消息的开发模拟实现；不得在生产环境启用该模式。
+
 ## 普通用户
 
 普通用户使用手机号或邮箱注册、登录，不再使用用户名。联系方式在写入和查询前统一规范化：手机号去除首尾空格并校验 11 位中国大陆手机号；邮箱去除首尾空格并转为小写。
