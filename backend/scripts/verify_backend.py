@@ -150,8 +150,9 @@ class BackendGate:
 
     def maven(self, *goals, log_name):
         log_path = self.workspace / log_name
+        wrapper_name = "mvnw.cmd" if os.name == "nt" else "mvnw"
         with log_path.open("w", encoding="utf-8") as log:
-            result = subprocess.run([str(ROOT / "mvnw.cmd"), *goals], cwd=ROOT, env=self.env,
+            result = subprocess.run([str(ROOT / wrapper_name), *goals], cwd=ROOT, env=self.env,
                                     stdout=log, stderr=subprocess.STDOUT, timeout=240, creationflags=NO_WINDOW)
         require(result.returncode == 0, f"Maven failed; inspect {log_path}")
 
@@ -200,7 +201,8 @@ class BackendGate:
         agent = (Path.home() / ".m2/repository/org/jacoco/org.jacoco.agent/0.8.15/"
                  "org.jacoco.agent-0.8.15-runtime.jar")
         require(agent.is_file(), "JaCoCo agent was not resolved by Maven")
-        command = [str(self.args.java_home / "bin/java.exe"),
+        java_name = "java.exe" if os.name == "nt" else "java"
+        command = [str(self.args.java_home / "bin" / java_name),
                    f"-javaagent:{agent}=output=tcpserver,address=127.0.0.1,port={self.coverage_port}",
                    "-jar", str(ROOT / "target/backend-0.0.1-SNAPSHOT.jar"),
                    f"--server.port={self.http_port}", "--server.address=127.0.0.1",
@@ -729,12 +731,26 @@ class BackendGate:
                    {"target": target, "targetType": "EMAIL", "scene": "REGISTER"}, status=400, code=40013)
 
     def process_metrics(self):
-        result = subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             f"Get-Process -Id {self.app.pid} | Select-Object CPU,WorkingSet64,@{{Name='Threads';Expression={{$_.Threads.Count}}}} | ConvertTo-Json -Compress"],
-            text=True, capture_output=True, timeout=10, creationflags=NO_WINDOW)
-        require(result.returncode == 0, "Cannot collect Java process resource metrics")
-        return json.loads(result.stdout)
+        if os.name == "nt":
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"Get-Process -Id {self.app.pid} | Select-Object CPU,WorkingSet64,@{{Name='Threads';Expression={{$_.Threads.Count}}}} | ConvertTo-Json -Compress"],
+                text=True, capture_output=True, timeout=10, creationflags=NO_WINDOW)
+            require(result.returncode == 0, "Cannot collect Java process resource metrics")
+            return json.loads(result.stdout)
+
+        stat_path = Path("/proc") / str(self.app.pid) / "stat"
+        require(stat_path.is_file(), "Linux process metrics require readable /proc")
+        fields = stat_path.read_text(encoding="utf-8").rsplit(")", 1)[1].split()
+        require(len(fields) > 21, "Linux returned incomplete Java process metrics")
+        clock_ticks = os.sysconf("SC_CLK_TCK")
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        cpu_ticks = int(fields[11]) + int(fields[12])
+        return {
+            "CPU": cpu_ticks / clock_ticks,
+            "WorkingSet64": max(0, int(fields[21])) * page_size,
+            "Threads": int(fields[17]),
+        }
 
     def login_rate_limit_checks(self):
         redis_command(self.redis_port, "FLUSHDB")
