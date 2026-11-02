@@ -96,7 +96,8 @@ export default function MessageManagementPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [draft, setDraft] = useState<MessageNotificationInput | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('system')
-  const [successMessage, setSuccessMessage] = useState('')\n  const [formError, setFormError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [formError, setFormError] = useState('')
 
   const notificationsQuery = useQuery({
     queryKey: ['message-notifications', category],
