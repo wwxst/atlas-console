@@ -96,7 +96,7 @@ export default function MessageManagementPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [draft, setDraft] = useState<MessageNotificationInput | null>(null)
   const [detailTab, setDetailTab] = useState<DetailTab>('system')
-  const [successMessage, setSuccessMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')\n  const [formError, setFormError] = useState('')
 
   const notificationsQuery = useQuery({
     queryKey: ['message-notifications', category],
@@ -146,13 +146,21 @@ export default function MessageManagementPage() {
     },
   })
 
+  const templates = (templatesQuery.data?.records ?? []).filter((item: SmsTemplate) =>
+    item.enabled && item.reviewStatus === 'approved' &&
+    (!loginSettingsQuery.data || item.provider === loginSettingsQuery.data.smsProvider),
+  )
+  const selectedTemplate = templates.find((item) => item.id === draft?.smsTemplateId)
+
   const openEditor = (item: MessageNotification) => {
+    setFormError('')
     setEditingId(item.id)
     setDraft(toInput(item))
     setDetailTab('system')
     setDrawerOpen(true)
   }
   const openCreate = () => {
+    setFormError('')
     setEditingId(null)
     setDraft({ ...emptyInput, category: 'custom' })
     setDetailTab('system')
@@ -160,19 +168,36 @@ export default function MessageManagementPage() {
   }
   const closeEditor = () => {
     if (saveMutation.isPending) return
+    setFormError('')
     setDrawerOpen(false)
     setDraft(null)
     setEditingId(null)
   }
   const updateDraft = (patch: Partial<MessageNotificationInput>) => {
+    setFormError('')
     setDraft((current) => current ? { ...current, ...patch } : current)
   }
   const updateChannels = (channels: Partial<MessageNotificationInput['channels']>) => {
+    setFormError('')
     setDraft((current) => current ? { ...current, channels: { ...current.channels, ...channels } } : current)
   }
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!draft || saveMutation.isPending) return
+    if (draft.channels.sms) {
+      if (!draft.smsTemplateId || !selectedTemplate) {
+        setDetailTab('sms')
+        setFormError('启用短信通知前，请选择当前短信平台下审核通过且已启用的模板。')
+        return
+      }
+      const missingVariables = selectedTemplate.variables.filter((variable) => !draft.smsVariableMappings[variable]?.trim())
+      if (missingVariables.length > 0) {
+        setDetailTab('sms')
+        setFormError(`请填写短信模板变量映射：${missingVariables.join('、')}`)
+        return
+      }
+    }
+    setFormError('')
     saveMutation.mutate({ id: editingId, input: draft })
   }
   const toggleChannel = (item: MessageNotification, channel: MessageChannel, next: boolean) => {
@@ -189,11 +214,6 @@ export default function MessageManagementPage() {
     if (window.confirm(`确定删除自定义通知“${item.name}”吗？`)) deleteMutation.mutate(item.id)
   }
 
-  const templates = (templatesQuery.data?.records ?? []).filter((item: SmsTemplate) =>
-    item.enabled && item.reviewStatus === 'approved' &&
-    (!loginSettingsQuery.data || item.provider === loginSettingsQuery.data.smsProvider),
-  )
-  const selectedTemplate = templates.find((item) => item.id === draft?.smsTemplateId)
   const records = notificationsQuery.data ?? []
   const toolbar: ReactNode = category === 'custom'
     ? <AppButton variant="primary" icon={<Plus size={15} />} onClick={openCreate}>新增自定义通知</AppButton>
@@ -303,7 +323,7 @@ export default function MessageManagementPage() {
               {templates.map((template) => <option key={template.id} value={template.id}>{template.name} · {template.templateCode}</option>)}
             </select>
           </FormField>
-          {draft.smsTemplateId && !selectedTemplate && <p role="alert" className={styles.error}>当前关联模板不可用或不属于已选短信平台，请重新选择。</p>}
+          {templatesQuery.isSuccess && draft.smsTemplateId && !selectedTemplate && <p role="alert" className={styles.error}>当前关联模板不可用或不属于已选短信平台，请重新选择。</p>}
           {selectedTemplate && <div className={styles.templatePreview}>
             <div><span>模板 ID</span><strong>{selectedTemplate.templateCode}</strong></div>
             <p>{selectedTemplate.content}</p>
@@ -336,6 +356,7 @@ export default function MessageManagementPage() {
           </div>
         </div>}
 
+        {formError && <p role="alert" className={styles.error}>{formError}</p>}
         {saveMutation.isError && <p role="alert" className={styles.error}>通知配置保存失败，请检查消息管理接口或稍后重试。</p>}
         <div className={styles.editorActions}>
           <AppButton type="button" disabled={saveMutation.isPending} onClick={closeEditor}>取消</AppButton>
