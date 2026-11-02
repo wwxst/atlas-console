@@ -940,7 +940,7 @@ class BackendGate:
                    {"refreshToken": self.user_pair["refreshToken"]}, status=500, code=50000)
         self.start_redis()
         self.user_pair = self.login(self.email, self.password)
-        self.check("Redis recovery", "GET", "/api/user/me", token=token)
+        self.check("Redis recovery", "GET", "/api/user/me", token=self.user_pair["accessToken"])
         text = (self.workspace / "application.log").read_text(encoding="utf-8", errors="replace")
         require(not any(value in text for value in self.sensitive), "Application log exposed a sensitive value")
         self.report["log_sensitive_scan"] = "passed"
