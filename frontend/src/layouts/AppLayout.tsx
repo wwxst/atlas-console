@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Bell, ChevronDown, ChevronLeft, ChevronRight, FileText, HardDrive, LayoutDashboard, Settings, ShieldCheck, Users, UserCog } from 'lucide-react'
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, HardDrive, LayoutDashboard, Settings, ShieldCheck, Users, UserCog } from 'lucide-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { IconButton } from '@ui/index'
 import { useAppStore } from '@/stores/appStore'
@@ -16,8 +16,7 @@ const menuItems = [
 
 const settingsItems = [
   { key: '/settings', label: '登录配置', icon: <ShieldCheck size={17} /> },
-  { key: '/settings/sms-templates', label: '短信模板管理', icon: <FileText size={17} /> },
-  { key: '/settings/messages', label: '消息管理', icon: <Bell size={17} /> },
+  { key: '/settings/messages', label: '短信与消息配置', icon: <Bell size={17} /> },
   { key: '/settings/storage', label: '存储配置', icon: <HardDrive size={17} /> },
 ]
 
