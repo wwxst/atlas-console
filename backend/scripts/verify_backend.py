@@ -594,7 +594,8 @@ class BackendGate:
         template_id = created["id"]
         require(created["variables"] == ["code"], "SMS template variables were not persisted")
         listed = self.check("filter SMS templates", "GET",
-                            "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun&kind=verification&reviewStatus=approved",
+                            "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun"
+                            "&kind=verification&reviewStatus=approved",
                             token=self.sys_token)
         require(listed["total"] == 1 and listed["records"][0]["id"] == template_id,
                 "SMS template filter did not return the created template")
@@ -614,7 +615,8 @@ class BackendGate:
         self.check("delete SMS template", "DELETE", f"/api/sys-user/sms-templates/{template_id}",
                    {}, self.sys_token)
         listed_after_delete = self.check("SMS template deleted", "GET",
-                                         "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun&kind=verification",
+                                         "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun"
+                                         "&kind=verification",
                                          token=self.sys_token)
         require(listed_after_delete["total"] == 0, "Deleted SMS template remained in the registry")
 
