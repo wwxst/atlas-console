@@ -9,10 +9,14 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class SecurityConfig {
+
+    private static final String SYS_USER_LOGOUT_PATH = "/api/sys-user/auth/logout";
+    private static final String USER_LOGOUT_PATH = "/api/user/auth/logout";
     /**
      * 配置接口的访问权限。
      */
@@ -22,6 +26,7 @@ public class SecurityConfig {
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler
     ) throws Exception {
+        DefaultBearerTokenResolver defaultBearerTokenResolver = new DefaultBearerTokenResolver();
         http
                 // 资源接口通过 Bearer Token 认证，不使用浏览器自动携带的 Cookie/Session。
                 .csrf(AbstractHttpConfigurer::disable)
@@ -43,11 +48,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.HEAD, "/files/*")
                         .permitAll()
 
-                        // 系统用户登录和刷新接口公开访问
+                        // 登录、刷新公开；退出接口由控制器独立验证签名以保持幂等。
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/sys-user/auth/login",
-                                "/api/sys-user/auth/refresh"
+                                "/api/sys-user/auth/refresh",
+                                SYS_USER_LOGOUT_PATH
                         )
                         .permitAll()
 
@@ -58,7 +64,8 @@ public class SecurityConfig {
                                 "/api/user/auth/refresh",
                                 "/api/user/auth/register",
                                 "/api/user/auth/send-code",
-                                "/api/user/auth/reset-password"
+                                "/api/user/auth/reset-password",
+                                USER_LOGOUT_PATH
                         )
                         .permitAll()
 
@@ -80,6 +87,12 @@ public class SecurityConfig {
                 )
 
                 .oauth2ResourceServer(oauth2 -> oauth2
+                        .bearerTokenResolver(request -> {
+                            boolean logoutRequest = HttpMethod.POST.matches(request.getMethod())
+                                    && (SYS_USER_LOGOUT_PATH.equals(request.getServletPath())
+                                    || USER_LOGOUT_PATH.equals(request.getServletPath()));
+                            return logoutRequest ? null : defaultBearerTokenResolver.resolve(request);
+                        })
                         .jwt(Customizer.withDefaults())
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
