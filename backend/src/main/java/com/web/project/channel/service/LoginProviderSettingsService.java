@@ -245,7 +245,11 @@ public class LoginProviderSettingsService {
                 || !List.of("SSL", "STARTTLS", "NONE").contains(security)) {
             throw notConfigured("SMTP 邮箱");
         }
-        return new EmailSmtpConfig(host, Integer.parseInt(portValue), username,
+        int port = Integer.parseInt(portValue);
+        if (port < 1 || port > 65535) {
+            throw notConfigured("SMTP 邮箱");
+        }
+        return new EmailSmtpConfig(host, port, username,
                 credentialCipher.decrypt(encrypted), fromAddress, fromName, security);
     }
 
