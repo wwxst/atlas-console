@@ -26,14 +26,27 @@
   align-items: center;
   min-height: 3.5rem;
   padding: 0;
+  border: 0;
   border-bottom: 2px solid transparent;
   color: var(--atlas-color-text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
   white-space: nowrap;
+}
+
+.tab:hover,
+.tabActive {
+  color: var(--atlas-color-brand);
 }
 
 .tabActive {
   border-bottom-color: var(--atlas-color-brand);
-  color: var(--atlas-color-brand);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--atlas-color-brand);
+  outline-offset: 3px;
 }
 
 .settingRows { display: grid; gap: var(--atlas-space-lg); }

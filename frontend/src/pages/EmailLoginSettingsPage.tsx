@@ -21,13 +21,14 @@ const emptyDraft: EmailLoginSettingsUpdate = {
   security: 'SSL',
 }
 
-export default function EmailLoginSettingsPage() {
+export default function EmailLoginSettingsPage({ active = true }: { active?: boolean }) {
   const queryClient = useQueryClient()
   const [draftState, setDraftState] = useState<EmailLoginSettingsUpdate | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
   const settingsQuery = useQuery({
     queryKey: EMAIL_LOGIN_SETTINGS_QUERY_KEY,
     queryFn: getEmailLoginSettings,
+    enabled: active,
     retry: false,
     refetchOnWindowFocus: false,
   })
@@ -73,12 +74,6 @@ export default function EmailLoginSettingsPage() {
   }
 
   return <div className={storageStyles.page}>
-    <section className={storageStyles.tabSection} aria-label="邮箱登录配置">
-      <div className={storageStyles.tabs}>
-        <span className={[storageStyles.tab, storageStyles.tabActive].join(' ')}>邮箱服务配置</span>
-      </div>
-    </section>
-
     <section className={storageStyles.configSection}>
       <div className={storageStyles.notice}>
         <div>
