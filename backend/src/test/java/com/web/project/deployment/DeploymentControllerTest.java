@@ -44,7 +44,7 @@ class DeploymentControllerTest {
         assertThrows(BusinessException.class, () -> controller.history(null));
         verifyNoInteractions(service);
 
-        when(service.status()).thenReturn(new DeploymentStatus(false, "not_configured", null, null, null, null));
+        when(service.status()).thenReturn(DeploymentStatus.notConfigured());
         assertFalse(controller.status(user("SYS_USER", "1")).data().configured());
         verify(service).status();
     }
