@@ -35,6 +35,8 @@ jobs:
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
       JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      STORAGE_ENCRYPTION_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      AUTH_CODE_SENDER: dev
     steps:
       - uses: actions/checkout@v4
       - name: Create least-privileged PostgreSQL application role
