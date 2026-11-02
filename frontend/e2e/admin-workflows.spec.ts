@@ -287,7 +287,7 @@ test('login settings stay on one page with three tabs and retain provider config
   await page.getByLabel('AccessKey ID').fill('example-access-id')
   await page.getByLabel('AccessKey Secret').fill('example-credential')
   await page.locator('#phone-login-panel-aliyun').getByLabel('短信签名').fill('Atlas')
-  await page.getByLabel('短信模板 Code').fill('SMS_123456')
+  await page.getByLabel('登录验证码模板 Code').fill('SMS_123456')
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('aliyun-sms-saved')).toBe(true)
 
@@ -296,7 +296,7 @@ test('login settings stay on one page with three tabs and retain provider config
   await page.getByLabel('SecretKey').fill('example-credential')
   await page.getByLabel('短信 SDK App ID').fill('1400000000')
   await page.locator('#phone-login-panel-tencent').getByLabel('短信签名').fill('Atlas')
-  await page.getByLabel('短信模板 ID').fill('123456')
+  await page.getByLabel('登录验证码模板 ID').fill('123456')
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('tencent-sms-saved')).toBe(true)
 
