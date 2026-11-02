@@ -38,6 +38,16 @@ class ReleaseValidationTests(unittest.TestCase):
             self.assertIsNone(server.read_manifest(path))
 
 
+class VersionOrderingTests(unittest.TestCase):
+    def test_newer_stable_versions_are_recognized_without_downgrades(self):
+        self.assertTrue(server.is_newer_release("0.1.1", "0.1.0"))
+        self.assertTrue(server.is_newer_release("1.0.0", "0.99.99"))
+        self.assertFalse(server.is_newer_release("0.1.1", "0.1.2"))
+        self.assertFalse(server.is_newer_release("0.1.1", "0.1.1"))
+        self.assertFalse(server.is_newer_release("0.1.0-rc.1", "0.1.0"))
+        self.assertFalse(server.is_newer_release(None, "0.1.0"))
+
+
 class ReleaseDiscoveryTests(unittest.TestCase):
     def test_public_release_is_cached_and_normalized(self):
         class Response:
