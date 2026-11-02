@@ -29,7 +29,7 @@ public interface SmsTemplateMapper {
             @Param("limit") int limit
     );
 
-    @Options(useGeneratedKeys = true, keyProperty = "id")
+    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(SmsTemplate template);
 
     int update(SmsTemplate template);
