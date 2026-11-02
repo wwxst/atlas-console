@@ -17,12 +17,14 @@ public record EmailLoginSettingsUpdateDTO(
         @NotNull(message = "请输入 SMTP 端口") @Min(1) @Max(65535)
         Integer port,
         @NotBlank(message = "请输入 SMTP 用户名") @Size(max = 254)
+        @Pattern(regexp = "[^\\\\p{Cntrl}]+", message = "SMTP 用户名不能包含控制字符")
         String username,
         @NotNull(message = "SMTP 密码或授权码不能为空") @Size(max = 128)
         String password,
         @NotBlank(message = "请输入发件邮箱") @Email @Size(max = 254)
         String fromAddress,
         @NotBlank(message = "请输入发件人名称") @Size(max = 80)
+        @Pattern(regexp = "[^\\\\p{Cntrl}]+", message = "发件人名称不能包含控制字符")
         String fromName,
         @NotBlank(message = "请选择 SMTP 加密方式")
         @Pattern(regexp = "SSL|STARTTLS|NONE", message = "SMTP 加密方式不正确")
