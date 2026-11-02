@@ -511,7 +511,7 @@ class BackendGate:
         self.check("admin edit duplicate email", "PUT", path,
                    {"nickname": "should-not-change", "phone": phone, "email": second_email},
                    self.sys_token, status=400, code=40017)
-        require(self.sql("SELECT nickname,email FROM user_account WHERE id=" + str(first_id)) == "edited\t" + new_email,
+        require(self.sql("SELECT nickname,email FROM user_account WHERE id=" + str(first_id)) == "edited|" + new_email,
                 "Contact conflict partially changed user")
         self.check("admin can keep only phone", "PUT", path,
                    {"nickname": "edited", "phone": " " + phone + " ", "email": None}, self.sys_token)
