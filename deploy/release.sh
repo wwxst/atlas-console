@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Transactional application-image deployment, one-step and historical rollback.
+# Transactional customer deployment, one-step and historical rollback.
+# The isolated updater downloads a public GitHub Release; this script only builds and activates it.
 # This does NOT reverse database migrations or restore persistent data.
 set -Eeuo pipefail
 umask 077
