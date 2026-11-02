@@ -58,6 +58,7 @@ class LoginProviderSettingsServiceTest {
 
         when(mapper.selectByKeys(anyList())).thenAnswer(invocation -> rows(invocation.getArgument(0)));
         when(mapper.selectByKeysForUpdate(anyList())).thenAnswer(invocation -> rows(invocation.getArgument(0)));
+        when(mapper.selectMasterSwitchesForUpdate()).thenAnswer(invocation -> rows(List.of("auth.phone.enabled", "auth.email.enabled")));
         when(mapper.updateValue(anyString(), anyString())).thenAnswer(invocation -> {
             values.put(invocation.getArgument(0), invocation.getArgument(1));
             return 1;
