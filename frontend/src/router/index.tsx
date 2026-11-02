@@ -7,15 +7,15 @@ import SystemUsersPage from '@/pages/SystemUsersPage'
 import UsersPage from '@/pages/UsersPage'
 import SettingsPage from '@/pages/SettingsPage'
 import StorageSettingsPage from '@/pages/StorageSettingsPage'
-import SmsTemplatesPage from '@/pages/SmsTemplatesPage'
-import MessageManagementPage from '@/pages/MessageManagementPage'
+import SmsMessageSettingsPage from '@/pages/SmsMessageSettingsPage'
 import RequireAdmin from './RequireAdmin'
 
 function LegacyPhoneLoginRedirect() {
   const [searchParams] = useSearchParams()
   const nextSearchParams = new URLSearchParams(searchParams)
-  nextSearchParams.set('section', 'phone')
-  return <Navigate to={{ pathname: '/settings', search: `?${nextSearchParams.toString()}` }} replace />
+  nextSearchParams.delete('section')
+  nextSearchParams.set('panel', 'provider')
+  return <Navigate to={{ pathname: '/settings/messages', search: `?${nextSearchParams.toString()}` }} replace />
 }
 
 export default function AppRouter() {
@@ -31,8 +31,8 @@ export default function AppRouter() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/settings/phone-login" element={<LegacyPhoneLoginRedirect />} />
         <Route path="/settings/email-login" element={<Navigate to="/settings?section=email" replace />} />
-        <Route path="/settings/sms-templates" element={<SmsTemplatesPage />} />
-        <Route path="/settings/messages" element={<MessageManagementPage />} />
+        <Route path="/settings/sms-templates" element={<Navigate to="/settings/messages?panel=templates" replace />} />
+        <Route path="/settings/messages" element={<SmsMessageSettingsPage />} />
         <Route path="/settings/storage" element={<StorageSettingsPage />} />
       </Route>
     </Route>
