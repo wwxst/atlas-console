@@ -32,7 +32,7 @@ Options:
 
 This script installs the application stack and a private local update agent.
 It does not install Baota, configure a public firewall, or issue TLS certificates.
-Customer updates use public GitHub Releases; no GitHub PAT or Actions Runner is needed.
+Customer updates use public GitHub Releases and the local updater; no GitHub credentials are needed.
 USAGE
 }
 
