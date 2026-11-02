@@ -17,7 +17,7 @@ import type {
   MessageNotificationInput,
   SmsTemplate,
 } from '@/features/messages/api'
-import { AppButton, DataTable, Drawer, EmptyState, FormField, StatusIndicator, Toast } from '@ui/index'
+import { AppButton, DataTable, Drawer, EmptyState, FormField, Toast } from '@ui/index'
 import styles from './MessageManagementPage.module.less'
 
 const categories: Array<{ key: MessageCategory; label: string }> = [
@@ -27,10 +27,8 @@ const categories: Array<{ key: MessageCategory; label: string }> = [
 ]
 
 const detailTabs = [
-  { key: 'system', label: '系统通知' },
+  { key: 'system', label: '站内信通知' },
   { key: 'sms', label: '短信通知' },
-  { key: 'wechat', label: '微信模板消息' },
-  { key: 'wecom', label: '企业微信' },
 ] as const
 type DetailTab = typeof detailTabs[number]['key']
 
@@ -39,7 +37,7 @@ const emptyInput: MessageNotificationInput = {
   code: '',
   name: '',
   description: '',
-  channels: { siteMessage: true, officialAccount: false, sms: false, enterpriseWechat: false },
+  channels: { siteMessage: true, sms: false },
   siteMessageTitle: '',
   siteMessageContent: '',
   smsTemplateId: null,
@@ -48,9 +46,7 @@ const emptyInput: MessageNotificationInput = {
 
 const channelLabels: Record<MessageChannel, string> = {
   siteMessage: '站内信',
-  officialAccount: '公众号模板',
   sms: '发送短信',
-  enterpriseWechat: '企业微信',
 }
 
 function toInput(item: MessageNotification): MessageNotificationInput {
@@ -240,20 +236,20 @@ export default function MessageManagementPage({ active = true }: { active?: bool
       <div className={styles.tableWrap}>
         <DataTable className={styles.table}>
           <thead><tr>
-            <th>ID</th><th>通知类型</th><th>通知场景说明</th><th>站内信</th><th>公众号模板</th><th>发送短信</th><th>企业微信</th><th>操作</th>
+            <th>ID</th><th>通知类型</th><th>通知场景说明</th><th>站内信</th><th>发送短信</th><th>操作</th>
           </tr></thead>
           <tbody>
-            {notificationsQuery.isPending && <tr><td colSpan={8}><div className={styles.state}>正在加载通知场景…</div></td></tr>}
-            {notificationsQuery.isError && <tr><td colSpan={8}><div className={styles.state}>
+            {notificationsQuery.isPending && <tr><td colSpan={6}><div className={styles.state}>正在加载通知场景…</div></td></tr>}
+            {notificationsQuery.isError && <tr><td colSpan={6}><div className={styles.state}>
               <p role="alert">消息通知列表加载失败，请确认消息管理接口已部署。</p>
               <AppButton icon={<RotateCcw size={15} />} onClick={() => void notificationsQuery.refetch()}>重试</AppButton>
             </div></td></tr>}
-            {notificationsQuery.isSuccess && records.length === 0 && <tr><td colSpan={8}><EmptyState description={category === 'custom' ? '暂无自定义通知，点击“新增自定义通知”创建' : '当前分类暂无通知场景'} /></td></tr>}
+            {notificationsQuery.isSuccess && records.length === 0 && <tr><td colSpan={6}><EmptyState description={category === 'custom' ? '暂无自定义通知，点击“新增自定义通知”创建' : '当前分类暂无通知场景'} /></td></tr>}
             {records.map((item) => <tr key={item.id}>
               <td className={styles.id}>{item.id}</td>
               <td className={styles.name}>{item.name}</td>
               <td className={styles.description} title={item.description}>{item.description}</td>
-              {(['siteMessage', 'officialAccount', 'sms', 'enterpriseWechat'] as MessageChannel[]).map((channel) =>
+              {(['siteMessage', 'sms'] as MessageChannel[]).map((channel) =>
                 <td key={channel}><Toggle
                   checked={item.channels[channel]}
                   label={`${item.name} - ${channelLabels[channel]}`}
@@ -334,28 +330,6 @@ export default function MessageManagementPage({ active = true }: { active?: bool
             <input id={`message-sms-variable-${variable}`} value={draft.smsVariableMappings[variable] ?? ''} disabled={saveMutation.isPending || !draft.channels.sms} onChange={(event) => updateDraft({ smsVariableMappings: { ...draft.smsVariableMappings, [variable]: event.target.value } })} placeholder="填写对应的业务数据字段，例如 orderNo" />
           </FormField>)}
           <p className={styles.muted}>只有审核通过且处于启用状态、并且与当前短信服务平台一致的模板才能被选择。</p>
-        </div>}
-
-        {detailTab === 'wechat' && <div className={styles.detailPanel}>
-          <label className={styles.channelOption}>
-            <input type="checkbox" checked={draft.channels.officialAccount} disabled={saveMutation.isPending} onChange={(event) => updateChannels({ officialAccount: event.target.checked })} />
-            启用公众号模板消息
-          </label>
-          <div className={styles.channelPlaceholder}>
-            <StatusIndicator tone="warning">待接入</StatusIndicator>
-            <p>公众号模板消息的模板库和变量映射将在微信服务配置接入后开放。当前可先维护此业务场景的渠道开关。</p>
-          </div>
-        </div>}
-
-        {detailTab === 'wecom' && <div className={styles.detailPanel}>
-          <label className={styles.channelOption}>
-            <input type="checkbox" checked={draft.channels.enterpriseWechat} disabled={saveMutation.isPending} onChange={(event) => updateChannels({ enterpriseWechat: event.target.checked })} />
-            启用企业微信通知
-          </label>
-          <div className={styles.channelPlaceholder}>
-            <StatusIndicator tone="warning">待接入</StatusIndicator>
-            <p>企业微信应用和消息模板配置将在对应平台接入后开放。当前可先维护此业务场景的渠道开关。</p>
-          </div>
         </div>}
 
         {formError && <p role="alert" className={styles.error}>{formError}</p>}
