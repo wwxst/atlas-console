@@ -151,7 +151,7 @@ export default function SmsTemplatesPage({ active = true }: { active?: boolean }
     saveMutation.mutate({ id: editingId, input })
   }
   const confirmDelete = (template: SmsTemplate) => {
-    if (window.confirm(`确定删除短信模板“${template.name}”吗？已被消息通知引用的模板不能删除。`)) {
+    if (window.confirm(`确定删除短信模板“${template.name}”吗？删除后无法恢复。`)) {
       deleteMutation.mutate(template.id)
     }
   }
@@ -184,7 +184,7 @@ export default function SmsTemplatesPage({ active = true }: { active?: boolean }
     <div className={styles.intro}>
       <div>
         <h1>短信模板管理</h1>
-        <p>集中登记各短信平台已创建的模板，并供业务消息通知选择使用。</p>
+        <p>集中登记各短信平台已创建的模板，供后续业务通知配置引用。</p>
       </div>
       <p className={styles.hint}>模板需先在阿里云或腾讯云控制台创建并审核通过；本页面只维护模板资料，不直接向服务商提交审核。</p>
     </div>
