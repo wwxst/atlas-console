@@ -32,7 +32,7 @@ test('customer updates use public Releases and a local private updater, not a Gi
   assert.ok(!worker.includes('shell=True'))
   assert.ok(worker.includes('git", "clone"'))
   assert.ok(worker.includes('deploy", "rollback", "rollback-history'))
-  assert.ok(worker.includes('frontend/package.json'))
+  assert.ok(worker.includes('stage / "frontend" / "package.json"'))
   assert.ok(dockerfile.includes('docker-cli-compose'))
   assert.ok(dockerfile.includes('git'))
 })
