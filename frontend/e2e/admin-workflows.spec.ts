@@ -267,7 +267,7 @@ test('system-user actions are centered and the root admin cannot be disabled', a
   await expect(page.getByText('编号：1')).toBeVisible()
 })
 
-test('login settings stay on one page with three tabs and retain provider configuration forms', async ({ page }) => {
+test('login settings stay on one page and SMS settings share a three-tab page', async ({ page }) => {
   const requests = await installMockApi(page)
   await login(page)
 
@@ -305,6 +305,13 @@ test('login settings stay on one page with three tabs and retain provider config
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('tencent-sms-saved')).toBe(true)
 
+  await messageTabs.getByRole('tab', { name: '短信模板管理' }).click()
+  await expect(page.getByRole('heading', { name: '短信模板管理' })).toBeVisible()
+  await expect(page.getByText('暂无短信模板，请先登记已在服务商控制台创建的模板')).toBeVisible()
+  await messageTabs.getByRole('tab', { name: '消息通知管理' }).click()
+  await expect(page.getByRole('tab', { name: '会员通知' })).toBeVisible()
+
+  await page.goto('/settings')
   await loginTabs.getByRole('tab', { name: '邮箱登录配置' }).click()
   await expect(page).toHaveURL(/\/settings\?section=email/)
   await page.getByLabel('SMTP 服务器').fill('smtp.example.com')
