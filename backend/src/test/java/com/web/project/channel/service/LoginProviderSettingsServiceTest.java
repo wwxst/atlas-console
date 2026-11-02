@@ -6,7 +6,6 @@ import com.web.project.channel.dto.LoginSettingsUpdateDTO;
 import com.web.project.channel.dto.TencentSmsSettingsUpdateDTO;
 import com.web.project.channel.entity.SysConfig;
 import com.web.project.channel.mapper.SysConfigMapper;
-import com.web.project.channel.model.AuthChannelConfig;
 import com.web.project.common.error.ErrorCode;
 import com.web.project.common.exception.BusinessException;
 import com.web.project.storage.service.CredentialCipher;
@@ -25,13 +24,11 @@ import static org.mockito.Mockito.*;
 class LoginProviderSettingsServiceTest {
 
     private final SysConfigMapper mapper = mock(SysConfigMapper.class);
-    private final com.web.project.channel.service.AuthChannelService channels =
-            mock(com.web.project.channel.service.AuthChannelService.class);
     private final CredentialCipher cipher = new CredentialCipher(
             Base64.getEncoder().encodeToString(new byte[32]));
     private final Map<String, String> values = new HashMap<>();
     private final LoginProviderSettingsService service =
-            new LoginProviderSettingsService(mapper, channels, cipher);
+            new LoginProviderSettingsService(mapper, cipher);
 
     @BeforeEach
     void configureMapper() {
@@ -63,7 +60,17 @@ class LoginProviderSettingsServiceTest {
             values.put(invocation.getArgument(0), invocation.getArgument(1));
             return 1;
         });
-        when(channels.getChannels()).thenReturn(new AuthChannelConfig(true, true, true, true));
+    }
+
+    @Test
+    void loginSettingsReadUsesOneConsistentConfigSnapshot() {
+        var settings = service.getLoginSettings();
+
+        assertTrue(settings.phoneLoginEnabled());
+        assertTrue(settings.emailLoginEnabled());
+        assertEquals("aliyun", settings.smsProvider());
+        verify(mapper).selectByKeys(List.of(
+                "auth.phone.enabled", "auth.email.enabled", "auth.sms.provider"));
     }
 
     @Test
