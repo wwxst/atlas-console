@@ -89,7 +89,7 @@ function Toggle({ checked, label, disabled, onChange }: {
   ><span /></button>
 }
 
-export default function MessageManagementPage() {
+export default function MessageManagementPage({ active = true }: { active?: boolean }) {
   const queryClient = useQueryClient()
   const [category, setCategory] = useState<MessageCategory>('member')
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -102,13 +102,14 @@ export default function MessageManagementPage() {
   const notificationsQuery = useQuery({
     queryKey: ['message-notifications', category],
     queryFn: () => getMessageNotifications(category),
+    enabled: active,
     retry: false,
   })
   const loginSettingsQuery = useQuery({
     queryKey: LOGIN_SETTINGS_QUERY_KEY,
     queryFn: getLoginSettings,
     retry: false,
-    enabled: drawerOpen && detailTab === 'sms',
+    enabled: active && drawerOpen && detailTab === 'sms',
   })
   const templatesQuery = useQuery({
     queryKey: ['sms-templates', 'approved-for-notifications'],
