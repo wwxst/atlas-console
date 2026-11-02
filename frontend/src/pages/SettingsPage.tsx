@@ -2,25 +2,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { LOGIN_SETTINGS_QUERY_KEY, getLoginSettings, updateLoginSettings } from '@/features/settings/api'
 import type { LoginSettings } from '@/features/settings/api'
 import { AppButton, Toast } from '@ui/index'
-import PhoneLoginSettingsPage from './PhoneLoginSettingsPage'
 import EmailLoginSettingsPage from './EmailLoginSettingsPage'
 import styles from './SettingsPage.module.less'
 
 const tabs = [
   { key: 'basic', label: '登录基础配置' },
-  { key: 'phone', label: '短信服务商配置' },
   { key: 'email', label: '邮箱登录配置' },
 ] as const
 type LoginSettingsTab = typeof tabs[number]['key']
 
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const section = searchParams.get('section')
-  const activeTab: LoginSettingsTab = section === 'phone' || section === 'email' ? section : 'basic'
+  const activeTab: LoginSettingsTab = section === 'email' ? 'email' : 'basic'
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState<LoginSettings | null>(null)
   const [successMessage, setSuccessMessage] = useState('')
@@ -48,6 +47,15 @@ export default function SettingsPage() {
     const timer = window.setTimeout(() => setSuccessMessage(''), 4000)
     return () => window.clearTimeout(timer)
   }, [successMessage])
+
+  useEffect(() => {
+    if (section !== 'phone') return
+    const providerTab = searchParams.get('tab')
+    navigate({
+      pathname: '/settings/messages',
+      search: providerTab === 'tencent' ? '?panel=provider&tab=tencent' : '?panel=provider',
+    }, { replace: true })
+  }, [section, searchParams, navigate])
 
   const saved = settingsQuery.data
   const current = draft ?? saved
@@ -179,16 +187,6 @@ export default function SettingsPage() {
           </AppButton>
         </div>
       </form>}
-    </section>
-
-    <section
-      id="login-settings-panel-phone"
-      role="tabpanel"
-      aria-labelledby="login-settings-tab-phone"
-      tabIndex={0}
-      hidden={activeTab !== 'phone'}
-    >
-      <PhoneLoginSettingsPage active={activeTab === 'phone'} />
     </section>
 
     <section
