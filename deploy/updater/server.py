@@ -24,7 +24,7 @@ REPO_URL = "https://github.com/wwxst/atlas-console.git"
 API = "https://api.github.com/repos/wwxst/atlas-console"
 STATE_FILE = RELEASE_DIR / "updater-status.json"
 CACHE_FILE = RELEASE_DIR / "latest-release-cache.json"
-WORKER_IMAGE = "atlas-updater:local"
+WORKER_IMAGE_PREFIX = "atlas-updater:git-"
 TAG_RE = re.compile(r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 RELEASE_ID_RE = re.compile(r"^[0-9a-f]{40}_[0-9a-f]{40}$")
@@ -194,11 +194,21 @@ def status_payload():
     }
 
 
+def worker_image() -> str:
+    # Run the detached worker from this installation's currently active,
+    # version-pinned image, so even the updater itself can be rolled back.
+    current = current_release_id()
+    if current is None or not RELEASE_ID_RE.fullmatch(current):
+        raise RuntimeError("无法确定当前更新执行器版本")
+    return WORKER_IMAGE_PREFIX + current.split("_")[1]
+
+
 def start_worker(operation: str, tag: str | None = None, release_id: str | None = None):
     with LOCK:
         saved = read_json(STATE_FILE, {})
         if isinstance(saved, dict) and saved.get("state") == "in_progress" and worker_running(saved.get("workerContainer")):
             raise RuntimeError("已有更新任务正在执行，请等待完成")
+        image = worker_image()
         request_id = str(uuid.uuid4())
         container = "atlas-update-worker-" + request_id
         payload = {
@@ -218,7 +228,7 @@ def start_worker(operation: str, tag: str | None = None, release_id: str | None 
             "--env", "ATLAS_PROJECT_NAME=" + PROJECT,
             "--env", "ATLAS_REPO_URL=" + REPO_URL,
             "--env", "ATLAS_GITHUB_API=" + API,
-            WORKER_IMAGE,
+            image,
             "python3", "/opt/atlas-updater/worker.py",
             "--operation", operation,
             "--request-id", request_id,
