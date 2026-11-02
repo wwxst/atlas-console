@@ -154,7 +154,15 @@ class BackendGate:
         with log_path.open("w", encoding="utf-8") as log:
             result = subprocess.run([str(ROOT / wrapper_name), *goals], cwd=ROOT, env=self.env,
                                     stdout=log, stderr=subprocess.STDOUT, timeout=240, creationflags=NO_WINDOW)
-        require(result.returncode == 0, f"Maven failed; inspect {log_path}")
+        if result.returncode != 0:
+            # Surface the real Maven error in GitHub Actions before the temporary
+            # workspace is removed. Never dump environment variables or secrets.
+            with log_path.open("r", encoding="utf-8", errors="replace") as output:
+                tail = output.readlines()[-120:]
+            print("Maven verification failed; final output follows:", file=sys.stderr)
+            for line in tail:
+                print(line.rstrip(), file=sys.stderr)
+            require(False, f"Maven failed; inspect {log_path}")
 
     def request(self, method, path, payload=None, token=None):
         headers = {"Content-Type": "application/json"}
