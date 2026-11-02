@@ -8,7 +8,7 @@ curl -fsSL https://raw.githubusercontent.com/wwxst/atlas-console/main/install.sh
 
 安装器会检测环境、安装 Docker Engine + Compose v2（自动安装仅支持 Ubuntu/Debian）、下载 Atlas 单仓库、生成随机密钥、写入权限受限的 `/opt/atlas/.env`，并构建启动前后端及依赖。首次构建可能需要数分钟。
 
-安装器不会安装宝塔、修改公网防火墙、申请 TLS 证书或注册 GitHub Actions Runner。公网开放前请完成域名、HTTPS 和默认管理员密码配置。
+安装器不会安装宝塔、修改公网防火墙或申请 TLS 证书。公网开放前请完成域名、HTTPS 和默认管理员密码配置；后续更新不需要 GitHub PAT 或 Runner。
 
 ## 数据库选项
 
@@ -182,8 +182,18 @@ curl --fail --silent --output /dev/null http://127.0.0.1:8088/
 
 外部 PostgreSQL 由宿主机/宝塔服务管理，不随 Atlas Compose 自动启动；整机重启后必须确认外部数据库也已正常启动。
 
-## 后续 GitHub 自动更新
+## 后续版本更新
 
-一条命令首次安装与 GitHub Actions 自动更新是两个阶段。自动更新仍需要在生产服务器注册专用 GitHub Actions Runner，标签包含 `self-hosted`、`linux`、`x64`、`atlas-production`。安装器创建的 `atlas-deploy` 是专用非 root 账号，并加入 Docker 组；Docker 组权限接近 root，因此不要用于日常登录，也不要在生产 Runner 上执行未经审查的 PR 代码。
+安装器首次启动时会自动创建一个隔离的本机 updater 服务，并生成独立的随机 Bearer token。后续客户更新不需要 GitHub 账号、PAT、GitHub Actions Runner 或仓库授权。
 
-当前安装器提供命令行首次安装。网页安装向导、安装状态页面和宝塔面板内的专用状态展示属于后续功能。
+1. 管理员登录 Atlas Console，点击侧边栏底部「版本与更新」。
+2. 系统从公开的 `wwxst/atlas-console` GitHub Releases 获取最新正式版本。
+3. 有新版本时，点击「一键更新」。本机 updater 下载对应的正式 Git tag，核对 tag 与 `frontend/package.json` 版本一致后，在服务器构建并更新前端、后端和 updater 容器。
+4. 更新期间页面会显示执行状态。成功后刷新页面即可加载新前端；失败时会自动恢复上一套应用镜像。
+5. 可在「历史版本」中回滚到服务器保留的历史应用版本。
+
+更新日志位于 `/opt/atlas/releases/update-logs/`。本机 updater API 只在 Docker 私有网络中监听 8090，且由安装器生成的随机 token 保护。只有 updater 容器挂载 Docker socket；业务 backend 不直接拥有 Docker 管理权限。
+
+**数据库回滚边界：**应用镜像回滚不会撤销 Flyway 数据库迁移，也不会恢复上传文件。更新前应备份数据库和上传文件；新迁移必须兼容当前版本和可回滚的旧应用版本。
+
+`atlas-deploy` 仍是主机上的专用非 root 安装/维护账号，并加入 Docker 组（Docker 组权限接近 root）；它不再运行 GitHub Runner，也不需要作为客户日常登录账号。
