@@ -100,7 +100,7 @@ class LoginProviderSettingsIntegrationTest {
     }
 
     @Test
-    void smsTemplateCrudPersistsJsonVariablesAndEnforcesProviderTemplateUniqueness() {
+    void smsTemplateCrudPersistsJsonVariablesAndSupportsFiltering() {
         String code = "SMS_INTEGRATION_" + System.nanoTime();
         var input = new SmsTemplateInputDTO("aliyun", "登录验证码", code, "verification",
                 "验证码：${code}", List.of("code"), "approved", true);
