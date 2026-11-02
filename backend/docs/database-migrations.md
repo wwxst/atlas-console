@@ -4,7 +4,7 @@
 
 - Atlas Console 只支持 PostgreSQL 17；MySQL 不再是受支持的数据库后端。
 - 全新安装由 Spring Boot 启动时运行 Flyway。数据库容器不执行额外 SQL 初始化脚本。
-- `src/main/resources/db/migration/V1__initial_schema.sql` 是 PostgreSQL 新安装的初始 schema 和默认系统配置。发布后迁移文件不可编辑；后续只添加 `V2__...`、`V3__...`。
+- `src/main/resources/db/migration/V1__initial_schema.sql` 是 PostgreSQL 新安装的初始 schema 和默认系统配置；V2 增加加密的 SMTP/短信服务商配置项及 `sms_template` 表。发布后迁移文件不可编辑；后续只添加新的版本迁移。
 - 默认启用 `validate-on-migrate`，并禁用 Flyway clean。迁移失败会导致后端启动/健康检查失败。
 - Flyway 只负责 schema 和迁移脚本明确写入的数据；不会备份或恢复 PostgreSQL 数据、上传文件、Redis、OSS 对象或服务器配置。
 
@@ -12,8 +12,8 @@
 
 1. Docker 模式由 Compose 创建私有 PostgreSQL 17 容器和空的 `web_project` 数据库。
 2. 宝塔/外部数据库模式由用户先创建 PostgreSQL 数据库和专用账号，再在安装向导填写连接信息。
-3. 后端启动时 Flyway 执行 V1，创建五张业务表并写入初始管理员和系统配置。
-4. CI 使用真实 PostgreSQL 17 空数据库执行相同迁移，并运行 Mapper、事务、并发、存储集成测试。
+3. 后端启动时 Flyway 依次执行 V1、V2，创建六张业务表并写入初始管理员、登录渠道和服务商默认配置。
+4. CI 使用真实 PostgreSQL 17 空数据库执行相同迁移，并运行 Mapper、事务、并发、存储、邮箱/短信服务商配置和短信模板集成测试。
 
 不要手动导入历史 MySQL `web_project.sql`。首次对外开放前必须修改默认系统管理员密码。
 
@@ -47,4 +47,4 @@ FROM flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-全新安装应显示 V1；后续每个成功迁移都会新增一条版本记录。
+全新安装应显示 V1 和 V2；后续每个成功迁移都会新增一条版本记录。
