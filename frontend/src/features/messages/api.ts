@@ -1,4 +1,4 @@
-import { requireApiData } from '../../services/api.ts'
+import { requireApiData, requireApiSuccess } from '../../services/api.ts'
 import type { ApiResult, PageResult } from '../../services/api.ts'
 import { http } from '../../services/http.ts'
 
@@ -81,8 +81,7 @@ export async function updateSmsTemplate(id: number, input: SmsTemplateInput): Pr
 }
 
 export async function deleteSmsTemplate(id: number): Promise<void> {
-  const result = (await http.delete<ApiResult<null>>(`${basePath}/sms-templates/${id}`)).data
-  if (result.code !== 200) throw new Error(result.msg ?? '删除短信模板失败')
+  requireApiSuccess((await http.delete<ApiResult<null>>(`${basePath}/sms-templates/${id}`)).data)
 }
 
 export async function getMessageNotifications(category: MessageCategory): Promise<MessageNotification[]> {
@@ -98,6 +97,5 @@ export async function updateMessageNotification(id: number, input: MessageNotifi
 }
 
 export async function deleteMessageNotification(id: number): Promise<void> {
-  const result = (await http.delete<ApiResult<null>>(`${basePath}/message-notifications/${id}`)).data
-  if (result.code !== 200) throw new Error(result.msg ?? '删除消息通知失败')
+  requireApiSuccess((await http.delete<ApiResult<null>>(`${basePath}/message-notifications/${id}`)).data)
 }
