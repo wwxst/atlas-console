@@ -75,8 +75,8 @@ class LoginProviderSettingsServiceTest {
         assertEquals("true", values.get("auth.phone.enabled"));
         assertEquals("false", values.get("auth.email.enabled"));
         assertEquals("tencent", values.get("auth.sms.provider"));
-        verify(mapper).selectByKeysForUpdate(List.of(
-                "auth.phone.enabled", "auth.email.enabled", "auth.sms.provider"));
+        verify(mapper).selectMasterSwitchesForUpdate();
+        verify(mapper).selectByKeysForUpdate(List.of("auth.sms.provider"));
     }
 
     @Test
