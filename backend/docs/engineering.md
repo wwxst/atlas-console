@@ -110,13 +110,14 @@ python scripts/verify_backend.py `
   --redis-server D:/Develop/sofe/Redis/redis-server.exe
 ```
 
-Linux/macOS 之外的 Linux CI 或本机环境可在安装 PostgreSQL 客户端和 Redis Server 后执行：
+Linux CI 或 Linux 本机环境可在安装 PostgreSQL 客户端和 Redis Server 后执行：
 
 ```bash
 export DB_USERNAME=atlas
 export DB_PASSWORD='应用角色密码'
 export POSTGRES_ADMIN_USERNAME=postgres
 export POSTGRES_ADMIN_PASSWORD='数据库管理角色密码'
+chmod +x ./mvnw
 python3 scripts/verify_backend.py \
   --java-home "$JAVA_HOME" \
   --postgres-client "$(command -v psql)" \
