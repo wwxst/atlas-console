@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * 渠道配置业务实现类。
  *
- * 直接读取 MySQL，不增加配置缓存。
+ * 直接读取 PostgreSQL，不增加配置缓存。
  */
 @Service
 @RequiredArgsConstructor
