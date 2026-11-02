@@ -337,6 +337,7 @@ class BackendGate:
         self.list_checks()
         self.admin_user_edit_checks(token, sys_pair["refreshToken"])
         self.admin_user_status_checks(pair, sys_pair["refreshToken"])
+        token = self.user_pair["accessToken"]
         self.check("role isolation", "GET", "/api/sys-user/users", token=token, status=403, code=40301)
         self.check("profile update", "PUT", "/api/user/me", {"nickname": "quality", "avatar": None}, token)
         self.check("idempotent profile", "PUT", "/api/user/me", {"nickname": "quality", "avatar": None}, token)
