@@ -11,6 +11,14 @@ export interface DeploymentStatus {
   rollbackAvailable: boolean
   runId: number | null
   recoveryAvailable: boolean
+  currentVersion: string | null
+  latestVersion: string | null
+  latestReleaseUrl: string | null
+  releaseNotes: string | null
+  publishedAt: string | null
+  updateAvailable: boolean
+  message: string | null
+  releaseCheckError: string | null
 }
 
 export async function getDeploymentStatus(): Promise<DeploymentStatus> {
@@ -30,6 +38,7 @@ export async function rollbackDeployment(): Promise<DeploymentStatus> {
 
 export interface ReleaseHistoryItem {
   releaseId: string
+  version: string
   frontendSha: string
   backendSha: string
   deployedAt: string
@@ -46,8 +55,3 @@ export async function rollbackToHistory(releaseId: string): Promise<DeploymentSt
   return requireApiData(response.data)
 }
 
-/** Only clears a stale request after the backend verifies no GitHub run is active. */
-export async function recoverDeployment(): Promise<DeploymentStatus> {
-  const response = await http.post<ApiResult<DeploymentStatus>>('/sys-user/deployment/recover')
-  return requireApiData(response.data)
-}
