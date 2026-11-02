@@ -53,6 +53,9 @@ public class LoginProviderSettingsService {
     private static final String EMAIL_FROM_NAME = "auth.email.smtp.from-name";
     private static final String EMAIL_SECURITY = "auth.email.smtp.security";
 
+    private static final List<String> TENCENT_REGIONS = List.of(
+            "ap-guangzhou", "ap-shanghai", "ap-beijing", "ap-chengdu", "ap-hongkong", "ap-singapore");
+
     private static final List<String> ALIYUN_KEYS = List.of(
             ALIYUN_ACCESS_KEY_ID, ALIYUN_ACCESS_KEY_SECRET, ALIYUN_SIGN_NAME, ALIYUN_TEMPLATE_CODE);
     private static final List<String> TENCENT_KEYS = List.of(
@@ -132,7 +135,7 @@ public class LoginProviderSettingsService {
         return new TencentSmsSettingsVO(
                 secretId, appId, signName, templateId, region, secretConfigured,
                 secretConfigured && !secretId.isBlank() && !appId.isBlank()
-                        && !signName.isBlank() && !templateId.isBlank() && !region.isBlank());
+                        && !signName.isBlank() && !templateId.isBlank() && TENCENT_REGIONS.contains(region));
     }
 
     @Transactional
@@ -164,7 +167,7 @@ public class LoginProviderSettingsService {
         String fromName = required(values, EMAIL_FROM_NAME);
         String security = required(values, EMAIL_SECURITY);
         boolean passwordConfigured = !encryptedPassword.isBlank();
-        boolean configured = passwordConfigured && !host.isBlank() && port > 0
+        boolean configured = passwordConfigured && !host.isBlank() && port > 0 && port <= 65535
                 && !username.isBlank() && !fromAddress.isBlank() && !fromName.isBlank()
                 && List.of("SSL", "STARTTLS", "NONE").contains(security);
         return new EmailLoginSettingsVO(host, port, username, fromAddress, fromName,
@@ -219,7 +222,7 @@ public class LoginProviderSettingsService {
                 || required(values, TENCENT_APP_ID).isBlank()
                 || required(values, TENCENT_SIGN_NAME).isBlank()
                 || required(values, TENCENT_TEMPLATE_ID).isBlank()
-                || required(values, TENCENT_REGION).isBlank()) {
+                || !TENCENT_REGIONS.contains(required(values, TENCENT_REGION))) {
             throw notConfigured("腾讯云短信");
         }
         return new TencentSmsConfig(
