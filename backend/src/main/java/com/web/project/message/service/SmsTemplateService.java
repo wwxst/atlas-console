@@ -74,11 +74,11 @@ public class SmsTemplateService {
     }
 
     private SmsTemplateVO pageById(Long id) {
-        // The update row is returned through the same mapper query contract.
-        return mapper.selectPage(null, null, null, null, 0, Integer.MAX_VALUE)
-                .stream().filter(item -> id.equals(item.getId()))
-                .findFirst().map(this::toVO)
-                .orElseThrow(() -> new IllegalStateException("更新后的短信模板未找到"));
+        SmsTemplate saved = mapper.selectById(id);
+        if (saved == null) {
+            throw new IllegalStateException("更新后的短信模板未找到");
+        }
+        return toVO(saved);
     }
 
     private SmsTemplate fromInput(SmsTemplateInputDTO dto) {
