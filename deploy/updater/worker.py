@@ -110,14 +110,34 @@ def run():
     write_json(STATE_FILE, payload)
 
     try:
+        if args.operation != "deploy":
+            # Application rollback is an offline operation: the required Docker
+            # images and signed-in history are already present on this server.
+            # Never require GitHub to be reachable to recover a failed release.
+            source = ROOT / "atlas-console"
+            script = source / "deploy" / "release.sh"
+            if not script.is_file():
+                raise RuntimeError("本机缺少回滚执行脚本")
+            command = ["bash", str(script), args.operation]
+            if args.operation == "rollback-history":
+                command.append(args.release_id)
+            update_state(request_id, message="正在恢复上一套应用镜像")
+            with log_path.open("w", encoding="utf-8") as log:
+                result = subprocess.run(command, cwd=source, env=os.environ.copy(),
+                                        stdout=log, stderr=subprocess.STDOUT,
+                                        timeout=900, check=False)
+            if result.returncode != 0:
+                raise RuntimeError("回滚失败，请查看更新日志")
+            current_id = manifest_id()
+            current_meta = read_json(RELEASE_DIR / "versions" / (current_id + ".json"), {}) if current_id else {}
+            update_state(request_id, state="completed", conclusion="success",
+                         message="回滚成功", currentVersion=current_meta.get("version"),
+                         finishedAt=time.time())
+            return
+
         if stage.exists():
             shutil.rmtree(stage)
         tag = args.tag
-        if not tag:
-            latest = request_json(API + "/releases/latest")
-            tag = latest.get("tag_name", "")
-            if not TAG_RE.fullmatch(tag):
-                raise ValueError("Latest GitHub Release has an invalid version tag")
         release = release_for_tag(tag)
         command = ["git", "clone", "--depth", "1", "--single-branch", "--branch", tag, REPO_URL, str(stage)]
         with log_path.open("w", encoding="utf-8") as log:
@@ -133,10 +153,6 @@ def run():
             package_version = package.get("version") if isinstance(package, dict) else None
             if package_version != tag[1:]:
                 raise RuntimeError("GitHub Release 标签与前端 package.json 版本不一致")
-            if release.get("target_commitish") not in ("main", sha):
-                # GitHub may return the branch name for lightweight tags. The
-                # checked-out tag commit is the authoritative source revision.
-                pass
             update_state(request_id, releaseVersion=package_version, releaseTag=tag,
                          releaseUrl=release.get("html_url"), message="正在构建前后端并执行健康检查")
             env = os.environ.copy()
@@ -147,31 +163,21 @@ def run():
                 "VERIFIED_FRONTEND_SHA": sha,
                 "VERIFIED_BACKEND_SHA": sha,
             })
-            if args.operation == "deploy":
-                operation = ["bash", str(stage / "deploy" / "release.sh"), "deploy"]
-            elif args.operation == "rollback":
-                operation = ["bash", str(stage / "deploy" / "release.sh"), "rollback"]
-            else:
-                operation = ["bash", str(stage / "deploy" / "release.sh"),
-                             "rollback-history", args.release_id]
+            operation = ["bash", str(stage / "deploy" / "release.sh"), "deploy"]
             result = subprocess.run(operation, cwd=stage, env=env, stdout=log,
                                     stderr=subprocess.STDOUT, timeout=2400, check=False)
             if result.returncode != 0:
                 raise RuntimeError("部署命令失败，请查看更新日志")
-        if args.operation == "deploy":
-            release_id = sha + "_" + sha
-            write_json(RELEASE_DIR / "versions" / (release_id + ".json"), {
-                "version": package_version, "tag": tag,
-                "releaseUrl": release.get("html_url"),
-                "publishedAt": release.get("published_at"),
-            })
-        current_id = manifest_id()
-        current_meta = read_json(RELEASE_DIR / "versions" / (current_id + ".json"), {}) if current_id else {}
+        release_id = sha + "_" + sha
+        write_json(RELEASE_DIR / "versions" / (release_id + ".json"), {
+            "version": package_version, "tag": tag,
+            "releaseUrl": release.get("html_url"),
+            "publishedAt": release.get("published_at"),
+        })
         update_state(request_id, state="completed", conclusion="success",
-                     message=("更新成功" if args.operation == "deploy" else "回滚成功"),
-                     currentVersion=current_meta.get("version"), finishedAt=time.time(),
-                     releaseVersion=package_version, releaseTag=tag,
-                     releaseUrl=release.get("html_url"))
+                     message="更新成功", currentVersion=package_version,
+                     finishedAt=time.time(), releaseVersion=package_version,
+                     releaseTag=tag, releaseUrl=release.get("html_url"))
     except Exception as exc:
         # Do not expose subprocess command lines or credentials in the UI.
         update_state(request_id, state="completed", conclusion="failure",
