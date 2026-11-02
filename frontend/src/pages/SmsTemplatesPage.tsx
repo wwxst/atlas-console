@@ -72,7 +72,7 @@ function toDraft(template: SmsTemplate): TemplateDraft {
   }
 }
 
-export default function SmsTemplatesPage() {
+export default function SmsTemplatesPage({ active = true }: { active?: boolean }) {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [keyword, setKeyword] = useState('')
@@ -95,6 +95,7 @@ export default function SmsTemplatesPage() {
   const templatesQuery = useQuery({
     queryKey: ['sms-templates', query],
     queryFn: () => getSmsTemplates(query),
+    enabled: active,
     retry: false,
     placeholderData: (previous) => previous,
   })
