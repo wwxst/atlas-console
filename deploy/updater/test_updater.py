@@ -125,6 +125,9 @@ class StatusTests(unittest.TestCase):
             root = Path(directory)
             release_dir = root / "releases"
             release_dir.mkdir()
+            front = "a" * 40
+            (release_dir / "current.env").write_text(
+                f"frontend=git-{front}\nbackend=git-{front}\n", encoding="utf-8")
             with patch.object(server, "ROOT", root), \
                  patch.object(server, "ENV_FILE", root / ".env"), \
                  patch.object(server, "RELEASE_DIR", release_dir), \
@@ -136,7 +139,7 @@ class StatusTests(unittest.TestCase):
                 payload = server.start_worker("deploy", "v0.1.1")
                 self.assertEqual("in_progress", payload["state"])
                 command = run.call_args.args[0]
-                self.assertIn("atlas-updater:local", command)
+                self.assertIn("atlas-updater:git-" + "a" * 40, command)
                 self.assertIn("/opt/atlas-updater/worker.py", command)
                 self.assertIn("v0.1.1", command)
                 self.assertNotIn("sh", command)
