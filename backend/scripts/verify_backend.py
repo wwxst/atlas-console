@@ -404,8 +404,8 @@ class BackendGate:
         self.check("idempotent logout", "POST", "/api/user/auth/logout", {}, no_password_pair["accessToken"])
         self.check("logout blocks refresh", "POST", "/api/user/auth/refresh",
                    {"refreshToken": no_password_pair["refreshToken"]}, status=401, code=40104)
-        self.check("access remains valid until expiry", "GET", "/api/user/me",
-                   token=no_password_pair["accessToken"])
+        self.check("logout revokes access immediately", "GET", "/api/user/me",
+                   token=no_password_pair["accessToken"], status=401, code=40102)
         self.sql("DELETE FROM user_account WHERE id=" + str(int(profile["id"])))
         self.check("deleted user profile", "GET", "/api/user/me", token=phone_pair["accessToken"],
                    status=401, code=40102)
@@ -432,7 +432,7 @@ class BackendGate:
                    {"status": 0}, self.sys_token, status=400, code=40000)
         self.check("admin disables user", "PATCH", path, {"status": 0}, self.sys_token)
         self.check("disabled profile after admin action", "GET", "/api/user/me", token=pair["accessToken"],
-                   status=403, code=40303)
+                   status=401, code=40102)
         self.check("disabled refresh after admin action", "POST", "/api/user/auth/refresh",
                    {"refreshToken": pair["refreshToken"]}, status=401, code=40104)
         self.check("disabled password login after admin action", "POST", "/api/user/auth/login",
@@ -458,8 +458,9 @@ class BackendGate:
             require(any(row["id"] == user_id and row["status"] == user_status for row in listed["records"]),
                     "Status change missing from filtered list")
             self.report["scenarios"].append({"name": f"8 concurrent status={user_status} writes", "passed": True})
-        self.check("enabled profile restored", "GET", "/api/user/me", token=pair["accessToken"])
-        self.login(self.email, self.password)
+        self.check("old profile token remains revoked after reenable", "GET", "/api/user/me",
+                   token=pair["accessToken"], status=401, code=40102)
+        self.user_pair = self.login(self.email, self.password)
 
     def admin_user_edit_checks(self, user_token, refresh_token):
         suffix = uuid.uuid4().hex[:12]
@@ -668,7 +669,7 @@ class BackendGate:
         self.sql("UPDATE user_account SET status=0 WHERE email='" + email + "'")
         try:
             self.check("disabled user profile", "GET", "/api/user/me", token=pair["accessToken"],
-                       status=403, code=40303)
+                       status=401, code=40102)
             self.check("disabled user refresh", "POST", "/api/user/auth/refresh",
                        {"refreshToken": pair["refreshToken"]}, status=401, code=40104)
             self.check("disabled user login", "POST", "/api/user/auth/login",
