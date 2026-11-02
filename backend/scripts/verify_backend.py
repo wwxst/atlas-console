@@ -417,7 +417,7 @@ class BackendGate:
         user_id = profile["id"]
         require(isinstance(user_id, str), "Status target ID must be a JSON string")
         path = f"/api/sys-user/users/{user_id}/status"
-        protected_query = ("SELECT user_no,phone,email,nickname,password,password_version,avatar,created_at "
+        protected_query = ("SELECT user_no,phone,email,nickname,password,avatar,created_at "
                            f"FROM user_account WHERE id={int(user_id)}")
         before = self.sql(protected_query)
         for name, token, status, code in (
