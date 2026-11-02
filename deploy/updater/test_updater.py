@@ -94,6 +94,35 @@ class ReleaseDiscoveryTests(unittest.TestCase):
                 self.assertEqual("无法连接 GitHub 版本发布服务", error)
 
 
+class OfflineRollbackTests(unittest.TestCase):
+    def test_rollback_uses_local_script_without_contacting_github(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            script = root / "atlas-console" / "deploy" / "release.sh"
+            script.parent.mkdir(parents=True)
+            script.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            release_dir = root / "releases"
+            release_dir.mkdir()
+            request_id = "12345678-1234-1234-1234-123456789abc"
+            (release_dir / "updater-status.json").write_text(
+                json.dumps({"requestId": request_id, "state": "in_progress"}),
+                encoding="utf-8")
+            result = type("Result", (), {"returncode": 0})()
+            with patch.object(worker, "ROOT", root), \
+                 patch.object(worker, "RELEASE_DIR", release_dir), \
+                 patch.object(worker, "STATE_FILE", release_dir / "updater-status.json"), \
+                 patch.object(worker, "request_json", side_effect=AssertionError("GitHub must remain unused")), \
+                 patch.object(worker, "manifest_id", return_value=None), \
+                 patch.object(worker.subprocess, "run", return_value=result) as runner, \
+                 patch.object(sys, "argv", ["worker.py", "--operation", "rollback",
+                                            "--request-id", request_id]):
+                worker.run()
+                self.assertEqual("completed", worker.read_json(worker.STATE_FILE)["state"])
+                self.assertEqual("success", worker.read_json(worker.STATE_FILE)["conclusion"])
+                command = runner.call_args.args[0]
+                self.assertEqual(["bash", str(script), "rollback"], command)
+
+
 class StatusTests(unittest.TestCase):
     def test_update_available_compares_release_versions_not_commit_dates(self):
         with tempfile.TemporaryDirectory() as directory:
