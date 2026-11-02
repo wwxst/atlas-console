@@ -39,6 +39,7 @@ while (($#)); do
       else
         touch "$TEST_DOCKER_DIR/images/$(key "atlas-console:$ATLAS_FRONTEND_TAG")"
         touch "$TEST_DOCKER_DIR/images/$(key "atlas-backend:$ATLAS_BACKEND_TAG")"
+        touch "$TEST_DOCKER_DIR/images/$(key "atlas-updater:$ATLAS_BACKEND_TAG")"
       fi
       exit 0
       ;;
