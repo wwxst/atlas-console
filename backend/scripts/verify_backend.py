@@ -267,10 +267,14 @@ class BackendGate:
         self.sms_template_checks()
         self.channel_checks()
         self.storage_checks()
-        self.check("system logout", "POST", "/api/sys-user/auth/logout", {}, self.sys_token)
-        self.check("idempotent system logout", "POST", "/api/sys-user/auth/logout", {}, self.sys_token)
+        logout_pair = self.check("dedicated logout session login", "POST", "/api/sys-user/auth/login",
+                                  {"username": "admin", "password": "123456"})
+        self.sensitive.extend(logout_pair.values())
+        logout_access = logout_pair["accessToken"]
+        self.check("system logout", "POST", "/api/sys-user/auth/logout", {}, logout_access)
+        self.check("idempotent system logout", "POST", "/api/sys-user/auth/logout", {}, logout_access)
         self.check("system logout blocks refresh", "POST", "/api/sys-user/auth/refresh",
-                   {"refreshToken": sys_pair["refreshToken"]}, status=401, code=40104)
+                   {"refreshToken": logout_pair["refreshToken"]}, status=401, code=40104)
         self.sql("INSERT INTO sys_user (username,password,nickname) "
                  "SELECT 'quality-system',password,'quality' FROM sys_user WHERE username='admin'")
         system_id = int(self.sql("SELECT id FROM sys_user WHERE username='quality-system'"))
