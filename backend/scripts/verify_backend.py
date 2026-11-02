@@ -783,6 +783,12 @@ class BackendGate:
         self.report["login_rate_limit"] = counts
 
     def pressure(self):
+        # The preceding login-rate-limit check flushes Redis; create fresh sessions before warmup.
+        admin_pair = self.check("pressure warmup admin login", "POST", "/api/sys-user/auth/login",
+                                {"username": "admin", "password": "123456"})
+        self.sensitive.extend(admin_pair.values())
+        self.sys_token = admin_pair["accessToken"]
+        self.user_pair = self.login(self.email, self.password)
         # Baseline contract fixed before load: zero unexpected errors and a working recovery probe.
         self.report["baseline_contract"] = {"workers": [1, 8, 24, 48], "seconds_per_stage": self.args.seconds,
                                             "operation_mix": "40% profile, 40% refresh, 20% password login",
@@ -797,6 +803,10 @@ class BackendGate:
         def run_stage(workers, mode):
             # Each stage uses a fresh private Redis session and rate-limit window.
             redis_command(self.redis_port, "FLUSHDB")
+            admin_pair = self.check("pressure stage admin login", "POST", "/api/sys-user/auth/login",
+                                    {"username": "admin", "password": "123456"})
+            self.sensitive.extend(admin_pair.values())
+            self.sys_token = admin_pair["accessToken"]
             self.user_pair = self.login(self.email, self.password)
             access_token = self.user_pair["accessToken"]
             refresh_token = self.user_pair["refreshToken"]
