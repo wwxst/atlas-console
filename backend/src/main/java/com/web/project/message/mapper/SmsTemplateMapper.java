@@ -11,6 +11,8 @@ import java.util.List;
 @Mapper
 public interface SmsTemplateMapper {
 
+    SmsTemplate selectById(@Param("id") Long id);
+
     long count(
             @Param("keyword") String keyword,
             @Param("provider") String provider,
