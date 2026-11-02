@@ -20,6 +20,9 @@ public interface SysConfigMapper {
      */
     List<SysConfig> selectByKeys(@Param("keys") List<String> keys);
 
+    /** 按固定键顺序锁定配置项，供同一事务内的敏感配置更新使用。 */
+    List<SysConfig> selectByKeysForUpdate(@Param("keys") List<String> keys);
+
     /**
      * 锁定手机号和邮箱两个渠道总开关，供渠道配置更新事务使用。
      *
