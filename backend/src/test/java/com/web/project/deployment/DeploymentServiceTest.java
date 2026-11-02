@@ -58,13 +58,14 @@ class DeploymentServiceTest {
 
     @Test
     void statusReadsPublicReleaseMetadataFromPrivateAgentAndNeverCallsGithubDirectly() throws Exception {
-        when(client.send(any(HttpRequest.class),
-                org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
-                .thenReturn(response(200, """
+        HttpResponse<String> reply = response(200, """
                         {"state":"idle","conclusion":null,"currentVersion":"0.1.0",
                          "latestVersion":"0.1.1","latestReleaseUrl":"https://github.com/wwxst/atlas-console/releases/tag/v0.1.1",
                          "releaseNotes":"Fixes","updateAvailable":true}
-                        """));
+                        """);
+        when(client.send(any(HttpRequest.class),
+                org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+                .thenReturn(reply);
         DeploymentService service = new DeploymentService(properties(Path.of("/tmp/atlas-release-test")),
                 mapper, client);
 
@@ -87,12 +88,13 @@ class DeploymentServiceTest {
 
     @Test
     void deployDispatchesOnlyToTheLocalAgentAndReturnsItsAcceptedStatus(@TempDir Path state) throws Exception {
-        when(client.send(any(HttpRequest.class),
-                org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
-                .thenReturn(response(202, """
+        HttpResponse<String> reply = response(202, """
                         {"state":"in_progress","requestId":"12345678-1234-1234-1234-123456789abc",
                          "currentVersion":"0.1.0","latestVersion":"0.1.1","updateAvailable":true}
-                        """));
+                        """);
+        when(client.send(any(HttpRequest.class),
+                org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+                .thenReturn(reply);
         DeploymentService service = new DeploymentService(properties(state), mapper, client);
 
         DeploymentStatus started = service.deploy();
@@ -108,9 +110,10 @@ class DeploymentServiceTest {
 
     @Test
     void agentConflictsAreReturnedAsSafeBusinessErrors() throws Exception {
+        HttpResponse<String> reply = response(409, "{\"message\":\"当前已经是最新版本\"}");
         when(client.send(any(HttpRequest.class),
                 org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
-                .thenReturn(response(409, "{\"message\":\"当前已经是最新版本\"}"));
+                .thenReturn(reply);
         DeploymentService service = new DeploymentService(properties(Path.of("/tmp/atlas-release-test")),
                 mapper, client);
         BusinessException error = assertThrows(BusinessException.class, service::deploy);
@@ -128,9 +131,10 @@ class DeploymentServiceTest {
                 "frontend=git-" + front + "\nbackend=git-" + back + "\n");
         Files.writeString(state.resolve("previous.env"),
                 "frontend=git-" + front + "\nbackend=git-" + back + "\n");
+        HttpResponse<String> reply = response(202, "{\"state\":\"in_progress\"}");
         when(client.send(any(HttpRequest.class),
                 org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
-                .thenReturn(response(202, "{\"state\":\"in_progress\"}"));
+                .thenReturn(reply);
 
         assertEquals("in_progress", service.rollback().state());
         var request = org.mockito.ArgumentCaptor.forClass(HttpRequest.class);
@@ -175,9 +179,10 @@ class DeploymentServiceTest {
                 "frontend=git-" + a + "\nbackend=git-" + b + "\n");
         Files.writeString(state.resolve("current.env"),
                 "frontend=git-" + c + "\nbackend=git-" + d + "\n");
+        HttpResponse<String> reply = response(202, "{\"state\":\"in_progress\"}");
         when(client.send(any(HttpRequest.class),
                 org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
-                .thenReturn(response(202, "{\"state\":\"in_progress\"}"));
+                .thenReturn(reply);
 
         DeploymentService service = new DeploymentService(properties(state), mapper, client);
         assertEquals("in_progress", service.rollbackHistorical(id).state());
