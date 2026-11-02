@@ -44,7 +44,7 @@
 
     <!--
         同一事务锁定两个渠道总开关，串行判断至少一个渠道仍然启用。
-        ORDER BY FIELD 只规定返回顺序；显式 CASE 排序使 PostgreSQL 按稳定顺序返回并加锁。
+        显式 CASE 排序使 PostgreSQL 按固定顺序返回并获取行锁。
     -->
     <select id="selectMasterSwitchesForUpdate"
             resultType="com.web.project.channel.entity.SysConfig">
