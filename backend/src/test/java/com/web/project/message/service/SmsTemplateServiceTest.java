@@ -29,6 +29,10 @@ class SmsTemplateServiceTest {
             saved.setUpdatedAt(LocalDateTime.parse("2026-11-02T10:00:00"));
             return 1;
         });
+        SmsTemplate createdRecord = template();
+        createdRecord.setId(12L);
+        createdRecord.setUpdatedAt(LocalDateTime.parse("2026-11-02T10:00:00"));
+        when(mapper.selectById(12L)).thenReturn(createdRecord);
         when(mapper.count("login", "aliyun", "verification", "approved")).thenReturn(1L);
         SmsTemplate saved = template();
         saved.setId(12L);
