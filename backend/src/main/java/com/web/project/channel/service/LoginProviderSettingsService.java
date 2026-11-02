@@ -185,7 +185,7 @@ public class LoginProviderSettingsService {
         write(EMAIL_PORT, dto.port().toString());
         write(EMAIL_USERNAME, dto.username().trim());
         write(EMAIL_PASSWORD, encryptedPassword);
-        write(EMAIL_FROM_ADDRESS, dto.fromAddress().trim().toLowerCase(java.util.Locale.ROOT));
+        write(EMAIL_FROM_ADDRESS, dto.fromAddress().trim());
         write(EMAIL_FROM_NAME, dto.fromName().trim());
         write(EMAIL_SECURITY, dto.security());
         return getEmailLoginSettings();
