@@ -1,0 +1,78 @@
+.page {
+  display: grid;
+  gap: var(--atlas-space-lg);
+  width: 100%;
+  min-width: 0;
+}
+
+.header {
+  display: grid;
+  gap: var(--atlas-space-xs);
+}
+
+.header h1 {
+  margin: 0;
+  color: var(--atlas-color-text-primary);
+  font-size: var(--atlas-text-lg);
+  font-weight: 600;
+}
+
+.header p {
+  margin: 0;
+  color: var(--atlas-color-text-secondary);
+  font-size: var(--atlas-text-sm);
+  line-height: 1.6;
+}
+
+.tabSection {
+  padding: 0 var(--atlas-space-xl);
+  border: 1px solid var(--atlas-color-border);
+  border-radius: var(--atlas-radius-sm);
+  background: var(--atlas-color-bg-surface);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--atlas-space-xl);
+  border-bottom: 1px solid var(--atlas-color-border);
+}
+
+.tab {
+  display: inline-flex;
+  min-height: 3.5rem;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--atlas-color-text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--atlas-text-sm);
+  white-space: nowrap;
+}
+
+.tab:hover,
+.tabActive {
+  color: var(--atlas-color-brand);
+}
+
+.tabActive {
+  border-bottom-color: var(--atlas-color-brand);
+  font-weight: 600;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--atlas-color-brand);
+  outline-offset: 3px;
+}
+
+.page > section[role='tabpanel'] {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .tabSection { padding: 0 var(--atlas-space-md); }
+  .tabs { gap: var(--atlas-space-lg); }
+}

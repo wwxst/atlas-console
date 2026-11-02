@@ -155,6 +155,10 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
       requests.push('email-smtp-saved')
       return reply(emailConfig)
     }
+    if (path === '/api/sys-user/sms-templates' && method === 'GET') {
+      return reply({ page: Number(url.searchParams.get('page') ?? 1), pageSize: Number(url.searchParams.get('pageSize') ?? 20), total: 0, records: [] })
+    }
+    if (path === '/api/sys-user/message-notifications' && method === 'GET') return reply([])
     if (path === '/api/sys-user/storage/settings') {
       return reply({ storageType: 'local' })
     }
@@ -263,14 +267,15 @@ test('system-user actions are centered and the root admin cannot be disabled', a
   await expect(page.getByText('编号：1')).toBeVisible()
 })
 
-test('login settings stay on one page with three tabs and retain provider configuration forms', async ({ page }) => {
+test('login settings stay on one page and SMS settings share a three-tab page', async ({ page }) => {
   const requests = await installMockApi(page)
   await login(page)
 
   await page.goto('/settings')
   const loginTabs = page.locator('section[aria-label="登录配置"]')
   await expect(page.getByRole('button', { name: '登录配置', exact: true })).toBeVisible()
-  await expect(page.locator('#settings-navigation').getByRole('button')).toHaveCount(2)
+  await expect(page.locator('#settings-navigation').getByRole('button')).toHaveCount(3)
+  await expect(page.locator('#settings-navigation').getByRole('button', { name: '短信与消息配置' })).toBeVisible()
   await expect(loginTabs.getByRole('tab', { name: '登录基础配置' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('switch', { name: '手机登录' })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByRole('switch', { name: '邮箱登录' })).toHaveAttribute('aria-checked', 'true')
@@ -279,13 +284,15 @@ test('login settings stay on one page with three tabs and retain provider config
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('login-settings:true:false:tencent')).toBe(true)
 
-  await loginTabs.getByRole('tab', { name: '手机登录配置' }).click()
-  await expect(page).toHaveURL(/\/settings\?section=phone/)
+  await page.goto('/settings/messages')
+  const messageTabs = page.getByRole('tablist', { name: '短信与消息配置分类' })
+  await expect(messageTabs.getByRole('tab')).toHaveCount(3)
+  await expect(messageTabs.getByRole('tab', { name: '短信服务商配置' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('tab', { name: '阿里云配置' })).toHaveAttribute('aria-selected', 'true')
   await page.getByLabel('AccessKey ID').fill('example-access-id')
   await page.getByLabel('AccessKey Secret').fill('example-credential')
   await page.locator('#phone-login-panel-aliyun').getByLabel('短信签名').fill('Atlas')
-  await page.getByLabel('短信模板 Code').fill('SMS_123456')
+  await page.getByLabel('登录验证码模板 Code').fill('SMS_123456')
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('aliyun-sms-saved')).toBe(true)
 
@@ -294,10 +301,20 @@ test('login settings stay on one page with three tabs and retain provider config
   await page.getByLabel('SecretKey').fill('example-credential')
   await page.getByLabel('短信 SDK App ID').fill('1400000000')
   await page.locator('#phone-login-panel-tencent').getByLabel('短信签名').fill('Atlas')
-  await page.getByLabel('短信模板 ID').fill('123456')
+  await page.getByLabel('登录验证码模板 ID').fill('123456')
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('tencent-sms-saved')).toBe(true)
 
+  await messageTabs.getByRole('tab', { name: '短信模板管理' }).click()
+  await expect(page.getByRole('heading', { name: '短信模板管理' })).toBeVisible()
+  await expect(page.getByText('暂无短信模板，请先登记已在服务商控制台创建的模板')).toBeVisible()
+  await messageTabs.getByRole('tab', { name: '消息通知管理' }).click()
+  await expect(page.getByRole('tab', { name: '会员通知' })).toBeVisible()
+  await page.goto('/settings/sms-templates')
+  await expect(page).toHaveURL(/\/settings\/messages\?panel=templates/)
+  await expect(page.getByRole('heading', { name: '短信模板管理' })).toBeVisible()
+
+  await page.goto('/settings')
   await loginTabs.getByRole('tab', { name: '邮箱登录配置' }).click()
   await expect(page).toHaveURL(/\/settings\?section=email/)
   await page.getByLabel('SMTP 服务器').fill('smtp.example.com')
@@ -309,10 +326,11 @@ test('login settings stay on one page with three tabs and retain provider config
   await expect.poll(() => requests.includes('email-smtp-saved')).toBe(true)
 
   await page.goto('/settings/phone-login')
-  await expect(page).toHaveURL(/\/settings\?section=phone/)
+  await expect(page).toHaveURL(/\/settings\/messages\?panel=provider/)
+  const legacyProviderTabs = page.getByRole('tablist', { name: '短信与消息配置分类' })
+  await expect(legacyProviderTabs.getByRole('tab', { name: '短信服务商配置' })).toHaveAttribute('aria-selected', 'true')
   await page.goto('/settings/phone-login?tab=tencent')
-  await expect(page).toHaveURL(/\/settings\?tab=tencent&section=phone/)
-  await expect(loginTabs.getByRole('tab', { name: '手机登录配置' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page).toHaveURL(/\/settings\/messages\?tab=tencent&panel=provider/)
   await expect(page.getByRole('tab', { name: '腾讯云配置' })).toHaveAttribute('aria-selected', 'true')
   await page.goto('/settings/email-login')
   await expect(page).toHaveURL(/\/settings\?section=email/)

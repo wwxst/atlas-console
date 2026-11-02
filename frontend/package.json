@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "npm run test:types && node --experimental-strip-types --test tests/services/api-errors.test.ts tests/services/auth-session.test.ts tests/services/auth-cache.test.ts tests/services/list-search.test.ts tests/services/settings-api.test.ts tests/services/storage-api.test.ts tests/services/users-api.test.ts tests/router/require-admin.test.ts",
+    "test": "npm run test:types && node --experimental-strip-types --test tests/services/api-errors.test.ts tests/services/auth-session.test.ts tests/services/auth-cache.test.ts tests/services/list-search.test.ts tests/services/settings-api.test.ts tests/services/messages-api.test.ts tests/services/storage-api.test.ts tests/services/users-api.test.ts tests/router/require-admin.test.ts",
     "test:types": "tsc -p tsconfig.test.json",
     "preview": "vite preview"
   },

@@ -131,7 +131,7 @@ export default function PhoneLoginSettingsPage({ active = true }: { active?: boo
   ))
 
   return <div className={storageStyles.page}>
-    <section className={storageStyles.tabSection} aria-label="手机登录短信服务商配置">
+    <section className={storageStyles.tabSection} aria-label="短信服务商配置">
       <div className={storageStyles.tabs} role="tablist" aria-label="短信服务商配置分类">
         {tabs.map((tab, index) => <button
           key={tab.key}
@@ -151,7 +151,7 @@ export default function PhoneLoginSettingsPage({ active = true }: { active?: boo
     <section hidden={activeTab !== 'aliyun'} id="phone-login-panel-aliyun" role="tabpanel" aria-labelledby="phone-login-tab-aliyun" className={storageStyles.configSection}>
       <div className={storageStyles.notice}>
         <div>
-          <p>请先在阿里云短信控制台创建并审核通过短信签名和验证码模板。</p>
+          <p>请先在阿里云短信控制台创建并审核通过短信签名和手机登录验证码模板。业务通知模板请在“短信模板管理”中独立登记。</p>
           <p>模板变量请使用 <code>{'${code}'}</code>，发送时系统会将验证码作为 <code>code</code> 参数传入。</p>
         </div>
         <a href="https://dysms.console.aliyun.com/" target="_blank" rel="noreferrer">打开阿里云短信控制台</a>
@@ -168,7 +168,7 @@ export default function PhoneLoginSettingsPage({ active = true }: { active?: boo
         <FormField label="短信签名" htmlFor="aliyun-sms-sign" required>
           <input id="aliyun-sms-sign" value={aliyunDraft.signName} disabled={!aliyunQuery.data || aliyunSave.isPending} onChange={(event) => setAliyunDraftState({ ...aliyunDraft, signName: event.target.value })} placeholder="请输入已审核通过的签名名称" required />
         </FormField>
-        <FormField label="短信模板 Code" htmlFor="aliyun-sms-template" required>
+        <FormField label="登录验证码模板 Code" htmlFor="aliyun-sms-template" required>
           <input id="aliyun-sms-template" value={aliyunDraft.templateCode} disabled={!aliyunQuery.data || aliyunSave.isPending} onChange={(event) => setAliyunDraftState({ ...aliyunDraft, templateCode: event.target.value })} placeholder="例如：SMS_123456789" required />
         </FormField>
         <div className={formStyles.formActions}>
@@ -181,7 +181,7 @@ export default function PhoneLoginSettingsPage({ active = true }: { active?: boo
     <section hidden={activeTab !== 'tencent'} id="phone-login-panel-tencent" role="tabpanel" aria-labelledby="phone-login-tab-tencent" className={storageStyles.configSection}>
       <div className={storageStyles.notice}>
         <div>
-          <p>请先在腾讯云短信控制台创建并审核通过短信签名和验证码模板。</p>
+          <p>请先在腾讯云短信控制台创建并审核通过短信签名和手机登录验证码模板。业务通知模板请在“短信模板管理”中独立登记。</p>
           <p>模板第一个变量用于验证码，后续变量按模板顺序继续配置。</p>
         </div>
         <a href="https://console.cloud.tencent.com/smsv2" target="_blank" rel="noreferrer">打开腾讯云短信控制台</a>
@@ -201,7 +201,7 @@ export default function PhoneLoginSettingsPage({ active = true }: { active?: boo
         <FormField label="短信签名" htmlFor="tencent-sms-sign" required>
           <input id="tencent-sms-sign" value={tencentDraft.signName} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, signName: event.target.value })} placeholder="请输入已审核通过的签名名称" required />
         </FormField>
-        <FormField label="短信模板 ID" htmlFor="tencent-sms-template" required>
+        <FormField label="登录验证码模板 ID" htmlFor="tencent-sms-template" required>
           <input id="tencent-sms-template" value={tencentDraft.templateId} disabled={!tencentQuery.data || tencentSave.isPending} onChange={(event) => setTencentDraftState({ ...tencentDraft, templateId: event.target.value })} required />
         </FormField>
         <FormField label="接入地域" htmlFor="tencent-sms-region" required>
