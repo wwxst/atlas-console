@@ -88,9 +88,15 @@ public class SecurityConfig {
 
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .bearerTokenResolver(request -> {
+                            String requestPath = request.getRequestURI();
+                            String contextPath = request.getContextPath();
+                            if (contextPath != null && !contextPath.isEmpty()
+                                    && requestPath.startsWith(contextPath)) {
+                                requestPath = requestPath.substring(contextPath.length());
+                            }
                             boolean logoutRequest = HttpMethod.POST.matches(request.getMethod())
-                                    && (SYS_USER_LOGOUT_PATH.equals(request.getServletPath())
-                                    || USER_LOGOUT_PATH.equals(request.getServletPath()));
+                                    && (SYS_USER_LOGOUT_PATH.equals(requestPath)
+                                    || USER_LOGOUT_PATH.equals(requestPath));
                             return logoutRequest ? null : defaultBearerTokenResolver.resolve(request);
                         })
                         .jwt(Customizer.withDefaults())
