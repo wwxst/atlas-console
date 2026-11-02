@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.web.project.message.mapper.MessageNotificationMapper">
+
+    <sql id="NotificationColumns">
+        id,
+        category,
+        code,
+        name,
+        description,
+        site_message_enabled,
+        sms_enabled,
+        site_message_title,
+        site_message_content,
+        sms_template_id,
+        sms_variable_mappings::text AS sms_variable_mappings_json,
+        updated_at
+    </sql>
+
+    <select id="selectById" resultType="com.web.project.message.entity.MessageNotification">
+        SELECT <include refid="NotificationColumns"/>
+        FROM message_notification
+        WHERE id = #{id}
+    </select>
+
+    <select id="selectByCategory" resultType="com.web.project.message.entity.MessageNotification">
+        SELECT <include refid="NotificationColumns"/>
+        FROM message_notification
+        WHERE category = #{category}
+        ORDER BY id ASC
+    </select>
+
+    <insert id="insert" parameterType="com.web.project.message.entity.MessageNotification"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO message_notification (
+            category, code, name, description,
+            site_message_enabled, sms_enabled, site_message_title, site_message_content,
+            sms_template_id, sms_variable_mappings
+        ) VALUES (
+            #{category}, #{code}, #{name}, #{description},
+            #{siteMessageEnabled}, #{smsEnabled}, #{siteMessageTitle}, #{siteMessageContent},
+            #{smsTemplateId}, CAST(#{smsVariableMappingsJson} AS jsonb)
+        )
+    </insert>
+
+    <update id="updateConfiguration" parameterType="com.web.project.message.entity.MessageNotification">
+        UPDATE message_notification
+        SET site_message_enabled = #{siteMessageEnabled},
+            sms_enabled = #{smsEnabled},
+            site_message_title = #{siteMessageTitle},
+            site_message_content = #{siteMessageContent},
+            sms_template_id = #{smsTemplateId},
+            sms_variable_mappings = CAST(#{smsVariableMappingsJson} AS jsonb)
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteCustomById">
+        DELETE FROM message_notification
+        WHERE id = #{id}
+          AND category = 'custom'
+    </delete>
+
+    <select id="countEnabledBySmsTemplateId" resultType="int">
+        SELECT COUNT(*)
+        FROM message_notification
+        WHERE sms_enabled = TRUE
+          AND sms_template_id = #{templateId}
+    </select>
+
+    <select id="countEnabledUsingOtherProvider" resultType="int">
+        SELECT COUNT(*)
+        FROM message_notification notification
+        JOIN sms_template template ON template.id = notification.sms_template_id
+        WHERE notification.sms_enabled = TRUE
+          AND template.provider &lt;&gt; #{provider}
+    </select>
+
+</mapper>
