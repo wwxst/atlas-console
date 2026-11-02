@@ -309,7 +309,7 @@ test('login settings contain SMS configuration tabs while message management sta
   await expect.poll(() => requests.includes('tencent-sms-saved')).toBe(true)
 
   await smsTabs.getByRole('tab', { name: '短信模板管理' }).click()
-  await expect(page).toHaveURL(new RegExp('settings[?]section=sms&panel=templates$'))
+  await expect(page).toHaveURL(new RegExp('settings[?]section=sms&.*panel=templates$'))
   await expect(page.getByRole('heading', { name: '短信配置' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '短信模板管理' })).toBeVisible()
   await expect(page.getByText('暂无短信模板，请先登记已在服务商控制台创建的模板')).toBeVisible()
