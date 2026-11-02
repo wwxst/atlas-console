@@ -237,8 +237,8 @@ install_docker() {
 
 install_docker
 
-# A dedicated non-root account will run the future GitHub Actions Runner.
-# Membership in the Docker group is effectively root access, so keep it dedicated.
+# A dedicated non-root account performs the initial host-side Compose deployment.
+# It is not a GitHub Runner. Docker-group membership is effectively root access.
 getent group atlas-deploy >/dev/null 2>&1 || groupadd --system atlas-deploy
 id atlas-deploy >/dev/null 2>&1 || useradd --create-home --shell /bin/bash --gid atlas-deploy atlas-deploy
 getent group docker >/dev/null 2>&1 || groupadd docker
@@ -279,10 +279,12 @@ fi
 
 JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
 STORAGE_ENCRYPTION_KEY="$(openssl rand -base64 32 | tr -d '\n')"
+ATLAS_DEPLOYMENT_AGENT_TOKEN="$(openssl rand -hex 32)"
 
 : > "$ENV_FILE"
 write_env ATLAS_PROJECT_NAME "$PROJECT_NAME"
 write_env ATLAS_NETWORK_PREFIX "$NETWORK_PREFIX"
+write_env ATLAS_INSTALL_ROOT "$INSTALL_ROOT"
 write_env ATLAS_RELEASE_DIR "$RELEASE_DIR"
 write_env ATLAS_DB_MODE "$DB_MODE"
 write_env ATLAS_DB_URL "$ATLAS_DB_URL"
@@ -293,8 +295,8 @@ write_env JWT_SECRET "$JWT_SECRET"
 write_env STORAGE_ENCRYPTION_KEY "$STORAGE_ENCRYPTION_KEY"
 write_env ATLAS_FLYWAY_BASELINE_ON_MIGRATE false
 write_env ATLAS_HTTP_PORT "$HTTP_PORT"
-write_env ATLAS_DEPLOYMENT_ENABLED false
-write_env ATLAS_DEPLOYMENT_GITHUB_TOKEN ""
+write_env ATLAS_DEPLOYMENT_ENABLED true
+write_env ATLAS_DEPLOYMENT_AGENT_TOKEN "$ATLAS_DEPLOYMENT_AGENT_TOKEN"
 chown root:atlas-deploy "$ENV_FILE"
 chmod 640 "$ENV_FILE"
 
@@ -319,7 +321,7 @@ printf 'Next steps:\n'
 printf '  1. In Baota, add your domain and create an Nginx reverse proxy to http://127.0.0.1:%s\n' "$HTTP_PORT"
 printf '  2. Configure HTTPS in Baota before public access.\n'
 printf '  3. Change the default Atlas administrator password before public launch.\n'
-printf '  4. Configure a dedicated GitHub Actions Runner before enabling automatic updates.\n'
+printf '  4. Open 版本与更新; GitHub Release updates are ready without a PAT or Runner.\n'
 printf '\n'
 printf 'Do not expose PostgreSQL, Redis, or Spring Boot ports directly to the public internet.\n'
 }
