@@ -81,7 +81,8 @@ class BackendGate:
                         REDIS_PORT=str(self.redis_port), REDIS_DATABASE="0", REDIS_PASSWORD="",
                         JWT_SECRET=base64.b64encode(secrets.token_bytes(32)).decode(),
                         UPLOAD_DIR=str(self.workspace / "uploads"),
-                        STORAGE_ENCRYPTION_KEY=base64.b64encode(secrets.token_bytes(32)).decode())
+                        STORAGE_ENCRYPTION_KEY=base64.b64encode(secrets.token_bytes(32)).decode(),
+                        AUTH_CODE_SENDER="dev")
         self.env["PGPASSWORD"] = self.env.get("DB_PASSWORD", "123456")
         self.redis = None
         self.app = None
@@ -260,6 +261,8 @@ class BackendGate:
         for channel in ("phone", "email"):
             self.check("channel update", "PUT", "/api/sys-user/auth-channels/" + channel,
                        {"enabled": True, "codeEnabled": True}, self.sys_token)
+        self.provider_settings_checks()
+        self.sms_template_checks()
         self.channel_checks()
         self.storage_checks()
         self.check("system logout", "POST", "/api/sys-user/auth/logout", {}, self.sys_token)
@@ -527,6 +530,91 @@ class BackendGate:
                          + str(second_id) + ") AND phone IS NULL AND email IS NULL") == "0",
                 "Concurrent admin edits removed all login contacts")
         self.report["scenarios"].append({"name": "concurrent admin contact edits: one winner", "passed": True})
+
+    def provider_settings_checks(self):
+        settings = self.check("login settings", "GET", "/api/sys-user/login-settings", token=self.sys_token)
+        require(settings == {"phoneLoginEnabled": True, "emailLoginEnabled": True, "smsProvider": "aliyun"},
+                "Login settings do not match the persisted channel configuration")
+        updated = self.check("update login settings", "PUT", "/api/sys-user/login-settings",
+                             {"phoneLoginEnabled": True, "emailLoginEnabled": True, "smsProvider": "tencent"},
+                             self.sys_token)
+        require(updated["smsProvider"] == "tencent", "SMS provider selection was not persisted")
+        self.check("reject disabling all login channels", "PUT", "/api/sys-user/login-settings",
+                   {"phoneLoginEnabled": False, "emailLoginEnabled": False, "smsProvider": "aliyun"},
+                   self.sys_token, status=400, code=40018)
+
+        aliyun_secret = "aliyun-secret-" + secrets.token_hex(8)
+        self.sensitive.append(aliyun_secret)
+        aliyun = self.check("save Aliyun SMS settings", "PUT", "/api/sys-user/login-providers/sms/aliyun",
+                            {"accessKeyId": "quality-aliyun-id", "accessKeySecret": aliyun_secret,
+                             "signName": "Atlas", "templateCode": "SMS_QUALITY"},
+                            self.sys_token)
+        require(aliyun["configured"] and aliyun["accessKeySecretConfigured"],
+                "Aliyun SMS settings were not marked configured")
+        require("accessKeySecret" not in aliyun, "Aliyun secret was returned by the settings API")
+        self.check("read Aliyun SMS settings", "GET", "/api/sys-user/login-providers/sms/aliyun",
+                   token=self.sys_token)
+
+        tencent_secret = "tencent-secret-" + secrets.token_hex(8)
+        self.sensitive.append(tencent_secret)
+        tencent = self.check("save Tencent SMS settings", "PUT", "/api/sys-user/login-providers/sms/tencent",
+                             {"secretId": "quality-tencent-id", "secretKey": tencent_secret,
+                              "sdkAppId": "1400000000", "signName": "Atlas",
+                              "templateId": "100001", "region": "ap-guangzhou"},
+                             self.sys_token)
+        require(tencent["configured"] and tencent["secretKeyConfigured"],
+                "Tencent SMS settings were not marked configured")
+        require("secretKey" not in tencent, "Tencent secret was returned by the settings API")
+        self.check("read Tencent SMS settings", "GET", "/api/sys-user/login-providers/sms/tencent",
+                   token=self.sys_token)
+
+        smtp_password = "smtp-password-" + secrets.token_hex(8)
+        self.sensitive.append(smtp_password)
+        email = self.check("save SMTP settings", "PUT", "/api/sys-user/login-providers/email",
+                           {"host": "smtp.example.com", "port": 465, "username": "sender@example.com",
+                            "password": smtp_password, "fromAddress": "no-reply@example.com",
+                            "fromName": "Atlas", "security": "SSL"},
+                           self.sys_token)
+        require(email["configured"] and email["passwordConfigured"],
+                "SMTP settings were not marked configured")
+        require("password" not in email, "SMTP password was returned by the settings API")
+        self.check("read SMTP settings", "GET", "/api/sys-user/login-providers/email",
+                   token=self.sys_token)
+
+    def sms_template_checks(self):
+        template_code = "SMS_QUALITY_" + uuid.uuid4().hex[:8]
+        created = self.check("create SMS template", "POST", "/api/sys-user/sms-templates",
+                             {"provider": "aliyun", "name": "质量门禁验证码模板",
+                              "templateCode": template_code, "kind": "verification",
+                              "content": "验证码：${code}", "variables": ["code"],
+                              "reviewStatus": "approved", "enabled": True},
+                             self.sys_token)
+        template_id = created["id"]
+        require(created["variables"] == ["code"], "SMS template variables were not persisted")
+        listed = self.check("filter SMS templates", "GET",
+                            "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun&kind=verification&reviewStatus=approved",
+                            token=self.sys_token)
+        require(listed["total"] == 1 and listed["records"][0]["id"] == template_id,
+                "SMS template filter did not return the created template")
+        updated = self.check("update SMS template", "PUT", f"/api/sys-user/sms-templates/{template_id}",
+                             {"provider": "aliyun", "name": "质量门禁验证码模板已更新",
+                              "templateCode": template_code, "kind": "verification",
+                              "content": "验证码：${code}", "variables": ["code"],
+                              "reviewStatus": "approved", "enabled": False},
+                             self.sys_token)
+        require(updated["name"].endswith("已更新") and not updated["enabled"],
+                "SMS template update was not persisted")
+        self.check("reject duplicate SMS template ID", "POST", "/api/sys-user/sms-templates",
+                   {"provider": "aliyun", "name": "重复模板", "templateCode": template_code,
+                    "kind": "verification", "content": "验证码：${code}", "variables": ["code"],
+                    "reviewStatus": "pending", "enabled": True},
+                   self.sys_token, status=400, code=40000)
+        self.check("delete SMS template", "DELETE", f"/api/sys-user/sms-templates/{template_id}",
+                   {}, self.sys_token)
+        listed_after_delete = self.check("SMS template deleted", "GET",
+                                         "/api/sys-user/sms-templates?page=1&pageSize=20&provider=aliyun&kind=verification",
+                                         token=self.sys_token)
+        require(listed_after_delete["total"] == 0, "Deleted SMS template remained in the registry")
 
     def channel_checks(self):
         path = "/api/sys-user/auth-channels/"
