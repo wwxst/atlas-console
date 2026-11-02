@@ -7,7 +7,6 @@ import com.web.project.channel.dto.TencentSmsSettingsUpdateDTO;
 import com.web.project.channel.entity.SysConfig;
 import com.web.project.channel.mapper.SysConfigMapper;
 import com.web.project.channel.model.AliyunSmsConfig;
-import com.web.project.channel.model.AuthChannelConfig;
 import com.web.project.channel.model.EmailSmtpConfig;
 import com.web.project.channel.model.TencentSmsConfig;
 import com.web.project.channel.vo.AliyunSmsSettingsVO;
@@ -64,14 +63,15 @@ public class LoginProviderSettingsService {
             EMAIL_FROM_ADDRESS, EMAIL_FROM_NAME, EMAIL_SECURITY);
 
     private final SysConfigMapper sysConfigMapper;
-    private final AuthChannelService authChannelService;
     private final CredentialCipher credentialCipher;
 
     public LoginSettingsVO getLoginSettings() {
-        AuthChannelConfig channels = authChannelService.getChannels();
-        String provider = required(loadValues(List.of(SMS_PROVIDER)), SMS_PROVIDER);
+        Map<String, String> values = loadValues(List.of(PHONE_ENABLED, EMAIL_ENABLED, SMS_PROVIDER));
+        boolean phoneEnabled = requiredBoolean(values, PHONE_ENABLED);
+        boolean emailEnabled = requiredBoolean(values, EMAIL_ENABLED);
+        String provider = required(values, SMS_PROVIDER);
         requireSmsProvider(provider);
-        return new LoginSettingsVO(channels.phoneEnabled(), channels.emailEnabled(), provider);
+        return new LoginSettingsVO(phoneEnabled, emailEnabled, provider);
     }
 
     @Transactional
@@ -261,6 +261,17 @@ public class LoginProviderSettingsService {
     private Map<String, String> loadValuesForUpdate(List<String> keys) {
         return sysConfigMapper.selectByKeysForUpdate(keys).stream().collect(Collectors.toMap(
                 SysConfig::getConfigKey, SysConfig::getConfigValue));
+    }
+
+    private boolean requiredBoolean(Map<String, String> values, String key) {
+        String value = required(values, key).trim();
+        if ("true".equalsIgnoreCase(value)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value)) {
+            return false;
+        }
+        throw new IllegalStateException("登录方式配置缺失或格式错误：" + key);
     }
 
     private String required(Map<String, String> values, String key) {
