@@ -279,7 +279,7 @@ test('login settings stay on one page with three tabs and retain provider config
   await page.getByRole('button', { name: '保存更改' }).click()
   await expect.poll(() => requests.includes('login-settings:true:false:tencent')).toBe(true)
 
-  await loginTabs.getByRole('tab', { name: '手机登录配置' }).click()
+  await loginTabs.getByRole('tab', { name: '短信服务商配置' }).click()
   await expect(page).toHaveURL(/\/settings\?section=phone/)
   await expect(page.getByRole('tab', { name: '阿里云配置' })).toHaveAttribute('aria-selected', 'true')
   await page.getByLabel('AccessKey ID').fill('example-access-id')
@@ -312,7 +312,7 @@ test('login settings stay on one page with three tabs and retain provider config
   await expect(page).toHaveURL(/\/settings\?section=phone/)
   await page.goto('/settings/phone-login?tab=tencent')
   await expect(page).toHaveURL(/\/settings\?tab=tencent&section=phone/)
-  await expect(loginTabs.getByRole('tab', { name: '手机登录配置' })).toHaveAttribute('aria-selected', 'true')
+  await expect(loginTabs.getByRole('tab', { name: '短信服务商配置' })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('tab', { name: '腾讯云配置' })).toHaveAttribute('aria-selected', 'true')
   await page.goto('/settings/email-login')
   await expect(page).toHaveURL(/\/settings\?section=email/)
