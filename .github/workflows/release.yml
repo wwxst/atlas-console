@@ -7,21 +7,44 @@ on:
 
 permissions:
   contents: write
+  actions: read
+
+concurrency:
+  group: atlas-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Validate release tag
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate semantic version and main commit
         run: |
-          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\\.[0-9]+\\.[0-9]+$ ]]
-          test "$GITHUB_REF_NAME" = "v$(node -p \"require('./frontend/package.json').version\")"
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$GITHUB_REF_NAME" = "v$(node -p "require('./frontend/package.json').version")"
           git fetch origin main
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main
-      - name: Publish GitHub Release
+      - name: Require successful frontend and backend CI for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=100")"
+          for workflow in "Frontend quality" "Backend quality"; do
+            result="$(printf '%s' "$runs" | jq -r --arg name "$workflow" '[.workflow_runs[] | select(.name == $name and .event == "push" and .status == "completed")] | sort_by(.run_number) | last | .conclusion // empty')"
+            if [[ "$result" != success ]]; then
+              echo "Refusing to publish: $workflow for $GITHUB_SHA is not successful (result: ${result:-missing})."
+              exit 1
+            fi
+          done
+      - name: Publish public GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME" --latest
