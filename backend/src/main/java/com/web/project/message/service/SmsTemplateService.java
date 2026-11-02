@@ -49,7 +49,7 @@ public class SmsTemplateService {
         } catch (DuplicateKeyException exception) {
             throw duplicateTemplate(exception);
         }
-        return toVO(template);
+        return pageById(template.getId());
     }
 
     @Transactional
