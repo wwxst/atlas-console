@@ -196,7 +196,8 @@ public class DeploymentService {
                     nullableText(json, "publishedAt"),
                     json.path("updateAvailable").asBoolean(false),
                     nullableText(json, "message"),
-                    nullableText(json, "releaseCheckError"));
+                    nullableText(json, "releaseCheckError"),
+                    nullableText(json, "deploymentMode"));
         } catch (RuntimeException exception) {
             throw unavailable();
         }
