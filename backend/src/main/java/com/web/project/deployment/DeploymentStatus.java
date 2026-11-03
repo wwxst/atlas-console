@@ -18,11 +18,12 @@ public record DeploymentStatus(
         String publishedAt,
         boolean updateAvailable,
         String message,
-        String releaseCheckError
+        String releaseCheckError,
+        String deploymentMode
 ) {
     public static DeploymentStatus notConfigured() {
         return new DeploymentStatus(false, "not_configured", null, null, null, null,
                 false, null, false, null, null, null, null, null, false,
-                "更新服务尚未初始化", null);
+                "更新服务尚未初始化", null, null);
     }
 }

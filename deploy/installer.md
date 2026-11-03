@@ -1,5 +1,7 @@
 # Atlas Console 一条命令安装
 
+> 本页为 **Docker Compose 安装**。如果客户已经在宝塔使用 **Nginx 静态前端 + Java JAR**，且不希望安装 Docker，请改用 [宝塔原生无 Docker 安装](baota/README.md)。两种模式均支持后台一键检查 GitHub Release 和更新。
+
 ## 推荐：全新 Ubuntu/Debian 服务器
 
 ```bash

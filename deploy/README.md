@@ -1,5 +1,12 @@
 # Atlas Console 客户端独立部署与版本更新
 
+Atlas 支持两种独立部署更新方式：
+
+- **Docker Compose**：使用项目官方安装器，容器升级与健康检查按原方案执行。
+- **宝塔原生（无需 Docker）**：Nginx 静态目录 + Java JAR systemd 服务，公开 GitHub Release 提供 `atlas-frontend.tar.gz`、`atlas-backend.jar` 和 `SHA256SUMS`，由主机本地更新器完成校验、切换和回滚。首次接入请阅读 [宝塔原生部署与更新说明](baota/README.md)。
+
+两种模式共用同一个后台「版本与更新」入口。安装时只需配置一次服务和权限；不要求客户提供 GitHub PAT 或 Runner。
+
 Atlas Console 按**独立部署产品**交付：客户把系统安装在自己的 Linux 服务器上，之后在后台「版本与更新」中检查 GitHub 正式版本并一键升级。客户不需要 GitHub 账号、Personal Access Token（PAT）、自托管 Runner 或 GitHub Actions 仓库授权。
 
 ## 客户首次安装

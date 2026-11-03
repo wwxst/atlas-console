@@ -25,6 +25,7 @@ API = "https://api.github.com/repos/wwxst/atlas-console"
 STATE_FILE = RELEASE_DIR / "updater-status.json"
 CACHE_FILE = RELEASE_DIR / "latest-release-cache.json"
 WORKER_IMAGE_PREFIX = "atlas-updater:git-"
+MODE = os.environ.get("ATLAS_DEPLOYMENT_MODE", "docker")
 TAG_RE = re.compile(r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 RELEASE_ID_RE = re.compile(r"^[0-9a-f]{40}_[0-9a-f]{40}$")
@@ -161,7 +162,10 @@ def status_payload():
     saved = read_json(STATE_FILE, {})
     if not isinstance(saved, dict):
         saved = {}
-    if saved.get("state") == "in_progress" and not worker_running(saved.get("workerContainer")):
+    active = (worker_running(saved.get("workerContainer")) if MODE == "docker"
+              else __import__("native_agent").is_running(saved.get("workerPid")))
+    within_launch_grace = time.time() - saved.get("startedAt", 0) < 5
+    if saved.get("state") == "in_progress" and not active and not within_launch_grace:
         saved.update({"state": "completed", "conclusion": "failure",
                       "message": "更新进程意外退出，请检查服务器更新日志",
                       "finishedAt": time.time()})
@@ -175,6 +179,7 @@ def status_payload():
         state = "no_release" if check_error == "GitHub 尚未发布正式版本" else "release_unavailable"
     return {
         "configured": bool(TOKEN),
+        "deploymentMode": MODE,
         "state": state,
         "conclusion": saved.get("conclusion"),
         "runUrl": latest.get("url") if latest else saved.get("releaseUrl"),
@@ -205,6 +210,9 @@ def worker_image() -> str:
 
 def start_worker(operation: str, tag: str | None = None, release_id: str | None = None):
     with LOCK:
+        if MODE == "baota":
+            from native_agent import start
+            return start(operation, tag, release_id)
         saved = read_json(STATE_FILE, {})
         if isinstance(saved, dict) and saved.get("state") == "in_progress" and worker_running(saved.get("workerContainer")):
             raise RuntimeError("已有更新任务正在执行，请等待完成")
@@ -329,8 +337,11 @@ def main():
     if not TOKEN or len(TOKEN) < 48:
         raise SystemExit("ATLAS_DEPLOYMENT_AGENT_TOKEN must contain at least 48 characters")
     RELEASE_DIR.mkdir(parents=True, exist_ok=True)
-    server = ThreadingHTTPServer(("0.0.0.0", 8090), Handler)
-    print("Atlas customer updater listening on private container network", flush=True)
+    if MODE not in ("docker", "baota"):
+        raise SystemExit("Invalid deployment mode")
+    bind = "127.0.0.1" if MODE == "baota" else "0.0.0.0"
+    server = ThreadingHTTPServer((bind, 8090), Handler)
+    print("Atlas customer updater listening on " + bind, flush=True)
     server.serve_forever()
 
 
