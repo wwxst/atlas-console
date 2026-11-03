@@ -4,7 +4,7 @@ const userId = '9007199254740993'
 const now = '2026-10-01T12:00:00'
 
 async function installMockApi(page: Page, deploymentReady = false, previousRelease = false,
-  releaseHistory = false, scenario: 'normal' | 'no-release' | 'up-to-date' = 'normal') {
+  releaseHistory = false, scenario: 'normal' | 'no-release' | 'up-to-date' | 'baota' = 'normal') {
   let deploymentRequested = false
   let nickname = '测试用户'
   let status = 1
@@ -49,6 +49,7 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
         runId: null,
         recoveryAvailable: false,
         rollbackAvailable: previousRelease,
+        deploymentMode: scenario === 'baota' ? 'baota' : 'docker',
         currentVersion: upToDate ? '0.1.1' : '0.1.0',
         latestVersion: noRelease ? null : '0.1.1',
         latestReleaseUrl: noRelease ? null : releaseUrl,
@@ -469,4 +470,19 @@ test('release notes and official GitHub release link are visible to the administ
   await expect(page.getByText('修复登录问题并优化系统更新')).toBeVisible()
   await expect(page.getByRole('link', { name: '查看 GitHub 发布说明' }))
     .toHaveAttribute('href', 'https://github.com/wwxst/atlas-console/releases/tag/v0.1.1')
+})
+
+test('BaoTa native installations show Java JAR update wording without Docker', async ({ page }) => {
+  const requests = await installMockApi(page, true, false, false, 'baota')
+  await login(page)
+  await page.getByRole('button', { name: '版本与更新' }).click()
+  await expect(page.getByText('当前部署方式：宝塔原生（Nginx + Java JAR）')).toBeVisible()
+  await expect(page.getByText(/无需 Docker、GitHub PAT 或 Runner/)).toBeVisible()
+  page.once('dialog', async dialog => {
+    expect(dialog.message()).toContain('切换宝塔静态页面并重启 Java JAR')
+    await dialog.accept()
+  })
+  await page.getByRole('button', { name: '一键更新至 v0.1.1' }).click()
+  await expect(page.getByText('正在校验发布文件、切换网站并重启 Java 服务')).toBeVisible()
+  expect(requests).toContain('deployment-requested')
 })
