@@ -21,7 +21,7 @@ import worker
 
 ROOT = Path(os.environ.get("ATLAS_INSTALL_ROOT", "/opt/atlas-native")).resolve()
 RELEASE_DIR = Path(os.environ.get("ATLAS_RELEASE_DIR", str(ROOT / "releases"))).resolve()
-CURRENT = ROOT / "current"
+CURRENT = ROOT / "runtime" / "current"
 APPS = RELEASE_DIR / "apps"
 SERVICE = "atlas-native-backend.service"
 ASSETS = ("atlas-frontend.tar.gz", "atlas-backend.jar")
