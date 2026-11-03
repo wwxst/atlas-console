@@ -91,6 +91,7 @@ async function installMockApi(page: Page, deploymentReady = false, previousRelea
       requests.push('deployment-requested')
       return reply({ configured: true, state: 'in_progress', conclusion: null,
         title: '正在安装 v0.1.1', requestId: 'mock-request', updateAvailable: true,
+        deploymentMode: scenario === 'baota' ? 'baota' : 'docker',
         currentVersion: '0.1.0', latestVersion: '0.1.1' })
     }
     if (path === '/api/sys-user/sys-users' && method === 'GET') {
