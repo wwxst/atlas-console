@@ -11,11 +11,13 @@ import styles from './SidebarVersion.module.less'
 
 const activeStates = new Set(['requested', 'queued', 'in_progress', 'waiting', 'pending'])
 
-function description(state: string, conclusion: string | null, updateAvailable: boolean): string {
+function description(state: string, conclusion: string | null, updateAvailable: boolean, nativeMode: boolean): string {
   if (state === 'not_configured') return '本机更新执行器尚未初始化'
   if (state === 'no_release') return 'GitHub 尚未发布正式版本'
   if (state === 'release_unavailable') return '暂时无法获取 GitHub 版本信息'
-  if (activeStates.has(state)) return '正在下载正式版本、构建镜像并检查服务健康状态'
+  if (activeStates.has(state)) return nativeMode
+    ? '正在校验发布文件、切换网站并重启 Java 服务'
+    : '正在下载正式版本、构建镜像并检查服务健康状态'
   if (state === 'completed' && conclusion === 'success') return '最近一次更新已成功'
   if (state === 'completed' && conclusion === 'failure') return '最近一次更新失败，请查看服务器更新日志'
   if (updateAvailable) return '发现可用的新版本'
@@ -139,7 +141,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
             <p className={styles.notice} role="status">
               {deployment.isPending ? '正在查询部署状态…'
                 : deployment.isError ? '暂时无法连接到本机更新执行器'
-                  : description(status?.state ?? 'unknown', status?.conclusion ?? null, Boolean(status?.updateAvailable))}
+                  : description(status?.state ?? 'unknown', status?.conclusion ?? null, Boolean(status?.updateAvailable), nativeMode)}
             </p>
             {status?.configured && <>
               <p className={styles.explanation}>当前部署方式：{nativeMode ? '宝塔原生（Nginx + Java JAR）' : 'Docker Compose'}</p>
