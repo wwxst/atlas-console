@@ -218,6 +218,7 @@ def deploy(tag: str):
         if not app.exists():
             staged = APPS / ("staging-" + uuid.uuid4().hex)
             staged.mkdir(parents=True)
+            staged.chmod(0o755)  # Nginx and the unprivileged Java service must traverse this directory.
             try:
                 safe_extract_frontend(directory / "atlas-frontend.tar.gz", staged / "frontend")
                 shutil.copyfile(directory / "atlas-backend.jar", staged / "backend.jar")
