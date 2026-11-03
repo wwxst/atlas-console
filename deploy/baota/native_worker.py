@@ -50,7 +50,7 @@ def atomic_bytes(path: Path, content: bytes):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
     temp.write_bytes(content)
-    os.chmod(temp, 0o600)
+    os.chmod(temp, 0o644)
     os.replace(temp, path)
 
 
@@ -83,7 +83,8 @@ def verify_checksums(directory: Path):
     if set(expected) != set(ASSETS):
         raise ValueError("发布资产校验清单不完整")
     for name in ASSETS:
-        sha = hashlib.file_digest((directory / name).open("rb"), "sha256").hexdigest()
+        with (directory / name).open("rb") as stream:
+            sha = hashlib.file_digest(stream, "sha256").hexdigest()
         if sha != expected[name]:
             raise ValueError("发布资产 SHA256 校验失败")
 
@@ -180,6 +181,7 @@ def activate(release_id: str, version: str | None = None, tag: str | None = None
         raise RuntimeError("新版未通过健康检查，应用文件已恢复到旧版")
     history = RELEASE_DIR / "history"
     history.mkdir(parents=True, exist_ok=True)
+    history.chmod(0o755)
     if previous_id:
         old_bytes = manifest(previous_id).encode()
         atomic_bytes(history / (previous_id + ".env"), old_bytes)
@@ -187,9 +189,12 @@ def activate(release_id: str, version: str | None = None, tag: str | None = None
     atomic_bytes(RELEASE_DIR / "current.env", manifest(release_id).encode())
     atomic_bytes(history / (release_id + ".env"), manifest(release_id).encode())
     if version is not None:
-        server.write_json(RELEASE_DIR / "versions" / (release_id + ".json"), {
-            "version": version, "tag": tag, "releaseUrl": release_url,
-        })
+        versions = RELEASE_DIR / "versions"
+        versions.mkdir(parents=True, exist_ok=True)
+        versions.chmod(0o755)
+        atomic_bytes(versions / (release_id + ".json"),
+                     json.dumps({"version": version, "tag": tag, "releaseUrl": release_url},
+                                ensure_ascii=False).encode("utf-8"))
 
 
 def deploy(tag: str):
@@ -247,6 +252,7 @@ def run(argv=None):
         raise ValueError("更新请求标识不合法")
     RELEASE_DIR.mkdir(parents=True, exist_ok=True)
     APPS.mkdir(parents=True, exist_ok=True)
+    APPS.chmod(0o755)
     lock = RELEASE_DIR / ".native-update.lock"
     with lock.open("a+b") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
