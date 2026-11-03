@@ -41,11 +41,17 @@ done
 [[ -n "$BACKEND_ENV_FILE" && -f "$BACKEND_ENV_FILE" ]] || { echo "A backend environment file is required" >&2; exit 1; }
 [[ -z "$BOOTSTRAP_TAG" || "$BOOTSTRAP_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
   { echo "Invalid stable release tag" >&2; exit 1; }
-for cmd in systemctl useradd runuser python3 java sudo visudo openssl; do
+for cmd in systemctl useradd runuser python3 java sudo visudo openssl readlink; do
   command -v "$cmd" >/dev/null || { echo "Missing: $cmd" >&2; exit 1; }
 done
 [[ "$(command -v systemctl)" == "/usr/bin/systemctl" ]] ||
   { echo "This installer requires /usr/bin/systemctl for its fixed sudo policy" >&2; exit 1; }
+PYTHON_BIN="$(readlink -f "$(command -v python3)")"
+JAVA_BIN="$(readlink -f "$(command -v java)")"
+[[ "$PYTHON_BIN" =~ ^/[a-zA-Z0-9_./-]+$ && -x "$PYTHON_BIN" ]] ||
+  { echo "Invalid Python executable path" >&2; exit 1; }
+[[ "$JAVA_BIN" =~ ^/[a-zA-Z0-9_./-]+$ && -x "$JAVA_BIN" ]] ||
+  { echo "Invalid Java executable path" >&2; exit 1; }
 [[ "$(python3 -c 'import sys; print(sys.version_info >= (3,11))')" == True ]] ||
   { echo "Python >= 3.11 is required" >&2; exit 1; }
 java -version 2>&1 | head -1 | grep -Eq '"25\.' ||
@@ -116,7 +122,7 @@ User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$ROOT
 EnvironmentFile=/etc/atlas-native/backend.env
-ExecStart=/usr/bin/java -jar $ROOT/runtime/current/backend.jar --server.address=127.0.0.1 --server.port=8091
+ExecStart=$JAVA_BIN -jar $ROOT/runtime/current/backend.jar --server.address=127.0.0.1 --server.port=8091
 Restart=on-failure
 RestartSec=4
 NoNewPrivileges=true
@@ -141,7 +147,7 @@ User=$AGENT_USER
 Group=$AGENT_USER
 WorkingDirectory=$ROOT
 EnvironmentFile=/etc/atlas-native/updater.env
-ExecStart=/usr/bin/python3 $ROOT/agent/server.py
+ExecStart=$PYTHON_BIN $ROOT/agent/server.py
 Restart=on-failure
 RestartSec=4
 ProtectSystem=strict
@@ -165,7 +171,7 @@ systemctl enable --now "$AGENT_UNIT"
 
 if [[ "$SKIP_BOOTSTRAP" == false ]]; then
   REQUEST_ID="$(python3 -c 'import uuid; print(uuid.uuid4())')"
-  cmd=(/usr/bin/python3 "$ROOT/agent/native_worker.py" --operation deploy --request-id "$REQUEST_ID")
+  cmd=("$PYTHON_BIN" "$ROOT/agent/native_worker.py" --operation deploy --request-id "$REQUEST_ID")
   [[ -z "$BOOTSTRAP_TAG" ]] || cmd+=(--tag "$BOOTSTRAP_TAG")
   runuser -u "$AGENT_USER" -- env \
     "ATLAS_INSTALL_ROOT=$ROOT" "ATLAS_RELEASE_DIR=$ROOT/releases" \
