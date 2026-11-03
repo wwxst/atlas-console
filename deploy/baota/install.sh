@@ -54,7 +54,7 @@ for key in DB_URL DB_USERNAME DB_PASSWORD REDIS_HOST JWT_SECRET STORAGE_ENCRYPTI
   grep -Eq "^$key=" "$BACKEND_ENV_FILE" ||
     { echo "Missing backend environment key: $key" >&2; exit 1; }
 done
-if grep -Eq '^ATLAS_DEPLOYMENT_|^UPLOAD_DIR=|^AUTH_CODE_SENDER=' "$BACKEND_ENV_FILE"; then
+if grep -Eq '^ATLAS_DEPLOYMENT_|^UPLOAD_DIR=|^AUTH_CODE_SENDER=|^TRUSTED_PROXY_ADDRESSES=' "$BACKEND_ENV_FILE"; then
   echo "Reserved deployment/upload keys must not be present in the supplied backend env" >&2
   exit 1
 fi
@@ -89,6 +89,7 @@ install -m 0640 -o root -g "$APP_USER" "$BACKEND_ENV_FILE" /etc/atlas-native/bac
 {
   printf '\nUPLOAD_DIR=%s/uploads\n' "$ROOT"
   printf 'AUTH_CODE_SENDER=provider\n'
+  printf 'TRUSTED_PROXY_ADDRESSES=127.0.0.1\n'
   printf 'ATLAS_DEPLOYMENT_ENABLED=true\n'
   printf 'ATLAS_DEPLOYMENT_AGENT_URL=http://127.0.0.1:8090\n'
   printf 'ATLAS_DEPLOYMENT_AGENT_TOKEN=%s\n' "$TOKEN"
