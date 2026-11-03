@@ -63,6 +63,14 @@ sudo bash deploy/baota/install.sh \
 
 可使用 `--skip-bootstrap` 只安装执行器；此时还没有 Atlas 前后端发布文件，**不能先把宝塔网站切到新路径**。
 
+如果初次下载失败、当时还没有 GitHub 正式 Release，或使用了 `--skip-bootstrap`，请先修复网络/数据库问题，然后在首次发布成功前单独执行（不要反复覆盖安装脚本或系统账号）：
+
+```bash
+sudo bash deploy/baota/bootstrap.sh --tag v0.1.1
+```
+
+省略 `--tag` 会获取最新正式版。该脚本只允许**尚未安装任何有效版本**的原生环境执行；已有运行版本时必须从后台更新或回滚，防止覆盖生产发布记录。
+
 ## 3. 宝塔 Nginx 首次配置（只做一次）
 
 在对应宝塔站点 Nginx 配置中，将网站静态根目录改为：
