@@ -179,6 +179,7 @@ def status_payload():
         state = "no_release" if check_error == "GitHub 尚未发布正式版本" else "release_unavailable"
     return {
         "configured": bool(TOKEN),
+        "deploymentMode": MODE,
         "state": state,
         "conclusion": saved.get("conclusion"),
         "runUrl": latest.get("url") if latest else saved.get("releaseUrl"),
