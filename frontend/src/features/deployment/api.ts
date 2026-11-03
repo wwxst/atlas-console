@@ -19,6 +19,7 @@ export interface DeploymentStatus {
   updateAvailable: boolean
   message: string | null
   releaseCheckError: string | null
+  deploymentMode: 'docker' | 'baota' | null
 }
 
 export async function getDeploymentStatus(): Promise<DeploymentStatus> {
