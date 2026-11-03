@@ -19,7 +19,7 @@ Usage: sudo bash deploy/baota/install.sh --backend-env-file /root/atlas-backend.
 
 BaoTa native deployment requires Linux systemd, Python 3.11+, JDK 25, sudo,
 PostgreSQL 17, Redis, and a public GitHub Release containing the native assets.
-The frontend directory and JAR are managed under /opt/atlas-native/current.
+The frontend directory and JAR are managed under /opt/atlas-native/runtime/current.
 BaoTa site root and reverse proxy must be configured separately; this installer
 never changes existing websites, Nginx settings, databases, or upload files.
 The backend environment file must contain DB_URL, DB_USERNAME, DB_PASSWORD,
@@ -58,8 +58,8 @@ if grep -Eq '^ATLAS_DEPLOYMENT_|^UPLOAD_DIR=|^AUTH_CODE_SENDER=' "$BACKEND_ENV_F
   echo "Reserved deployment/upload keys must not be present in the supplied backend env" >&2
   exit 1
 fi
-if [[ -e "$ROOT/current" && ! -L "$ROOT/current" ]]; then
-  echo "Refusing to replace unmanaged $ROOT/current" >&2
+if [[ -e "$ROOT/runtime/current" && ! -L "$ROOT/runtime/current" ]]; then
+  echo "Refusing to replace unmanaged $ROOT/runtime/current" >&2
   exit 1
 fi
 if [[ -e /etc/systemd/system/$APP_UNIT || -e /etc/systemd/system/$AGENT_UNIT ]]; then
@@ -75,9 +75,9 @@ id "$AGENT_USER" >/dev/null 2>&1 ||
 id "$APP_USER" >/dev/null 2>&1 ||
   useradd --system --home-dir /nonexistent --shell /usr/sbin/nologin "$APP_USER"
 
-install -d -m 0755 "$ROOT" "$ROOT/agent" "$ROOT/releases"
+install -d -m 0755 -o root -g root "$ROOT" "$ROOT/agent"
+install -d -m 0755 -o "$AGENT_USER" -g "$AGENT_USER" "$ROOT/runtime" "$ROOT/releases"
 install -d -m 0750 -o "$APP_USER" -g "$APP_USER" "$ROOT/uploads"
-chown "$AGENT_USER:$AGENT_USER" "$ROOT" "$ROOT/releases"
 install -d -m 0755 -o root -g root /etc/atlas-native
 install -m 0555 -o root -g root "$REPO_ROOT/deploy/updater/server.py" "$ROOT/agent/server.py"
 install -m 0555 -o root -g root "$REPO_ROOT/deploy/updater/worker.py" "$ROOT/agent/worker.py"
@@ -115,7 +115,7 @@ User=$APP_USER
 Group=$APP_USER
 WorkingDirectory=$ROOT
 EnvironmentFile=/etc/atlas-native/backend.env
-ExecStart=/usr/bin/java -jar $ROOT/current/backend.jar --server.address=127.0.0.1 --server.port=8091
+ExecStart=/usr/bin/java -jar $ROOT/runtime/current/backend.jar --server.address=127.0.0.1 --server.port=8091
 Restart=on-failure
 RestartSec=4
 NoNewPrivileges=true
@@ -144,7 +144,7 @@ ExecStart=/usr/bin/python3 $ROOT/agent/server.py
 Restart=on-failure
 RestartSec=4
 ProtectSystem=strict
-ReadWritePaths=$ROOT
+ReadWritePaths=$ROOT/runtime $ROOT/releases
 ProtectHome=true
 PrivateTmp=true
 UMask=0027
@@ -174,7 +174,7 @@ fi
 
 cat <<EOF
 BaoTa native updater initialized.
-  Nginx website root: $ROOT/current/frontend
+  Nginx website root: $ROOT/runtime/current/frontend
   Backend proxy:     http://127.0.0.1:8091
   Updater API:       http://127.0.0.1:8090 (loopback and token protected)
   Release history:   $ROOT/releases
