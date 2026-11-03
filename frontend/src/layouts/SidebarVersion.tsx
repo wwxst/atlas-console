@@ -74,6 +74,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
   })
 
   const status = deployment.data
+  const nativeMode = status?.deploymentMode === 'baota'
   const busy = Boolean(status && activeStates.has(status.state)) ||
     update.isPending || rollback.isPending || restore.isPending
   const controlsBlocked = busy || deployment.isError
@@ -81,19 +82,19 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
     ? status.latestReleaseUrl : null
 
   const runRollback = () => {
-    if (!window.confirm('确定回滚到上一版本吗？这将恢复上一套前后端镜像，但不会恢复数据库或上传文件。')) return
+    if (!window.confirm(`确定回滚到上一版本吗？这将恢复上一套${nativeMode ? '宝塔静态页面和 Java JAR' : '前后端容器镜像'}，但不会恢复数据库或上传文件。`)) return
     rollback.mutate()
   }
 
   const runRestore = (release: ReleaseHistoryItem) => {
     if (release.current || controlsBlocked) return
-    if (!window.confirm(`确认回滚到历史版本 ${release.version}？这只会恢复应用容器，不会回滚数据库结构或恢复上传文件。`)) return
+    if (!window.confirm(`确认回滚到历史版本 ${release.version}？这只会恢复${nativeMode ? '宝塔静态页面和 JAR' : '应用容器'}，不会回滚数据库结构或恢复上传文件。`)) return
     restore.mutate(release.releaseId)
   }
 
   const runUpdate = () => {
     const versionLabel = status?.latestVersion ? `v${status.latestVersion}` : '最新正式版本'
-    if (!window.confirm(`将从 GitHub Releases 下载 ${versionLabel}，在本机服务器构建并更新 Atlas Console。更新期间服务可能短暂中断，数据库迁移不会随应用回滚。确定开始吗？`)) return
+    if (!window.confirm(`将从 GitHub Releases 下载 ${versionLabel}，在本机服务器${nativeMode ? '校验发布资产、切换宝塔静态页面并重启 Java JAR' : '构建并更新容器'}。更新期间服务可能短暂中断，数据库迁移不会随应用回滚。确定开始吗？`)) return
     update.mutate()
   }
 
@@ -141,7 +142,10 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
                   : description(status?.state ?? 'unknown', status?.conclusion ?? null, Boolean(status?.updateAvailable))}
             </p>
             {status?.configured && <>
-              <p className={styles.explanation}>直接检查公开的 GitHub Releases。更新时由本机隔离执行器下载正式版本、构建并替换容器；客户无需 GitHub 账号、PAT 或 Actions Runner。</p>
+              <p className={styles.explanation}>当前部署方式：{nativeMode ? '宝塔原生（Nginx + Java JAR）' : 'Docker Compose'}</p>
+              <p className={styles.explanation}>{nativeMode
+                ? '从公开 GitHub Releases 下载校验过的前端静态包与 Java JAR，原子切换应用版本并重启 Java 服务；无需 Docker、GitHub PAT 或 Runner。'
+                : '直接检查公开的 GitHub Releases。更新时由本机隔离执行器下载正式版本、构建并替换容器；客户无需 GitHub 账号、PAT 或 Actions Runner。'}</p>
               <p className={styles.explanation}>当前版本：{status?.currentVersion ? `v${status.currentVersion}` : '未记录'} · 最新版本：{status?.latestVersion ? `v${status.latestVersion}` : '暂无'}</p>
               {status?.requestId && <p className={styles.explanation}>更新请求：{status.requestId}</p>}
               {status?.message && <p className={styles.explanation}>{status.message}</p>}
@@ -191,7 +195,7 @@ export default function SidebarVersion({ collapsed }: { collapsed: boolean }) {
                   </button>
                 </div>)}
               </div> : null}
-              <p className={styles.explanation}>仅显示最近 50 条已记录的应用版本。恢复需要服务器仍保留对应镜像。</p>
+              <p className={styles.explanation}>仅显示最近 50 条已记录的应用版本。恢复需要服务器仍保留对应${nativeMode ? '本地发布文件' : '镜像'}。</p>
             </section>}
             {restore.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(restore.error, '历史版本回滚提交失败')}</p>}
             {update.isError && <p role="alert" className={styles.error}>{getApiErrorMessage(update.error, '提交更新失败')}</p>}
