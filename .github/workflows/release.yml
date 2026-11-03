@@ -44,7 +44,41 @@ jobs:
               exit 1
             fi
           done
-      - name: Publish public GitHub Release
+      - name: Install Node.js and build native frontend assets
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend release artifact
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Set up JDK 25 for native JAR artifact
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Package verified native release artifacts
+        run: |
+          set -euo pipefail
+          chmod +x backend/mvnw
+          (cd backend && ./mvnw -B -ntp -DskipTests clean package)
+          mkdir -p release-assets
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
+            -czf release-assets/atlas-frontend.tar.gz -C frontend/dist .
+          cp backend/target/backend-0.0.1-SNAPSHOT.jar release-assets/atlas-backend.jar
+          (cd release-assets && sha256sum atlas-frontend.tar.gz atlas-backend.jar > SHA256SUMS)
+          test "$(wc -l < release-assets/SHA256SUMS)" -eq 2
+      - name: Publish public GitHub Release with native deployment assets
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME" --latest
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            release-assets/atlas-frontend.tar.gz \
+            release-assets/atlas-backend.jar \
+            release-assets/SHA256SUMS \
+            --verify-tag --generate-notes --title "$GITHUB_REF_NAME" --latest
