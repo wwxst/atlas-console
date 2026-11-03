@@ -3,6 +3,7 @@ import hashlib
 import io
 import json
 import os
+import stat
 import sys
 import tarfile
 import tempfile
@@ -172,6 +173,9 @@ class NativeDownloadTest(NativeCase):
             self.assertEqual("a" * 40 + "_" + "a" * 40, activate.call_args.args[0])
             self.assertTrue((self.apps / ("a" * 40 + "_" + "a" * 40) / "frontend" / "index.html").exists())
             self.assertTrue((self.apps / ("a" * 40 + "_" + "a" * 40) / "backend.jar").exists())
+            self.assertEqual(0o755, stat.S_IMODE(
+                (self.apps / ("a" * 40 + "_" + "a" * 40)).stat().st_mode))
+
 
     def test_deploy_refuses_missing_checksum_asset(self):
         tag = "v0.1.1"
